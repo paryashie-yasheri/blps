@@ -24,7 +24,7 @@ jobs:
         uses: gradle/actions/setup-gradle@v3
 
       - name: Run tests
-        run: ./gradlew test
+        run: ./gradlew test --no-deamon
 
       - name: Upload test results
         if: failure()
