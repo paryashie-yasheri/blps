@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<configuration>
+    <jdbc>
+        <driver>org.postgresql.Driver</driver>
+        <url
+        >jdbc:postgresql://${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}</url>
+        <user>${POSTGRES_USER}</user>
+        <password>${POSTGRES_PASSWORD}</password>
+    </jdbc>
+    <generator>
+        <name>org.jooq.codegen.KotlinGenerator</name>
+        <database>
+            <name>org.jooq.meta.postgres.PostgresDatabase</name>
+            <schemata>
+                <schema>
+                    <inputSchema>${POSTGRES_SCHEMA}</inputSchema>
+                </schema>
+            </schemata>
+            <includes />
+        </database>
+        <generate>
+            <records>true</records>
+            <immutablePojos>true</immutablePojos>
+            <fluentSetters>true</fluentSetters>
+        </generate>
+        <target>
+            <packageName>soaringLizards.blps.jooq.generated</packageName>
+            <directory>build/generated/main/kotlin</directory>
+        </target>
+    </generator>
+</configuration>
