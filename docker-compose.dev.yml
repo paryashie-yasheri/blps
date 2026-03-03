@@ -8,7 +8,6 @@ services:
       - 5432:5432
     volumes:
       - pg-data:/var/lib/postgresql/data:Z
-      - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     environment:
       DB_CONNECTION: pgsql
       POSTGRES_HOST: ${POSTGRES_HOST}
