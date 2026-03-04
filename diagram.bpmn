@@ -1,431 +1,476 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
-             xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
-             xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
-             xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
-             id="Definitions_Skillbox_Gamification__Earning___Spending_Bonuses"
-             targetNamespace="http://example.com/bpmn">
-
-  <message id="Message_Skillbox_Gamification__Earning___Spending_Bonuses" name="Skillbox Gamification: Earning &amp; Spending Bonuses"/>
-  <message id="Message_Reward_received" name="Reward received"/>
-  <collaboration id="Collaboration_Skillbox_Gamification__Earning___Spending_Bonuses">
-    <participant id="Participant_Student" name="Student" processRef="Process_Student"/>
-    <participant id="Participant_Skillbox_Platform" name="Skillbox Platform" processRef="Process_Skillbox_Platform"/>
-    <messageFlow id="Flow_rel-Complete_achievement-Detect_achievement-forward_dashed-Achievement_data" name="Achievement data" sourceRef="Complete_achievement" targetRef="Detect_achievement"/>
-    <messageFlow id="Flow_rel-Send_notification-View_bonus_balance-forward_dashed-Notification" name="Notification" sourceRef="Send_notification" targetRef="View_bonus_balance"/>
-    <messageFlow id="Flow_rel-View_bonus_balance-Display_balance-forward_dashed-Request" name="Request" sourceRef="View_bonus_balance" targetRef="Display_balance"/>
-    <messageFlow id="Flow_rel-Display_balance-View_bonus_balance-forward_dashed-Balance_info" name="Balance info" sourceRef="Display_balance" targetRef="View_bonus_balance"/>
-    <messageFlow id="Flow_rel-Browse_rewards_catalog-Show_catalog-forward_dashed-Request" name="Request" sourceRef="Browse_rewards_catalog" targetRef="Show_catalog"/>
-    <messageFlow id="Flow_rel-Show_catalog-Browse_rewards_catalog-forward_dashed-Catalog" name="Catalog" sourceRef="Show_catalog" targetRef="Browse_rewards_catalog"/>
-    <messageFlow id="Flow_rel-Confirm_redemption-Process_redemption_request-forward_dashed-Redemption_request" name="Redemption request" sourceRef="Confirm_redemption" targetRef="Process_redemption_request"/>
-    <messageFlow id="Flow_rel-Insufficient_funds-Browse_rewards_catalog-forward_dashed-Try_again" name="Try again" sourceRef="Insufficient_funds" targetRef="Browse_rewards_catalog"/>
-    <messageFlow id="Flow_rel-Fulfill_reward-Reward_received-forward_dashed-Reward_delivered" name="Reward delivered" sourceRef="Fulfill_reward" targetRef="Reward_received"/>
-    <messageFlow id="Flow_rel-Complete_lesson-Track_lesson_completion-forward_dashed-Lesson_data" name="Lesson data" sourceRef="Complete_lesson" targetRef="Track_lesson_completion"/>
-  </collaboration>
-  <process id="Process_Student" isExecutable="true">
-    <laneSet id="LaneSet_Student">
-      <lane id="Lane_Student_Lane" name="Student Lane">
-        <flowNodeRef>Start_learning</flowNodeRef>
-        <flowNodeRef>Complete_achievement</flowNodeRef>
-        <flowNodeRef>View_bonus_balance</flowNodeRef>
-        <flowNodeRef>Browse_rewards_catalog</flowNodeRef>
-        <flowNodeRef>Select_reward</flowNodeRef>
-        <flowNodeRef>Confirm_redemption</flowNodeRef>
-        <flowNodeRef>Reward_received</flowNodeRef>
-        <flowNodeRef>Complete_lesson</flowNodeRef>
-      </lane>
-    </laneSet>
-    <startEvent id="Start_learning" name="Start learning"/>
-    <task id="Complete_achievement" name="Complete achievement"/>
-    <task id="View_bonus_balance" name="View bonus balance"/>
-    <task id="Browse_rewards_catalog" name="Browse rewards catalog"/>
-    <task id="Select_reward" name="Select reward"/>
-    <task id="Confirm_redemption" name="Confirm redemption"/>
-    <intermediateCatchEvent id="Reward_received" name="Reward received">
-    </intermediateCatchEvent>
-    <task id="Complete_lesson" name="Complete lesson"/>
-    <sequenceFlow id="Flow_rel-Start_learning-Complete_achievement-forward" sourceRef="Start_learning" targetRef="Complete_achievement"/>
-    <sequenceFlow id="Flow_rel-Complete_achievement-View_bonus_balance-forward" sourceRef="Complete_achievement" targetRef="View_bonus_balance"/>
-    <sequenceFlow id="Flow_rel-View_bonus_balance-Browse_rewards_catalog-forward" sourceRef="View_bonus_balance" targetRef="Browse_rewards_catalog"/>
-    <sequenceFlow id="Flow_rel-Browse_rewards_catalog-Select_reward-forward" sourceRef="Browse_rewards_catalog" targetRef="Select_reward"/>
-    <sequenceFlow id="Flow_rel-Select_reward-Confirm_redemption-forward" sourceRef="Select_reward" targetRef="Confirm_redemption"/>
-    <sequenceFlow id="Flow_rel-Start_learning-Complete_lesson-forward" sourceRef="Start_learning" targetRef="Complete_lesson"/>
-    <sequenceFlow id="Flow_rel-Complete_lesson-Complete_achievement-forward" sourceRef="Complete_lesson" targetRef="Complete_achievement"/>
-  </process>
-  <process id="Process_Skillbox_Platform" isExecutable="true">
-    <laneSet id="LaneSet_Skillbox_Platform">
-      <lane id="Lane_Rewards_System" name="Rewards System">
-        <flowNodeRef>Display_balance</flowNodeRef>
-        <flowNodeRef>Show_catalog</flowNodeRef>
-        <flowNodeRef>Process_redemption_request</flowNodeRef>
-        <flowNodeRef>Sufficient_balance_</flowNodeRef>
-        <flowNodeRef>Deduct_bonus_points</flowNodeRef>
-        <flowNodeRef>Fulfill_reward</flowNodeRef>
-        <flowNodeRef>Redemption_complete</flowNodeRef>
-        <flowNodeRef>Insufficient_funds</flowNodeRef>
-      </lane>
-      <lane id="Lane_Achievement_System" name="Achievement System">
-        <flowNodeRef>Detect_achievement</flowNodeRef>
-        <flowNodeRef>Validate_achievement</flowNodeRef>
-        <flowNodeRef>Achievement_valid_</flowNodeRef>
-        <flowNodeRef>Calculate_bonus_points</flowNodeRef>
-        <flowNodeRef>Update_student_balance</flowNodeRef>
-        <flowNodeRef>Send_notification</flowNodeRef>
-        <flowNodeRef>Achievement_rejected</flowNodeRef>
-      </lane>
-      <lane id="Lane_Course_System" name="Course System">
-        <flowNodeRef>Track_lesson_completion</flowNodeRef>
-        <flowNodeRef>Query_lesson_progress</flowNodeRef>
-        <flowNodeRef>All_lessons_done_</flowNodeRef>
-        <flowNodeRef>Course_completed</flowNodeRef>
-        <flowNodeRef>Award_course_points</flowNodeRef>
-        <flowNodeRef>Continue_learning</flowNodeRef>
-      </lane>
-    </laneSet>
-    <task id="Display_balance" name="Display balance"/>
-    <task id="Show_catalog" name="Show catalog"/>
-    <task id="Process_redemption_request" name="Process redemption request"/>
-    <exclusiveGateway id="Sufficient_balance_" name="Sufficient balance?"/>
-    <task id="Deduct_bonus_points" name="Deduct bonus points"/>
-    <task id="Fulfill_reward" name="Fulfill reward"/>
-    <endEvent id="Redemption_complete" name="Redemption complete"></endEvent>
-    <task id="Insufficient_funds" name="Insufficient funds"/>
-    <task id="Detect_achievement" name="Detect achievement"/>
-    <task id="Validate_achievement" name="Validate achievement"/>
-    <exclusiveGateway id="Achievement_valid_" name="Achievement valid?"/>
-    <task id="Calculate_bonus_points" name="Calculate bonus points"/>
-    <task id="Update_student_balance" name="Update student balance"/>
-    <task id="Send_notification" name="Send notification"/>
-    <intermediateCatchEvent id="Achievement_rejected" name="Achievement rejected">
-    </intermediateCatchEvent>
-    <task id="Track_lesson_completion" name="Track lesson completion"/>
-    <task id="Query_lesson_progress" name="Query lesson progress"/>
-    <exclusiveGateway id="All_lessons_done_" name="All lessons done?"/>
-    <endEvent id="Course_completed" name="Course completed"></endEvent>
-    <task id="Award_course_points" name="Award course points"/>
-    <intermediateCatchEvent id="Continue_learning" name="Continue learning">
-    </intermediateCatchEvent>
-    <sequenceFlow id="Flow_rel-Detect_achievement-Validate_achievement-forward" sourceRef="Detect_achievement" targetRef="Validate_achievement"/>
-    <sequenceFlow id="Flow_rel-Validate_achievement-Achievement_valid_-forward" sourceRef="Validate_achievement" targetRef="Achievement_valid_"/>
-    <sequenceFlow id="Flow_rel-Achievement_valid_-Calculate_bonus_points-forward-Yes" sourceRef="Achievement_valid_" targetRef="Calculate_bonus_points" name="Yes"/>
-    <sequenceFlow id="Flow_rel-Achievement_valid_-Achievement_rejected-forward-No" sourceRef="Achievement_valid_" targetRef="Achievement_rejected" name="No"/>
-    <sequenceFlow id="Flow_rel-Calculate_bonus_points-Update_student_balance-forward" sourceRef="Calculate_bonus_points" targetRef="Update_student_balance"/>
-    <sequenceFlow id="Flow_rel-Update_student_balance-Send_notification-forward" sourceRef="Update_student_balance" targetRef="Send_notification"/>
-    <sequenceFlow id="Flow_rel-Process_redemption_request-Sufficient_balance_-forward" sourceRef="Process_redemption_request" targetRef="Sufficient_balance_"/>
-    <sequenceFlow id="Flow_rel-Sufficient_balance_-Deduct_bonus_points-forward-Yes" sourceRef="Sufficient_balance_" targetRef="Deduct_bonus_points" name="Yes"/>
-    <sequenceFlow id="Flow_rel-Sufficient_balance_-Insufficient_funds-forward-No" sourceRef="Sufficient_balance_" targetRef="Insufficient_funds" name="No"/>
-    <sequenceFlow id="Flow_rel-Deduct_bonus_points-Fulfill_reward-forward" sourceRef="Deduct_bonus_points" targetRef="Fulfill_reward"/>
-    <sequenceFlow id="Flow_rel-Fulfill_reward-Redemption_complete-forward" sourceRef="Fulfill_reward" targetRef="Redemption_complete"/>
-    <sequenceFlow id="Flow_rel-Track_lesson_completion-Query_lesson_progress-forward" sourceRef="Track_lesson_completion" targetRef="Query_lesson_progress"/>
-    <sequenceFlow id="Flow_rel-Query_lesson_progress-All_lessons_done_-forward" sourceRef="Query_lesson_progress" targetRef="All_lessons_done_"/>
-    <sequenceFlow id="Flow_rel-All_lessons_done_-Course_completed-forward-Yes" sourceRef="All_lessons_done_" targetRef="Course_completed" name="Yes"/>
-    <sequenceFlow id="Flow_rel-All_lessons_done_-Continue_learning-forward-No" sourceRef="All_lessons_done_" targetRef="Continue_learning" name="No"/>
-    <sequenceFlow id="Flow_rel-Award_course_points-Update_student_balance-forward" sourceRef="Award_course_points" targetRef="Update_student_balance"/>
-    <sequenceFlow id="Flow_rel-Course_completed-Award_course_points-forward" sourceRef="Course_completed" targetRef="Award_course_points"/>
-  </process>  <!-- DI layout so the viewer can render -->
+<bpmn:definitions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="Definitions_14kzyfl" targetNamespace="http://bpmn.io/schema/bpmn" exporter="bpmn-js (https://demo.bpmn.io)" exporterVersion="18.12.0">
+  <bpmn:collaboration id="Collaboration_0dagtvp">
+    <bpmn:participant id="Participant_18f4um3" name="Студент" processRef="Process_1r3ex56" />
+    <bpmn:participant id="Participant_1816q9d" name="Skillbox" processRef="Process_1hxi6lx" />
+    <bpmn:messageFlow id="Flow_1e1ure1" sourceRef="Activity_10wdzfj" targetRef="Activity_076g4nn" />
+    <bpmn:messageFlow id="Flow_0yd50e1" sourceRef="Activity_0tzknpd" targetRef="Activity_1phzo3j" />
+    <bpmn:messageFlow id="Flow_0fj3let" sourceRef="Activity_19kcgjn" targetRef="Activity_0tluwxr" />
+    <bpmn:messageFlow id="Flow_1vylqjs" sourceRef="Activity_0fpdtdz" targetRef="Activity_10wdzfj" />
+    <bpmn:messageFlow id="Flow_1suw6ry" sourceRef="Activity_0tluwxr" targetRef="Activity_19kcgjn" />
+    <bpmn:messageFlow id="Flow_0257314" sourceRef="Activity_1ub1nbk" targetRef="Activity_0b56gmf" />
+    <bpmn:messageFlow id="Flow_1i0oetm" sourceRef="Activity_0bvjthd" targetRef="Activity_1inywcf" />
+    <bpmn:messageFlow id="Flow_1ip4yeb" sourceRef="Activity_1wis61g" targetRef="Activity_0mdjtt7" />
+    <bpmn:messageFlow id="Flow_1la6fj9" sourceRef="Activity_0mdjtt7" targetRef="Activity_1wis61g" />
+    <bpmn:messageFlow id="Flow_01cluzr" sourceRef="Activity_1pic5bw" targetRef="Activity_0eiw7xe" />
+  </bpmn:collaboration>
+  <bpmn:process id="Process_1r3ex56" isExecutable="false">
+    <bpmn:task id="Activity_1ub1nbk" name="Пройти урок">
+      <bpmn:incoming>Flow_0oflkz9</bpmn:incoming>
+      <bpmn:incoming>Flow_0u4b2zw</bpmn:incoming>
+      <bpmn:outgoing>Flow_0oflkz9</bpmn:outgoing>
+      <bpmn:outgoing>Flow_1bs0pje</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Activity_10wdzfj" name="Получить достижение">
+      <bpmn:incoming>Flow_1bs0pje</bpmn:incoming>
+      <bpmn:incoming>Flow_0rj0e0g</bpmn:incoming>
+      <bpmn:incoming>Flow_0qkj9pv</bpmn:incoming>
+      <bpmn:incoming>Flow_04s0oh8</bpmn:incoming>
+      <bpmn:outgoing>Flow_0bi5x7b</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Activity_0bvjthd" name="Посмотреть баланс">
+      <bpmn:incoming>Flow_0bi5x7b</bpmn:incoming>
+      <bpmn:outgoing>Flow_0dmcin0</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:startEvent id="StartEvent_0r3xqab" name="Регистрация/&#10;вход на платформу">
+      <bpmn:outgoing>Flow_0rj0e0g</bpmn:outgoing>
+      <bpmn:outgoing>Flow_1gn5h46</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:task id="Activity_19kcgjn" name="Просмотр списка курсов">
+      <bpmn:incoming>Flow_1gn5h46</bpmn:incoming>
+      <bpmn:outgoing>Flow_0jt38zr</bpmn:outgoing>
+      <bpmn:outgoing>Flow_04s0oh8</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Activity_0tzknpd" name="Запись на курс">
+      <bpmn:incoming>Flow_0jt38zr</bpmn:incoming>
+      <bpmn:outgoing>Flow_0u4b2zw</bpmn:outgoing>
+      <bpmn:outgoing>Flow_0qkj9pv</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:sequenceFlow id="Flow_0oflkz9" sourceRef="Activity_1ub1nbk" targetRef="Activity_1ub1nbk" />
+    <bpmn:sequenceFlow id="Flow_0u4b2zw" sourceRef="Activity_0tzknpd" targetRef="Activity_1ub1nbk" />
+    <bpmn:sequenceFlow id="Flow_1bs0pje" sourceRef="Activity_1ub1nbk" targetRef="Activity_10wdzfj" />
+    <bpmn:sequenceFlow id="Flow_0rj0e0g" sourceRef="StartEvent_0r3xqab" targetRef="Activity_10wdzfj" />
+    <bpmn:sequenceFlow id="Flow_0qkj9pv" sourceRef="Activity_0tzknpd" targetRef="Activity_10wdzfj" />
+    <bpmn:sequenceFlow id="Flow_04s0oh8" sourceRef="Activity_19kcgjn" targetRef="Activity_10wdzfj" />
+    <bpmn:sequenceFlow id="Flow_0bi5x7b" sourceRef="Activity_10wdzfj" targetRef="Activity_0bvjthd" />
+    <bpmn:sequenceFlow id="Flow_1q8vuvd" sourceRef="Activity_1pic5bw" targetRef="Event_1j79dyz" />
+    <bpmn:sequenceFlow id="Flow_1gn5h46" sourceRef="StartEvent_0r3xqab" targetRef="Activity_19kcgjn" />
+    <bpmn:sequenceFlow id="Flow_0jt38zr" sourceRef="Activity_19kcgjn" targetRef="Activity_0tzknpd" />
+    <bpmn:endEvent id="Event_1j79dyz" name="Получить награду">
+      <bpmn:incoming>Flow_1q8vuvd</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_0dmcin0" sourceRef="Activity_0bvjthd" targetRef="Activity_1wis61g" />
+    <bpmn:task id="Activity_1pic5bw" name="Выбрать награду">
+      <bpmn:incoming>Flow_1kogn8n</bpmn:incoming>
+      <bpmn:outgoing>Flow_1q8vuvd</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Activity_1wis61g" name="Начать выбирать награды">
+      <bpmn:incoming>Flow_0dmcin0</bpmn:incoming>
+      <bpmn:outgoing>Flow_1kogn8n</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:sequenceFlow id="Flow_1kogn8n" sourceRef="Activity_1wis61g" targetRef="Activity_1pic5bw" />
+  </bpmn:process>
+  <bpmn:process id="Process_1hxi6lx">
+    <bpmn:laneSet id="LaneSet_0lca1wn">
+      <bpmn:lane id="Lane_03xg4fx" name="Сервис наград">
+        <bpmn:flowNodeRef>Activity_0mdjtt7</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Activity_0eiw7xe</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_02trz6t" name="Сервис достижений">
+        <bpmn:flowNodeRef>Activity_076g4nn</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Activity_0fpdtdz</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Activity_1inywcf</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_0apbnzc" name="Сервис курсов">
+        <bpmn:flowNodeRef>Activity_0tluwxr</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Activity_1phzo3j</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_0jnodps" name="Сервис уроков">
+        <bpmn:flowNodeRef>Activity_0b56gmf</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_1fl8eeo</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Event_122zz7n</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Event_0gtmt9i</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:task id="Activity_076g4nn" name="Обнаружение достижения">
+      <bpmn:outgoing>Flow_1acg5l5</bpmn:outgoing>
+      <bpmn:outgoing>Flow_0g65wmz</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Activity_0fpdtdz" name="Обновление баланса">
+      <bpmn:incoming>Flow_1acg5l5</bpmn:incoming>
+      <bpmn:dataOutputAssociation id="DataOutputAssociation_0nfk9em">
+        <bpmn:targetRef>DataStoreReference_1czpmx3</bpmn:targetRef>
+      </bpmn:dataOutputAssociation>
+    </bpmn:task>
+    <bpmn:task id="Activity_0tluwxr" name="Получить список курсов">
+      <bpmn:dataOutputAssociation id="DataOutputAssociation_0wbszdn">
+        <bpmn:targetRef>DataStoreReference_1qtnhi7</bpmn:targetRef>
+      </bpmn:dataOutputAssociation>
+    </bpmn:task>
+    <bpmn:task id="Activity_1phzo3j" name="Затрекать запись на курс">
+      <bpmn:dataOutputAssociation id="DataOutputAssociation_0jtrkrr">
+        <bpmn:targetRef>DataStoreReference_1qtnhi7</bpmn:targetRef>
+      </bpmn:dataOutputAssociation>
+    </bpmn:task>
+    <bpmn:dataStoreReference id="DataStoreReference_1qtnhi7" name="Cources" />
+    <bpmn:dataStoreReference id="DataStoreReference_1czpmx3" name="Achivements" />
+    <bpmn:task id="Activity_0b56gmf" name="Затрекать прохождение урока">
+      <bpmn:outgoing>Flow_0fh08rg</bpmn:outgoing>
+      <bpmn:dataOutputAssociation id="DataOutputAssociation_09wzi89">
+        <bpmn:targetRef>DataStoreReference_1hwndi2</bpmn:targetRef>
+      </bpmn:dataOutputAssociation>
+    </bpmn:task>
+    <bpmn:dataStoreReference id="DataStoreReference_1hwndi2" name="lessons" />
+    <bpmn:exclusiveGateway id="Gateway_1fl8eeo" name="Все уроки пройдены?">
+      <bpmn:incoming>Flow_0fh08rg</bpmn:incoming>
+      <bpmn:outgoing>Flow_1vrxj0a</bpmn:outgoing>
+      <bpmn:outgoing>Flow_03gjnvj</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:endEvent id="Event_122zz7n" name="Курс завершен">
+      <bpmn:incoming>Flow_1vrxj0a</bpmn:incoming>
+      <bpmn:incoming>Flow_0g65wmz</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:intermediateThrowEvent id="Event_0gtmt9i" name="Продолжение обучения">
+      <bpmn:incoming>Flow_03gjnvj</bpmn:incoming>
+    </bpmn:intermediateThrowEvent>
+    <bpmn:task id="Activity_1inywcf" name="Просмотр баланса">
+      <bpmn:dataOutputAssociation id="DataOutputAssociation_1erzto3">
+        <bpmn:targetRef>DataStoreReference_1czpmx3</bpmn:targetRef>
+      </bpmn:dataOutputAssociation>
+    </bpmn:task>
+    <bpmn:dataStoreReference id="DataStoreReference_1s3sgdm" name="rewards" />
+    <bpmn:task id="Activity_0mdjtt7" name="Получить список доступных нагрд">
+      <bpmn:dataOutputAssociation id="DataOutputAssociation_0qg33to">
+        <bpmn:targetRef>DataStoreReference_1s3sgdm</bpmn:targetRef>
+      </bpmn:dataOutputAssociation>
+    </bpmn:task>
+    <bpmn:task id="Activity_0eiw7xe" name="Подтвердить покупку">
+      <bpmn:dataOutputAssociation id="DataOutputAssociation_1d3c8gh">
+        <bpmn:targetRef>DataStoreReference_1s3sgdm</bpmn:targetRef>
+      </bpmn:dataOutputAssociation>
+    </bpmn:task>
+    <bpmn:sequenceFlow id="Flow_1acg5l5" sourceRef="Activity_076g4nn" targetRef="Activity_0fpdtdz" />
+    <bpmn:sequenceFlow id="Flow_0g65wmz" sourceRef="Activity_076g4nn" targetRef="Event_122zz7n" />
+    <bpmn:sequenceFlow id="Flow_0fh08rg" sourceRef="Activity_0b56gmf" targetRef="Gateway_1fl8eeo" />
+    <bpmn:sequenceFlow id="Flow_1vrxj0a" name="Да" sourceRef="Gateway_1fl8eeo" targetRef="Event_122zz7n" />
+    <bpmn:sequenceFlow id="Flow_03gjnvj" sourceRef="Gateway_1fl8eeo" targetRef="Event_0gtmt9i" />
+  </bpmn:process>
   <bpmndi:BPMNDiagram id="BPMNDiagram_1">
-    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Collaboration_Skillbox_Gamification__Earning___Spending_Bonuses">
-      <bpmndi:BPMNShape id="Participant_Student_di" bpmnElement="Participant_Student" isHorizontal="true">
-        <dc:Bounds x="130" y="60" width="1716" height="169"/>
-        <bpmndi:BPMNLabel/>
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Collaboration_0dagtvp">
+      <bpmndi:BPMNShape id="Participant_18f4um3_di" bpmnElement="Participant_18f4um3" isHorizontal="true">
+        <dc:Bounds x="160" y="85" width="1760" height="335" />
+        <bpmndi:BPMNLabel />
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="LaneShape_Student_Lane" bpmnElement="Lane_Student_Lane">
-        <dc:Bounds x="160" y="60" width="1686" height="169"/>
+      <bpmndi:BPMNShape id="Activity_1ub1nbk_di" bpmnElement="Activity_1ub1nbk">
+        <dc:Bounds x="720" y="170" width="100" height="80" />
+        <bpmndi:BPMNLabel />
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Participant_Skillbox_Platform_di" bpmnElement="Participant_Skillbox_Platform" isHorizontal="true">
-        <dc:Bounds x="130" y="264" width="1716" height="838"/>
-        <bpmndi:BPMNLabel/>
+      <bpmndi:BPMNShape id="Activity_10wdzfj_di" bpmnElement="Activity_10wdzfj">
+        <dc:Bounds x="930" y="170" width="100" height="80" />
+        <bpmndi:BPMNLabel />
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="LaneShape_Rewards_System" bpmnElement="Lane_Rewards_System">
-        <dc:Bounds x="160" y="264" width="1686" height="279.3333333333333"/>
+      <bpmndi:BPMNShape id="Activity_0bvjthd_di" bpmnElement="Activity_0bvjthd">
+        <dc:Bounds x="1140" y="170" width="100" height="80" />
+        <bpmndi:BPMNLabel />
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="LaneShape_Achievement_System" bpmnElement="Lane_Achievement_System">
-        <dc:Bounds x="160" y="543.3333333333333" width="1686" height="279.3333333333333"/>
+      <bpmndi:BPMNShape id="_BPMNShape_StartEvent_2" bpmnElement="StartEvent_0r3xqab">
+        <dc:Bounds x="242" y="192" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="227" y="235" width="68" height="40" />
+        </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="LaneShape_Course_System" bpmnElement="Lane_Course_System">
-        <dc:Bounds x="160" y="822.6666666666666" width="1686" height="279.3333333333333"/>
+      <bpmndi:BPMNShape id="Activity_19kcgjn_di" bpmnElement="Activity_19kcgjn">
+        <dc:Bounds x="330" y="170" width="100" height="80" />
+        <bpmndi:BPMNLabel />
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Shape_Start_learning" bpmnElement="Start_learning">
-        <dc:Bounds x="235" y="116" width="50" height="50"/>
+      <bpmndi:BPMNShape id="Activity_0tzknpd_di" bpmnElement="Activity_0tzknpd">
+        <dc:Bounds x="490" y="170" width="100" height="80" />
+        <bpmndi:BPMNLabel />
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Shape_Complete_achievement" bpmnElement="Complete_achievement">
-        <dc:Bounds x="555" y="105" width="138" height="72"/>
+      <bpmndi:BPMNShape id="Event_1j79dyz_di" bpmnElement="Event_1j79dyz">
+        <dc:Bounds x="1682" y="192" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1674" y="235" width="52" height="27" />
+        </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Shape_View_bonus_balance" bpmnElement="View_bonus_balance">
-        <dc:Bounds x="760" y="105" width="138" height="72"/>
+      <bpmndi:BPMNShape id="Activity_1pic5bw_di" bpmnElement="Activity_1pic5bw">
+        <dc:Bounds x="1510" y="170" width="100" height="80" />
+        <bpmndi:BPMNLabel />
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Shape_Browse_rewards_catalog" bpmnElement="Browse_rewards_catalog">
-        <dc:Bounds x="965" y="105" width="138" height="72"/>
+      <bpmndi:BPMNShape id="Activity_1wis61g_di" bpmnElement="Activity_1wis61g">
+        <dc:Bounds x="1330" y="170" width="100" height="80" />
+        <bpmndi:BPMNLabel />
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Shape_Select_reward" bpmnElement="Select_reward">
-        <dc:Bounds x="1170" y="105" width="138" height="72"/>
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Shape_Confirm_redemption" bpmnElement="Confirm_redemption">
-        <dc:Bounds x="1374" y="105" width="142" height="72"/>
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Shape_Reward_received" bpmnElement="Reward_received">
-        <dc:Bounds x="1593" y="116" width="50" height="50"/>
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Shape_Complete_lesson" bpmnElement="Complete_lesson">
-        <dc:Bounds x="371" y="105" width="138" height="72"/>
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Shape_Display_balance" bpmnElement="Display_balance">
-        <dc:Bounds x="420" y="309" width="138" height="72"/>
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Shape_Show_catalog" bpmnElement="Show_catalog">
-        <dc:Bounds x="720" y="309" width="138" height="72"/>
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Shape_Process_redemption_request" bpmnElement="Process_redemption_request">
-        <dc:Bounds x="1186" y="309" width="139" height="72"/>
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Shape_Sufficient_balance_" bpmnElement="Sufficient_balance_">
-        <dc:Bounds x="1231" y="426" width="50" height="50"/>
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Shape_Deduct_bonus_points" bpmnElement="Deduct_bonus_points">
-        <dc:Bounds x="1367" y="414" width="138" height="72"/>
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Shape_Fulfill_reward" bpmnElement="Fulfill_reward">
-        <dc:Bounds x="1481" y="309" width="138" height="72"/>
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Shape_Redemption_complete" bpmnElement="Redemption_complete">
-        <dc:Bounds x="1685" y="372" width="50" height="50"/>
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Shape_Insufficient_funds" bpmnElement="Insufficient_funds">
-        <dc:Bounds x="952" y="309" width="138" height="72"/>
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Shape_Detect_achievement" bpmnElement="Detect_achievement">
-        <dc:Bounds x="292" y="612" width="143" height="72"/>
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Shape_Validate_achievement" bpmnElement="Validate_achievement">
-        <dc:Bounds x="323" y="723" width="138" height="72"/>
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Shape_Achievement_valid_" bpmnElement="Achievement_valid_">
-        <dc:Bounds x="582" y="734" width="50" height="50"/>
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Shape_Calculate_bonus_points" bpmnElement="Calculate_bonus_points">
-        <dc:Bounds x="1143" y="599" width="138" height="72"/>
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Shape_Update_student_balance" bpmnElement="Update_student_balance">
-        <dc:Bounds x="916" y="599" width="138" height="72"/>
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Shape_Send_notification" bpmnElement="Send_notification">
-        <dc:Bounds x="707" y="599" width="138" height="72"/>
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Shape_Achievement_rejected" bpmnElement="Achievement_rejected">
-        <dc:Bounds x="582" y="584" width="50" height="50"/>
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Shape_Track_lesson_completion" bpmnElement="Track_lesson_completion">
-        <dc:Bounds x="310" y="892" width="138" height="72"/>
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Shape_Query_lesson_progress" bpmnElement="Query_lesson_progress">
-        <dc:Bounds x="601" y="892" width="138" height="72"/>
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Shape_All_lessons_done_" bpmnElement="All_lessons_done_">
-        <dc:Bounds x="828" y="905" width="50" height="50"/>
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Shape_Course_completed" bpmnElement="Course_completed">
-        <dc:Bounds x="963" y="903" width="50" height="50"/>
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Shape_Award_course_points" bpmnElement="Award_course_points">
-        <dc:Bounds x="1072" y="894" width="138" height="72"/>
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Shape_Continue_learning" bpmnElement="Continue_learning">
-        <dc:Bounds x="999" y="989" width="50" height="50"/>
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNEdge id="Edge_Flow_rel-Start_learning-Complete_achievement-forward" bpmnElement="Flow_rel-Start_learning-Complete_achievement-forward">
-        <di:waypoint x="287" y="141"/>
-        <di:waypoint x="315" y="141"/>
-        <di:waypoint x="315" y="81"/>
-        <di:waypoint x="535" y="81"/>
-        <di:waypoint x="535" y="141"/>
-        <di:waypoint x="555" y="141"/>
+      <bpmndi:BPMNEdge id="Flow_0oflkz9_di" bpmnElement="Flow_0oflkz9">
+        <di:waypoint x="770" y="250" />
+        <di:waypoint x="770" y="270" />
+        <di:waypoint x="700" y="270" />
+        <di:waypoint x="700" y="210" />
+        <di:waypoint x="720" y="210" />
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Edge_Flow_rel-Complete_achievement-Detect_achievement-forward_dashed-Achievement_data" bpmnElement="Flow_rel-Complete_achievement-Detect_achievement-forward_dashed-Achievement_data">
-        <di:waypoint x="555" y="165"/>
-        <di:waypoint x="525" y="165"/>
-        <di:waypoint x="525" y="205"/>
-        <di:waypoint x="455" y="205"/>
-        <di:waypoint x="455" y="285"/>
-        <di:waypoint x="364" y="285"/>
-        <di:waypoint x="364" y="612"/>
+      <bpmndi:BPMNEdge id="Flow_0u4b2zw_di" bpmnElement="Flow_0u4b2zw">
+        <di:waypoint x="590" y="210" />
+        <di:waypoint x="720" y="210" />
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Edge_Flow_rel-Detect_achievement-Validate_achievement-forward" bpmnElement="Flow_rel-Detect_achievement-Validate_achievement-forward">
-        <di:waypoint x="358" y="684"/>
-        <di:waypoint x="358" y="704"/>
-        <di:waypoint x="385" y="704"/>
-        <di:waypoint x="385" y="723"/>
+      <bpmndi:BPMNEdge id="Flow_1bs0pje_di" bpmnElement="Flow_1bs0pje">
+        <di:waypoint x="820" y="210" />
+        <di:waypoint x="930" y="210" />
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Edge_Flow_rel-Validate_achievement-Achievement_valid_-forward" bpmnElement="Flow_rel-Validate_achievement-Achievement_valid_-forward">
-        <di:waypoint x="461" y="759"/>
-        <di:waypoint x="582" y="759"/>
+      <bpmndi:BPMNEdge id="Flow_0rj0e0g_di" bpmnElement="Flow_0rj0e0g">
+        <di:waypoint x="276" y="202" />
+        <di:waypoint x="276" y="130" />
+        <di:waypoint x="870" y="130" />
+        <di:waypoint x="870" y="210" />
+        <di:waypoint x="930" y="210" />
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Edge_Flow_rel-Achievement_valid_-Calculate_bonus_points-forward-Yes" bpmnElement="Flow_rel-Achievement_valid_-Calculate_bonus_points-forward-Yes">
-        <di:waypoint x="630" y="759"/>
-        <di:waypoint x="1212" y="759"/>
-        <di:waypoint x="1212" y="671"/>
+      <bpmndi:BPMNEdge id="Flow_0qkj9pv_di" bpmnElement="Flow_0qkj9pv">
+        <di:waypoint x="540" y="170" />
+        <di:waypoint x="540" y="130" />
+        <di:waypoint x="870" y="130" />
+        <di:waypoint x="870" y="210" />
+        <di:waypoint x="930" y="210" />
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Edge_Flow_rel-Achievement_valid_-Achievement_rejected-forward-No" bpmnElement="Flow_rel-Achievement_valid_-Achievement_rejected-forward-No">
-        <di:waypoint x="607" y="737"/>
-        <di:waypoint x="607" y="657"/>
+      <bpmndi:BPMNEdge id="Flow_04s0oh8_di" bpmnElement="Flow_04s0oh8">
+        <di:waypoint x="380" y="170" />
+        <di:waypoint x="380" y="130" />
+        <di:waypoint x="870" y="130" />
+        <di:waypoint x="870" y="210" />
+        <di:waypoint x="930" y="210" />
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Edge_Flow_rel-Calculate_bonus_points-Update_student_balance-forward" bpmnElement="Flow_rel-Calculate_bonus_points-Update_student_balance-forward">
-        <di:waypoint x="1143" y="635"/>
-        <di:waypoint x="1054" y="635"/>
+      <bpmndi:BPMNEdge id="Flow_0bi5x7b_di" bpmnElement="Flow_0bi5x7b">
+        <di:waypoint x="1030" y="210" />
+        <di:waypoint x="1140" y="210" />
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Edge_Flow_rel-Update_student_balance-Send_notification-forward" bpmnElement="Flow_rel-Update_student_balance-Send_notification-forward">
-        <di:waypoint x="916" y="635"/>
-        <di:waypoint x="845" y="635"/>
+      <bpmndi:BPMNEdge id="Flow_1q8vuvd_di" bpmnElement="Flow_1q8vuvd">
+        <di:waypoint x="1610" y="210" />
+        <di:waypoint x="1682" y="210" />
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Edge_Flow_rel-Send_notification-View_bonus_balance-forward_dashed-Notification" bpmnElement="Flow_rel-Send_notification-View_bonus_balance-forward_dashed-Notification">
-        <di:waypoint x="776" y="599"/>
-        <di:waypoint x="776" y="409"/>
-        <di:waypoint x="706" y="409"/>
-        <di:waypoint x="706" y="249"/>
-        <di:waypoint x="776" y="249"/>
-        <di:waypoint x="776" y="209"/>
-        <di:waypoint x="833" y="209"/>
-        <di:waypoint x="833" y="177"/>
+      <bpmndi:BPMNEdge id="Flow_1gn5h46_di" bpmnElement="Flow_1gn5h46">
+        <di:waypoint x="278" y="210" />
+        <di:waypoint x="330" y="210" />
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Edge_Flow_rel-Complete_achievement-View_bonus_balance-forward" bpmnElement="Flow_rel-Complete_achievement-View_bonus_balance-forward">
-        <di:waypoint x="693" y="141"/>
-        <di:waypoint x="733" y="141"/>
-        <di:waypoint x="733" y="134"/>
-        <di:waypoint x="760" y="134"/>
+      <bpmndi:BPMNEdge id="Flow_0jt38zr_di" bpmnElement="Flow_0jt38zr">
+        <di:waypoint x="430" y="210" />
+        <di:waypoint x="490" y="210" />
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Edge_Flow_rel-View_bonus_balance-Display_balance-forward_dashed-Request" bpmnElement="Flow_rel-View_bonus_balance-Display_balance-forward_dashed-Request">
-        <di:waypoint x="789" y="177"/>
-        <di:waypoint x="789" y="197"/>
-        <di:waypoint x="749" y="197"/>
-        <di:waypoint x="749" y="227"/>
-        <di:waypoint x="689" y="227"/>
-        <di:waypoint x="689" y="287"/>
-        <di:waypoint x="589" y="287"/>
-        <di:waypoint x="589" y="345"/>
-        <di:waypoint x="558" y="345"/>
+      <bpmndi:BPMNEdge id="Flow_0dmcin0_di" bpmnElement="Flow_0dmcin0">
+        <di:waypoint x="1240" y="210" />
+        <di:waypoint x="1330" y="210" />
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Edge_Flow_rel-Display_balance-View_bonus_balance-forward_dashed-Balance_info" bpmnElement="Flow_rel-Display_balance-View_bonus_balance-forward_dashed-Balance_info">
-        <di:waypoint x="489" y="309"/>
-        <di:waypoint x="489" y="219"/>
-        <di:waypoint x="739" y="219"/>
-        <di:waypoint x="739" y="157"/>
-        <di:waypoint x="760" y="157"/>
+      <bpmndi:BPMNEdge id="Flow_1kogn8n_di" bpmnElement="Flow_1kogn8n">
+        <di:waypoint x="1430" y="210" />
+        <di:waypoint x="1510" y="210" />
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Edge_Flow_rel-View_bonus_balance-Browse_rewards_catalog-forward" bpmnElement="Flow_rel-View_bonus_balance-Browse_rewards_catalog-forward">
-        <di:waypoint x="898" y="141"/>
-        <di:waypoint x="928" y="141"/>
-        <di:waypoint x="928" y="134"/>
-        <di:waypoint x="965" y="134"/>
+      <bpmndi:BPMNShape id="Participant_1816q9d_di" bpmnElement="Participant_1816q9d" isHorizontal="true">
+        <dc:Bounds x="160" y="530" width="1440" height="1170" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_0jnodps_di" bpmnElement="Lane_0jnodps" isHorizontal="true">
+        <dc:Bounds x="190" y="1410" width="1410" height="290" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_0apbnzc_di" bpmnElement="Lane_0apbnzc" isHorizontal="true">
+        <dc:Bounds x="190" y="1110" width="1410" height="300" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_02trz6t_di" bpmnElement="Lane_02trz6t" isHorizontal="true">
+        <dc:Bounds x="190" y="815" width="1410" height="295" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_03xg4fx_di" bpmnElement="Lane_03xg4fx" isHorizontal="true">
+        <dc:Bounds x="190" y="530" width="1410" height="285" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_076g4nn_di" bpmnElement="Activity_076g4nn">
+        <dc:Bounds x="550" y="840" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_0fpdtdz_di" bpmnElement="Activity_0fpdtdz">
+        <dc:Bounds x="700" y="840" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_0tluwxr_di" bpmnElement="Activity_0tluwxr">
+        <dc:Bounds x="250" y="1180" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_1phzo3j_di" bpmnElement="Activity_1phzo3j">
+        <dc:Bounds x="390" y="1180" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="DataStoreReference_1qtnhi7_di" bpmnElement="DataStoreReference_1qtnhi7">
+        <dc:Bounds x="415" y="1315" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="420" y="1372" width="41" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="DataStoreReference_1czpmx3_di" bpmnElement="DataStoreReference_1czpmx3">
+        <dc:Bounds x="725" y="965" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="719" y="1022" width="63" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_0b56gmf_di" bpmnElement="Activity_0b56gmf">
+        <dc:Bounds x="550" y="1450" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="DataStoreReference_1hwndi2_di" bpmnElement="DataStoreReference_1hwndi2">
+        <dc:Bounds x="575" y="1605" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="581" y="1665" width="38" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_1fl8eeo_di" bpmnElement="Gateway_1fl8eeo" isMarkerVisible="true">
+        <dc:Bounds x="705" y="1465" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="702" y="1436" width="57" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_122zz7n_di" bpmnElement="Event_122zz7n">
+        <dc:Bounds x="812" y="1472" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="792" y="1515" width="77" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_0gtmt9i_di" bpmnElement="Event_0gtmt9i">
+        <dc:Bounds x="812" y="1582" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="793" y="1625" width="74" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_1inywcf_di" bpmnElement="Activity_1inywcf">
+        <dc:Bounds x="840" y="840" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="DataStoreReference_1s3sgdm_di" bpmnElement="DataStoreReference_1s3sgdm">
+        <dc:Bounds x="1115" y="685" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1120" y="742" width="40" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_0mdjtt7_di" bpmnElement="Activity_0mdjtt7">
+        <dc:Bounds x="1090" y="550" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_0eiw7xe_di" bpmnElement="Activity_0eiw7xe">
+        <dc:Bounds x="1340" y="550" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_1acg5l5_di" bpmnElement="Flow_1acg5l5">
+        <di:waypoint x="650" y="880" />
+        <di:waypoint x="700" y="880" />
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Edge_Flow_rel-Browse_rewards_catalog-Show_catalog-forward_dashed-Request" bpmnElement="Flow_rel-Browse_rewards_catalog-Show_catalog-forward_dashed-Request">
-        <di:waypoint x="1034" y="177"/>
-        <di:waypoint x="1034" y="287"/>
-        <di:waypoint x="884" y="287"/>
-        <di:waypoint x="884" y="345"/>
-        <di:waypoint x="858" y="345"/>
+      <bpmndi:BPMNEdge id="Flow_0g65wmz_di" bpmnElement="Flow_0g65wmz">
+        <di:waypoint x="600" y="920" />
+        <di:waypoint x="600" y="1230" />
+        <di:waypoint x="830" y="1230" />
+        <di:waypoint x="830" y="1472" />
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Edge_Flow_rel-Show_catalog-Browse_rewards_catalog-forward_dashed-Catalog" bpmnElement="Flow_rel-Show_catalog-Browse_rewards_catalog-forward_dashed-Catalog">
-        <di:waypoint x="789" y="309"/>
-        <di:waypoint x="789" y="219"/>
-        <di:waypoint x="939" y="219"/>
-        <di:waypoint x="939" y="141"/>
-        <di:waypoint x="965" y="141"/>
+      <bpmndi:BPMNEdge id="Flow_0fh08rg_di" bpmnElement="Flow_0fh08rg">
+        <di:waypoint x="650" y="1490" />
+        <di:waypoint x="705" y="1490" />
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Edge_Flow_rel-Browse_rewards_catalog-Select_reward-forward" bpmnElement="Flow_rel-Browse_rewards_catalog-Select_reward-forward">
-        <di:waypoint x="1103" y="141"/>
-        <di:waypoint x="1170" y="141"/>
+      <bpmndi:BPMNEdge id="Flow_1vrxj0a_di" bpmnElement="Flow_1vrxj0a">
+        <di:waypoint x="755" y="1490" />
+        <di:waypoint x="812" y="1490" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="777" y="1472" width="14" height="14" />
+        </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Edge_Flow_rel-Select_reward-Confirm_redemption-forward" bpmnElement="Flow_rel-Select_reward-Confirm_redemption-forward">
-        <di:waypoint x="1308" y="141"/>
-        <di:waypoint x="1374" y="141"/>
+      <bpmndi:BPMNEdge id="Flow_03gjnvj_di" bpmnElement="Flow_03gjnvj">
+        <di:waypoint x="730" y="1515" />
+        <di:waypoint x="730" y="1600" />
+        <di:waypoint x="812" y="1600" />
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Edge_Flow_rel-Confirm_redemption-Process_redemption_request-forward_dashed-Redemption_request" bpmnElement="Flow_rel-Confirm_redemption-Process_redemption_request-forward_dashed-Redemption_request">
-        <di:waypoint x="1445" y="177"/>
-        <di:waypoint x="1445" y="277"/>
-        <di:waypoint x="1255" y="277"/>
-        <di:waypoint x="1255" y="309"/>
+      <bpmndi:BPMNEdge id="DataOutputAssociation_0nfk9em_di" bpmnElement="DataOutputAssociation_0nfk9em">
+        <di:waypoint x="750" y="920" />
+        <di:waypoint x="750" y="965" />
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Edge_Flow_rel-Process_redemption_request-Sufficient_balance_-forward" bpmnElement="Flow_rel-Process_redemption_request-Sufficient_balance_-forward">
-        <di:waypoint x="1256" y="381"/>
-        <di:waypoint x="1256" y="426"/>
+      <bpmndi:BPMNEdge id="DataOutputAssociation_0wbszdn_di" bpmnElement="DataOutputAssociation_0wbszdn">
+        <di:waypoint x="344" y="1259" />
+        <di:waypoint x="415" y="1322" />
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Edge_Flow_rel-Sufficient_balance_-Deduct_bonus_points-forward-Yes" bpmnElement="Flow_rel-Sufficient_balance_-Deduct_bonus_points-forward-Yes">
-        <di:waypoint x="1279" y="451"/>
-        <di:waypoint x="1367" y="451"/>
+      <bpmndi:BPMNEdge id="DataOutputAssociation_0jtrkrr_di" bpmnElement="DataOutputAssociation_0jtrkrr">
+        <di:waypoint x="440" y="1260" />
+        <di:waypoint x="440" y="1310" />
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Edge_Flow_rel-Sufficient_balance_-Insufficient_funds-forward-No" bpmnElement="Flow_rel-Sufficient_balance_-Insufficient_funds-forward-No">
-        <di:waypoint x="1234" y="451"/>
-        <di:waypoint x="1021" y="451"/>
-        <di:waypoint x="1021" y="381"/>
+      <bpmndi:BPMNEdge id="DataOutputAssociation_09wzi89_di" bpmnElement="DataOutputAssociation_09wzi89">
+        <di:waypoint x="600" y="1530" />
+        <di:waypoint x="600" y="1605" />
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Edge_Flow_rel-Insufficient_funds-Browse_rewards_catalog-forward_dashed-Try_again" bpmnElement="Flow_rel-Insufficient_funds-Browse_rewards_catalog-forward_dashed-Try_again">
-        <di:waypoint x="1021" y="309"/>
-        <di:waypoint x="1021" y="299"/>
-        <di:waypoint x="1041" y="299"/>
-        <di:waypoint x="1041" y="219"/>
-        <di:waypoint x="1083" y="219"/>
-        <di:waypoint x="1083" y="177"/>
+      <bpmndi:BPMNEdge id="DataOutputAssociation_1erzto3_di" bpmnElement="DataOutputAssociation_1erzto3">
+        <di:waypoint x="843" y="917" />
+        <di:waypoint x="775" y="969" />
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Edge_Flow_rel-Deduct_bonus_points-Fulfill_reward-forward" bpmnElement="Flow_rel-Deduct_bonus_points-Fulfill_reward-forward">
-        <di:waypoint x="1431" y="414"/>
-        <di:waypoint x="1431" y="345"/>
-        <di:waypoint x="1481" y="345"/>
+      <bpmndi:BPMNEdge id="DataOutputAssociation_0qg33to_di" bpmnElement="DataOutputAssociation_0qg33to">
+        <di:waypoint x="1142" y="630" />
+        <di:waypoint x="1144" y="685" />
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Edge_Flow_rel-Fulfill_reward-Redemption_complete-forward" bpmnElement="Flow_rel-Fulfill_reward-Redemption_complete-forward">
-        <di:waypoint x="1619" y="345"/>
-        <di:waypoint x="1659" y="345"/>
-        <di:waypoint x="1659" y="397"/>
-        <di:waypoint x="1685" y="397"/>
+      <bpmndi:BPMNEdge id="DataOutputAssociation_1d3c8gh_di" bpmnElement="DataOutputAssociation_1d3c8gh">
+        <di:waypoint x="1340" y="613" />
+        <di:waypoint x="1165" y="696" />
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Edge_Flow_rel-Fulfill_reward-Reward_received-forward_dashed-Reward_delivered" bpmnElement="Flow_rel-Fulfill_reward-Reward_received-forward_dashed-Reward_delivered">
-        <di:waypoint x="1551" y="309"/>
-        <di:waypoint x="1551" y="219"/>
-        <di:waypoint x="1613" y="219"/>
-        <di:waypoint x="1613" y="189"/>
+      <bpmndi:BPMNEdge id="Flow_1e1ure1_di" bpmnElement="Flow_1e1ure1">
+        <di:waypoint x="930" y="239" />
+        <di:waypoint x="860" y="239" />
+        <di:waypoint x="860" y="360" />
+        <di:waypoint x="600" y="360" />
+        <di:waypoint x="600" y="840" />
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Edge_Flow_rel-Start_learning-Complete_lesson-forward" bpmnElement="Flow_rel-Start_learning-Complete_lesson-forward">
-        <di:waypoint x="287" y="141"/>
-        <di:waypoint x="371" y="141"/>
+      <bpmndi:BPMNEdge id="Flow_0yd50e1_di" bpmnElement="Flow_0yd50e1">
+        <di:waypoint x="494" y="248" />
+        <di:waypoint x="440" y="248" />
+        <di:waypoint x="440" y="1180" />
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Edge_Flow_rel-Complete_lesson-Track_lesson_completion-forward_dashed-Lesson_data" bpmnElement="Flow_rel-Complete_lesson-Track_lesson_completion-forward_dashed-Lesson_data">
-        <di:waypoint x="440" y="177"/>
-        <di:waypoint x="440" y="277"/>
-        <di:waypoint x="270" y="277"/>
-        <di:waypoint x="270" y="928"/>
-        <di:waypoint x="310" y="928"/>
+      <bpmndi:BPMNEdge id="Flow_0fj3let_di" bpmnElement="Flow_0fj3let">
+        <di:waypoint x="380" y="250" />
+        <di:waypoint x="380" y="645" />
+        <di:waypoint x="300" y="645" />
+        <di:waypoint x="300" y="1180" />
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Edge_Flow_rel-Track_lesson_completion-Query_lesson_progress-forward" bpmnElement="Flow_rel-Track_lesson_completion-Query_lesson_progress-forward">
-        <di:waypoint x="448" y="928"/>
-        <di:waypoint x="601" y="928"/>
+      <bpmndi:BPMNEdge id="Flow_1vylqjs_di" bpmnElement="Flow_1vylqjs">
+        <di:waypoint x="750" y="840" />
+        <di:waypoint x="750" y="475" />
+        <di:waypoint x="980" y="475" />
+        <di:waypoint x="980" y="250" />
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Edge_Flow_rel-Query_lesson_progress-All_lessons_done_-forward" bpmnElement="Flow_rel-Query_lesson_progress-All_lessons_done_-forward">
-        <di:waypoint x="739" y="928"/>
-        <di:waypoint x="828" y="928"/>
+      <bpmndi:BPMNEdge id="Flow_1suw6ry_di" bpmnElement="Flow_1suw6ry">
+        <di:waypoint x="323" y="1178" />
+        <di:waypoint x="323" y="670" />
+        <di:waypoint x="400" y="670" />
+        <di:waypoint x="400" y="250" />
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Edge_Flow_rel-All_lessons_done_-Course_completed-forward-Yes" bpmnElement="Flow_rel-All_lessons_done_-Course_completed-forward-Yes">
-        <di:waypoint x="876" y="930"/>
-        <di:waypoint x="963" y="930"/>
+      <bpmndi:BPMNEdge id="Flow_0257314_di" bpmnElement="Flow_0257314">
+        <di:waypoint x="770" y="250" />
+        <di:waypoint x="770" y="430" />
+        <di:waypoint x="520" y="430" />
+        <di:waypoint x="520" y="1490" />
+        <di:waypoint x="550" y="1490" />
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Edge_Flow_rel-All_lessons_done_-Continue_learning-forward-No" bpmnElement="Flow_rel-All_lessons_done_-Continue_learning-forward-No">
-        <di:waypoint x="853" y="953"/>
-        <di:waypoint x="853" y="1007"/>
-        <di:waypoint x="999" y="1007"/>
+      <bpmndi:BPMNEdge id="Flow_1i0oetm_di" bpmnElement="Flow_1i0oetm">
+        <di:waypoint x="1190" y="250" />
+        <di:waypoint x="1190" y="290" />
+        <di:waypoint x="1040" y="290" />
+        <di:waypoint x="1040" y="580" />
+        <di:waypoint x="890" y="580" />
+        <di:waypoint x="890" y="840" />
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Edge_Flow_rel-Award_course_points-Update_student_balance-forward" bpmnElement="Flow_rel-Award_course_points-Update_student_balance-forward">
-        <di:waypoint x="1141" y="894"/>
-        <di:waypoint x="1141" y="694"/>
-        <di:waypoint x="985" y="694"/>
-        <di:waypoint x="985" y="671"/>
+      <bpmndi:BPMNEdge id="Flow_1ip4yeb_di" bpmnElement="Flow_1ip4yeb">
+        <di:waypoint x="1380" y="250" />
+        <di:waypoint x="1380" y="330" />
+        <di:waypoint x="1130" y="330" />
+        <di:waypoint x="1130" y="550" />
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Edge_Flow_rel-Complete_lesson-Complete_achievement-forward" bpmnElement="Flow_rel-Complete_lesson-Complete_achievement-forward">
-        <di:waypoint x="509" y="141"/>
-        <di:waypoint x="555" y="141"/>
+      <bpmndi:BPMNEdge id="Flow_1la6fj9_di" bpmnElement="Flow_1la6fj9">
+        <di:waypoint x="1140" y="550" />
+        <di:waypoint x="1140" y="350" />
+        <di:waypoint x="1410" y="350" />
+        <di:waypoint x="1410" y="250" />
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Edge_Flow_rel-Course_completed-Award_course_points-forward" bpmnElement="Flow_rel-Course_completed-Award_course_points-forward">
-        <di:waypoint x="1015" y="928"/>
-        <di:waypoint x="1043" y="928"/>
-        <di:waypoint x="1043" y="930"/>
-        <di:waypoint x="1072" y="930"/>
+      <bpmndi:BPMNEdge id="Flow_01cluzr_di" bpmnElement="Flow_01cluzr">
+        <di:waypoint x="1560" y="250" />
+        <di:waypoint x="1560" y="590" />
+        <di:waypoint x="1440" y="590" />
       </bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>
-</definitions>
+</bpmn:definitions>
