@@ -17,5 +17,5 @@
 5.  Разработать набор curl-скриптов, либо набор запросов для REST клиента Insomnia для тестирования публичных интерфейсов разработанного программного модуля. Запросы Insomnia оформить в виде файла экспорта.
 6.  Развернуть разработанное приложение на сервере `helios`.
 
-![alt text](https://github.com/paryashie-yasheri/blps/blob/main/bpmn.png?raw=true)
+![alt text](https://github.com/paryashie-yasheri/blps/blob/main/diagram.svg?raw=true)
 ![alt text](https://github.com/paryashie-yasheri/blps/blob/main/database.png?raw=true)
