@@ -19,14 +19,16 @@ services:
     env_file:
       - .env
 
-  spring:
-    image: blps/backend:jib-dev
-    depends_on:
-      - pg
-    networks:
-      - app-network
-    env_file:
-      - .env
+#  spring:
+#    image: blps/backend:jib-dev
+#    ports:
+#      - "8080:8080"
+#    depends_on:
+#      - pg
+#    networks:
+#      - app-network
+#    env_file:
+#      - .env
 
 volumes:
   pg-data:
