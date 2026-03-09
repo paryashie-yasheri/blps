@@ -1,8 +1,19 @@
 import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.utility.DockerImageName
-import kotlin.apply
 
 class TestContainerManager(private val imageName: String = "postgres:16.6-alpine") {
+    companion object {
+        var containerInstance: TestContainerManager? = null
+
+        fun getOrCreateContainer(): TestContainerManager {
+            if (containerInstance == null) {
+                containerInstance = TestContainerManager()
+            }
+            containerInstance!!.start()
+            return containerInstance!!
+        }
+    }
+
     private var container: PostgreSQLContainer<*>? = null
 
     fun start(): PostgreSQLContainer<*> {
@@ -236,15 +247,6 @@ val liquibaseUpdate by tasks.register<JavaExec>("liquibaseUpdate") {
     args = connectionArgs
 }
 
-var containerInstance: TestContainerManager? = null
-
-fun getOrCreateContainer(): TestContainerManager {
-    if (containerInstance == null) {
-        containerInstance = TestContainerManager()
-    }
-    containerInstance!!.start()
-    return containerInstance!!
-}
 
 val liquibaseUpdateTestContainer by tasks.register<JavaExec>("liquibaseUpdateTestContainer") {
     group = "liquibase"
@@ -253,7 +255,8 @@ val liquibaseUpdateTestContainer by tasks.register<JavaExec>("liquibaseUpdateTes
     mainClass.set("liquibase.integration.commandline.Main")
 
     doFirst {
-        val manager = getOrCreateContainer()
+
+        val manager = TestContainerManager.getOrCreateContainer()
 
         val connectionArgs = createLiquibaseArgs(manager.toPostgresEnv()).toMutableList()
         connectionArgs += "update"
@@ -261,6 +264,7 @@ val liquibaseUpdateTestContainer by tasks.register<JavaExec>("liquibaseUpdateTes
         args = connectionArgs
     }
 }
+
 tasks.register<JavaExec>("generateJooq") {
     group = "jooq"
     classpath = configurations["jooqGenerator"]
@@ -269,7 +273,7 @@ tasks.register<JavaExec>("generateJooq") {
     outputs.upToDateWhen { false }
 
     doFirst {
-        val manager = getOrCreateContainer()
+        val manager = TestContainerManager.getOrCreateContainer()
         val pgConfig = manager.toPostgresEnv()
 
         environment(pgConfig)
@@ -277,7 +281,7 @@ tasks.register<JavaExec>("generateJooq") {
     }
 
     doLast {
-        containerInstance?.stop()
+        TestContainerManager.containerInstance?.stop()
     }
 }
 
@@ -295,7 +299,7 @@ tasks.register<JavaExec>("generateJooqFromExistingDb") {
     }
 
     doLast {
-        containerInstance?.stop()
+        TestContainerManager.containerInstance?.stop()
     }
 }
 
@@ -310,7 +314,6 @@ tasks.named("generateJooqFromExistingDb").configure {
 tasks.matching { it.name == "generateSources" }.configureEach {
     dependsOn(liquibaseUpdate)
 }
-
 
 tasks.register("checkDocker") {
     doLast {
