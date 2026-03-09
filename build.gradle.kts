@@ -206,31 +206,34 @@ val dotenv: Map<String, String> = run {
         .toMap()
 }
 
-val envProps: Map<String, String> = dotenv.ifEmpty { System.getenv() }
-val dbHost = envProps["POSTGRES_HOST"] ?: "localhost"
-val dbPort = envProps["POSTGRES_PORT"] ?: "5432"
-val dbName = envProps["POSTGRES_DB"] ?: "studs"
-val dbUser = envProps["POSTGRES_USER"] ?: ""
-val dbPassword = envProps["POSTGRES_PASSWORD"] ?: ""
-val dbSchema = envProps["POSTGRES_SCHEMA"] ?: "public"
-val jdbcUrl = "jdbc:postgresql://$dbHost:$dbPort/$dbName"
+fun createEnvMap(): Map<String, String> {
+    return dotenv.ifEmpty { System.getenv() };
+}
+
+fun createLiquibaseArgs(env: Map<String, String>): List<String> {
+    val url = "jdbc:postgresql://${env["POSTGRES_HOST"]}:${env["POSTGRES_PORT"]}/${env["POSTGRES_DB"]}"
+
+    return mutableListOf(
+        "--changeLogFile=src/main/resources/db/db.changelog-master.yaml",
+        "--url=$url",
+        "--username=${env["POSTGRES_USER"]}",
+        "--password=${env["POSTGRES_PASSWORD"]}",
+        "--defaultSchemaName=${env["POSTGRES_SCHEMA"]}",
+        "--liquibaseSchemaName=${env["POSTGRES_SCHEMA"]}",
+    )
+}
 
 val liquibaseUpdate by tasks.register<JavaExec>("liquibaseUpdate") {
     group = "liquibase"
     description = "Apply database migrations before code generation"
 
     classpath = configurations["liquibaseRuntime"]
-    mainClass.set("liquibase.integration.commandline.Main")
+    mainClass.set("liquibase.integration.commandline.LiquibaseCommandLine")
 
-    args = listOf(
-        "--changeLogFile=src/main/resources/db/db.changelog-master.yaml",
-        "--url=$jdbcUrl",
-        "--username=$dbUser",
-        "--password=$dbPassword",
-        "--defaultSchemaName=$dbSchema",
-        "--liquibaseSchemaName=$dbSchema",
-        "update"
-    )
+    val connectionArgs = createLiquibaseArgs(createEnvMap()).toMutableList()
+    connectionArgs += "update"
+
+    args = connectionArgs
 }
 
 var containerInstance: TestContainerManager? = null
@@ -252,15 +255,10 @@ val liquibaseUpdateTestContainer by tasks.register<JavaExec>("liquibaseUpdateTes
     doFirst {
         val manager = getOrCreateContainer()
 
-        args = listOf(
-            "--changeLogFile=src/main/resources/db/db.changelog-master.yaml",
-            "--url=${manager.jdbcUrl}",
-            "--username=${manager.username}",
-            "--password=${manager.password}",
-            "--defaultSchemaName=public",
-            "--liquibaseSchemaName=public",
-            "update"
-        )
+        val connectionArgs = createLiquibaseArgs(manager.toPostgresEnv()).toMutableList()
+        connectionArgs += "update"
+
+        args = connectionArgs
     }
 }
 tasks.register<JavaExec>("generateJooq") {
@@ -291,15 +289,8 @@ tasks.register<JavaExec>("generateJooqFromExistingDb") {
     outputs.upToDateWhen { false }
 
     doFirst {
-        val genEnv = envProps.filterKeys { it.startsWith("POSTGRES_") }.toMutableMap().apply {
-            putIfAbsent("POSTGRES_HOST", dbHost)
-            putIfAbsent("POSTGRES_PORT", dbPort)
-            putIfAbsent("POSTGRES_DB", dbName)
-            putIfAbsent("POSTGRES_USER", dbUser)
-            putIfAbsent("POSTGRES_PASSWORD", dbPassword)
-            putIfAbsent("POSTGRES_SCHEMA", dbSchema)
-        }
-        environment(genEnv)
+        val genEnv = createEnvMap()
+        environment(createEnvMap())
         genEnv.forEach { (k, v) -> systemProperty(k, v) }
     }
 
