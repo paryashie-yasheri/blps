@@ -7,7 +7,7 @@ class TestContainerManager(private val imageName: String = "postgres:16.6-alpine
 
     fun start(): PostgreSQLContainer<*> {
         if (container == null) {
-            println("🐳 Starting Testcontainers with image: $imageName")
+            println("Starting Testcontainers with image: $imageName")
             try {
                 container =
                     PostgreSQLContainer<Nothing>(DockerImageName.parse(imageName).asCompatibleSubstituteFor("postgres"))
@@ -18,10 +18,9 @@ class TestContainerManager(private val imageName: String = "postgres:16.6-alpine
                             withExposedPorts(5432)
                             start()
                         }
-                println("✅ Container started: ${container?.containerId?.substring(0, 12)}")
+                println("Container started: ${container?.containerId?.substring(0, 12)}")
             } catch (e: Exception) {
-                println("❌ Failed to start container: ${e.message}")
-                println("💡 Tip: Run 'docker info' to verify Docker is working")
+                println("Failed to start container: ${e.message}")
                 throw e
             }
         }
@@ -41,7 +40,7 @@ class TestContainerManager(private val imageName: String = "postgres:16.6-alpine
     }
 
     fun stop() {
-        println("🛑 Stopping container...")
+        println("Stopping container...")
         container?.stop()
         container = null
     }
@@ -116,13 +115,10 @@ configurations {
 dependencies {
     implementation("org.springframework.boot:spring-boot-starter-data-jdbc")
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
-    //implementation("org.springframework.boot:spring-boot-starter-data-redis")
-    //implementation("org.springframework.boot:spring-boot-starter-data-redis-reactive")
     implementation("org.springframework.boot:spring-boot-starter-jdbc")
     implementation("org.springframework.boot:spring-boot-starter-jooq")
     implementation("org.springframework.boot:spring-boot-starter-liquibase")
     implementation("org.springframework.boot:spring-boot-starter-security")
-    //implementation("org.springframework.boot:spring-boot-starter-session-data-redis")
     implementation("org.springframework.boot:spring-boot-starter-actuator")
     implementation("org.springframework.boot:spring-boot-starter-webmvc")
     implementation("org.springframework.boot:spring-boot-starter-webservices")
@@ -150,13 +146,10 @@ dependencies {
 
     testImplementation("org.springframework.boot:spring-boot-starter-data-jdbc-test")
     testImplementation("org.springframework.boot:spring-boot-starter-data-jpa-test")
-    // testImplementation("org.springframework.boot:spring-boot-starter-data-redis-reactive-test")
-    // testImplementation("org.springframework.boot:spring-boot-starter-data-redis-test")
     testImplementation("org.springframework.boot:spring-boot-starter-jdbc-test")
     testImplementation("org.springframework.boot:spring-boot-starter-jooq-test")
     testImplementation("org.springframework.boot:spring-boot-starter-liquibase-test")
     testImplementation("org.springframework.boot:spring-boot-starter-security-test")
-    // testImplementation("org.springframework.boot:spring-boot-starter-session-data-redis-test")
     testImplementation("org.springframework.boot:spring-boot-starter-webmvc-test")
     testImplementation("org.springframework.boot:spring-boot-starter-webservices-test")
     testImplementation("org.springframework.boot:spring-boot-starter-websocket-test")
@@ -202,7 +195,6 @@ tasks.test {
     }
 }
 
-// --- Env helpers ---
 val dotenv: Map<String, String> = run {
     val envFile = rootProject.file(".env")
     if (!envFile.exists()) emptyMap() else envFile.readLines()
