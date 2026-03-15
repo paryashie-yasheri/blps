@@ -26,7 +26,6 @@ class SecurityConfig {
         private val logger = LoggerFactory.getLogger(SecurityConfig::class.java)
     }
 
-
     @Bean
     fun filterChain(http: HttpSecurity): SecurityFilterChain {
         http
@@ -37,7 +36,7 @@ class SecurityConfig {
             }
             .formLogin(withDefaults())
             .csrf { csrf ->
-                csrf.ignoringRequestMatchers("/api/**") // Dev only!
+                csrf.ignoringRequestMatchers("/api/**", "/login") // Dev only!
             }
 
         return http.build()
