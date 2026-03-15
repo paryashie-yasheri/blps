@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<bpmn:definitions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="Definitions_14kzyfl" targetNamespace="http://bpmn.io/schema/bpmn" exporter="bpmn-js (https://demo.bpmn.io)" exporterVersion="18.12.0">
+<bpmn:definitions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="Definitions_14kzyfl" targetNamespace="http://bpmn.io/schema/bpmn" exporter="bpmn-js (https://demo.bpmn.io)" exporterVersion="18.13.1">
   <bpmn:collaboration id="Collaboration_0dagtvp">
     <bpmn:participant id="Participant_18f4um3" name="Студент" processRef="Process_1r3ex56" />
     <bpmn:participant id="Participant_1816q9d" processRef="Process_1hxi6lx" />
@@ -691,8 +691,8 @@
         <di:waypoint x="2260" y="930" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_0a0f8qn_di" bpmnElement="Flow_0a0f8qn">
-        <di:waypoint x="1310" y="350" />
-        <di:waypoint x="2350" y="350" />
+        <di:waypoint x="1310" y="330" />
+        <di:waypoint x="2350" y="330" />
         <di:waypoint x="2350" y="1310" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_0f7ro9g_di" bpmnElement="Flow_0f7ro9g">
@@ -701,8 +701,8 @@
         <di:waypoint x="2440" y="1500" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_0y6mw93_di" bpmnElement="Flow_0y6mw93">
-        <di:waypoint x="770" y="150" />
-        <di:waypoint x="2240" y="150" />
+        <di:waypoint x="770" y="130" />
+        <di:waypoint x="2240" y="130" />
         <di:waypoint x="2240" y="930" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_1wfmwwo_di" bpmnElement="Flow_1wfmwwo">
@@ -726,8 +726,8 @@
         <di:waypoint x="2330" y="1310" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_17b1xus_di" bpmnElement="Flow_17b1xus">
-        <di:waypoint x="1190" y="330" />
-        <di:waypoint x="2370" y="330" />
+        <di:waypoint x="1190" y="300" />
+        <di:waypoint x="2370" y="300" />
         <di:waypoint x="2370" y="1310" />
       </bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
