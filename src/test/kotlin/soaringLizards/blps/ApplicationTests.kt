@@ -9,22 +9,19 @@ import soaringLizards.blps.integration.IntegrationPostgres
 import soaringLizards.blps.integration.TestcontainersCleanupExtension
 
 @SpringBootTest
+@ExtendWith(TestcontainersCleanupExtension::class)
 class ApplicationTests {
-    @SpringBootTest
-    @ExtendWith(TestcontainersCleanupExtension::class)
-    class ApplicationTests {
 
-        companion object {
-            @JvmStatic
-            @DynamicPropertySource
-            fun registerProperties(registry: DynamicPropertyRegistry) {
-                IntegrationPostgres.registerProperties(registry)
-            }
+
+    companion object {
+        @JvmStatic
+        @DynamicPropertySource
+        fun registerProperties(registry: DynamicPropertyRegistry) {
+            IntegrationPostgres.registerProperties(registry)
         }
+    }
 
-        @Test
-        fun contextLoads() {
-        }
-
+    @Test
+    fun contextLoads() {
     }
 }
