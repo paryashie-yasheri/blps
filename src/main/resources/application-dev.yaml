@@ -12,6 +12,12 @@ spring:
       authorization-server:
         issuer-url: "${SPRING_HOST}"
         introspection-endpoint: /oauth2/token-info
+        jwt-secret: "${JWT_SECRET}"
+        scopes: [ "read.scope", "write.scope" ]
+        redirect-uri: "http://127.0.0.1:8080/code"
+        client-secret: "{noop}client-id"
+        client-name: "blps client"
+        client-id: "blps-client"
 
 
 logging:

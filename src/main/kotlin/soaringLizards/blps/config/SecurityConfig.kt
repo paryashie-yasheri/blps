@@ -3,18 +3,22 @@ package soaringLizards.blps.config
 import org.slf4j.LoggerFactory
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import org.springframework.core.annotation.Order
 import org.springframework.security.config.Customizer.withDefaults
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity
+import org.springframework.security.config.annotation.web.configurers.ExceptionHandlingConfigurer
 import org.springframework.security.core.userdetails.User
 import org.springframework.security.core.userdetails.UserDetailsService
 import org.springframework.security.core.userdetails.UsernameNotFoundException
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
 import org.springframework.security.crypto.password.PasswordEncoder
+import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint
 import soaringLizards.blps.repository.UserRepository
 
 @Configuration
 @EnableWebSecurity
+@Order(1)
 class SecurityConfig {
 
     companion object {
@@ -34,10 +38,13 @@ class SecurityConfig {
                     .requestMatchers("/", "/api/auth/**", "/error", "/public/**").permitAll()
                     .anyRequest().authenticated()
             }
-            .formLogin(withDefaults())
-            .csrf { csrf ->
-                csrf.ignoringRequestMatchers("/api/**", "/login") // Dev only!
+            .exceptionHandling { exceptions: ExceptionHandlingConfigurer<HttpSecurity?>? ->
+                exceptions!!.authenticationEntryPoint(
+                    LoginUrlAuthenticationEntryPoint("/login")
+                )
             }
+            .formLogin(withDefaults())
+            .csrf { it.disable() }
             .build()
 
     @Bean

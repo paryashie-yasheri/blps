@@ -13,8 +13,6 @@ class UserService(
     private val passwordEncoder: PasswordEncoder,
     private val userRepository: UserRepository,
 ) {
-
-
     fun getMe(): UserDto {
         TODO("обратится к спрингсекюрити и оттуда достать")
     }
@@ -39,5 +37,4 @@ class UserService(
 
         userRepository.insert(newUser);
     }
-
 }
