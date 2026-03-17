@@ -5,6 +5,7 @@ import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.core.annotation.Order
 import org.springframework.security.config.Customizer.withDefaults
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity
 import org.springframework.security.config.annotation.web.configurers.ExceptionHandlingConfigurer
@@ -18,6 +19,7 @@ import soaringLizards.blps.repository.UserRepository
 
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity(prePostEnabled = true)
 @Order(1)
 class SecurityConfig {
 
@@ -35,7 +37,7 @@ class SecurityConfig {
         http
             .authorizeHttpRequests { auth ->
                 auth
-                    .requestMatchers("/", "/api/auth/**", "/error", "/public/**").permitAll()
+                    .requestMatchers("/", "/api/auth/**", "/error", "/public/**", "/api/test/roles/public").permitAll()
                     .anyRequest().authenticated()
             }
             .exceptionHandling { exceptions: ExceptionHandlingConfigurer<HttpSecurity?>? ->

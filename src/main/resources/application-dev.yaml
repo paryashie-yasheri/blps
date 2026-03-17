@@ -19,7 +19,6 @@ spring:
         client-name: "blps client"
         client-id: "blps-client"
 
-
 logging:
   level:
     org.springframework.security: DEBUG
