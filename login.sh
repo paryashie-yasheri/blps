@@ -1,4 +1,8 @@
-curl -v -c cookies.txt -X POST http://localhost:1234/login \
+#!/usr/bin/env bash
+
+source .env
+
+curl -v -c cookies.txt -X POST "${SPRING_HOST}/login" \
   -H "Content-Type: application/x-www-form-urlencoded" \
   -d "username=john" \
   -d "password=secret123"
