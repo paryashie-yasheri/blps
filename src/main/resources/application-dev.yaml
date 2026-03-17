@@ -4,17 +4,3 @@ spring:
       on-profile: dev
   liquibase:
     enabled: true
-
-  application:
-    name: blps
-  security:
-    oauth2:
-      authorization-server:
-        issuer-url: "http://localhost:${SPRING_PORT}"
-        introspection-endpoint: /oauth2/token-info
-
-
-logging:
-  level:
-    org.springframework.security: DEBUG
-    soaringLizards.blps: DEBUG
