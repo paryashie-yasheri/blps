@@ -1,12 +1,14 @@
 package soaringLizards.blps.service
 
 import org.springframework.security.crypto.password.PasswordEncoder
+import org.springframework.stereotype.Service
 import soaringLizards.blps.dto.user.UserDto
 import soaringLizards.blps.dto.user.requests.RegisterDto
 import soaringLizards.blps.exception.UserAlreadyExistAuthenticationException
 import soaringLizards.blps.repository.UserRepository
 import java.util.UUID
 
+@Service
 class UserService(
     private val passwordEncoder: PasswordEncoder,
     private val userRepository: UserRepository,

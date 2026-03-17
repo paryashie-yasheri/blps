@@ -3,7 +3,7 @@ package soaringLizards.blps
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.runApplication
 
-@SpringBootApplication(scanBasePackages = ["soaringLizards.blps"])
+@SpringBootApplication
 class Application
 
 fun main(args: Array<String>) {
