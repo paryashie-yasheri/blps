@@ -16,13 +16,14 @@ import soaringLizards.blps.repository.UserRepository
 @Configuration
 @EnableWebSecurity
 class SecurityConfig {
-    @Bean
-    fun passwordEncoder(): PasswordEncoder {
-        return BCryptPasswordEncoder()
-    }
 
     companion object {
         private val logger = LoggerFactory.getLogger(SecurityConfig::class.java)
+    }
+
+    @Bean
+    fun passwordEncoder(): PasswordEncoder {
+        return BCryptPasswordEncoder()
     }
 
     @Bean
