@@ -23,8 +23,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.spring
-    ports:
-      - "${SPRING_PORT}:${SPRING_PORT}"
     depends_on:
       - pg
     networks:
