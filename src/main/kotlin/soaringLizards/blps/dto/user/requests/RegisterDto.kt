@@ -1,4 +1,4 @@
-package soaringLizards.blps.dto.user
+package soaringLizards.blps.dto.user.requests
 
 data class RegisterDto(
     val username: String,
