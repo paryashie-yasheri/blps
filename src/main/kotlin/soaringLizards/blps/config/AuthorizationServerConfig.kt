@@ -25,24 +25,21 @@ import java.time.temporal.ChronoUnit
 
 @Configuration(proxyBeanMethods = false)
 class AuthorizationServerConfig(
-    val authorizationServerProperties: AuthorizationServerProperties
+    val authorizationServerProperties: AuthorizationServerProperties,
 ) {
     @Bean
     @Order(Ordered.HIGHEST_PRECEDENCE)
     @Throws(Exception::class)
-    fun authServerSecurityFilterChain(http: HttpSecurity): SecurityFilterChain? {
-        http.exceptionHandling(Customizer { exceptions: ExceptionHandlingConfigurer<HttpSecurity?>? ->
+    fun authServerSecurityFilterChain(http: HttpSecurity) =
+        http.exceptionHandling { exceptions: ExceptionHandlingConfigurer<HttpSecurity?>? ->
             exceptions!!.authenticationEntryPoint(
                 LoginUrlAuthenticationEntryPoint("/login")
             )
-        }
-        )
-        return http.build()
-    }
+        }.build()
 
     @Bean
-    fun registeredClientRepository(): RegisteredClientRepository {
-        return InMemoryRegisteredClientRepository(
+    fun registeredClientRepository() =
+        InMemoryRegisteredClientRepository(
             RegisteredClient.withId("blps-client-id")
                 .clientName("blps client")
                 .clientId("blps-client")
@@ -65,13 +62,11 @@ class AuthorizationServerConfig(
                 )
                 .build()
         )
-    }
 
     @Bean
-    fun authorizationServerSettings(): AuthorizationServerSettings {
-        return AuthorizationServerSettings.builder()
+    fun authorizationServerSettings() =
+        AuthorizationServerSettings.builder()
             .issuer(authorizationServerProperties.issuerUrl)
             .tokenIntrospectionEndpoint(authorizationServerProperties.introspectionEndpoint)
             .build()
-    }
 }

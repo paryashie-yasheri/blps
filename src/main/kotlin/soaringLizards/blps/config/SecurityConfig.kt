@@ -11,7 +11,6 @@ import org.springframework.security.core.userdetails.UserDetailsService
 import org.springframework.security.core.userdetails.UsernameNotFoundException
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
 import org.springframework.security.crypto.password.PasswordEncoder
-import org.springframework.security.web.SecurityFilterChain
 import soaringLizards.blps.repository.UserRepository
 
 @Configuration
@@ -27,7 +26,7 @@ class SecurityConfig {
     }
 
     @Bean
-    fun filterChain(http: HttpSecurity): SecurityFilterChain {
+    fun filterChain(http: HttpSecurity) =
         http
             .authorizeHttpRequests { auth ->
                 auth
@@ -38,9 +37,7 @@ class SecurityConfig {
             .csrf { csrf ->
                 csrf.ignoringRequestMatchers("/api/**", "/login") // Dev only!
             }
-
-        return http.build()
-    }
+            .build()
 
     @Bean
     fun userDetailsService(userRepository: UserRepository): UserDetailsService {
