@@ -10,7 +10,7 @@ spring:
   security:
     oauth2:
       authorization-server:
-        issuer-url: "http://localhost:${SPRING_PORT}"
+        issuer-url: "${SPRING_HOST}"
         introspection-endpoint: /oauth2/token-info
 
 
