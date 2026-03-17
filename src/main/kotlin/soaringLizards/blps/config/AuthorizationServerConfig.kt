@@ -22,7 +22,6 @@ class AuthorizationServerConfig(
 ) {
     @Bean
     @Order(Ordered.HIGHEST_PRECEDENCE)
-    @Throws(Exception::class)
     fun authServerSecurityFilterChain(http: HttpSecurity) =
         http.exceptionHandling { exceptions: ExceptionHandlingConfigurer<HttpSecurity?>? ->
             exceptions!!.authenticationEntryPoint(
