@@ -1,3 +1,5 @@
+package soaringLizards.blps.config
+
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.core.Ordered
@@ -14,7 +16,6 @@ import org.springframework.security.oauth2.server.authorization.settings.TokenSe
 import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint
 import java.time.Duration
 import java.time.temporal.ChronoUnit
-
 
 @Configuration(proxyBeanMethods = false)
 class AuthorizationServerConfig(
