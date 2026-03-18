@@ -37,15 +37,16 @@ class SecurityConfig {
         http
             .authorizeHttpRequests { auth ->
                 auth
-                    .requestMatchers("/", "/api/auth/**", "/error", "/public/**", "/api/test/roles/public").permitAll()
+                    .requestMatchers("/", "/login", "/api/auth/**", "/error", "/public/**", "/api/test/roles/public")
+                    .permitAll()
                     .anyRequest().authenticated()
             }
+            .formLogin(withDefaults())
             .exceptionHandling { exceptions: ExceptionHandlingConfigurer<HttpSecurity?>? ->
                 exceptions!!.authenticationEntryPoint(
                     LoginUrlAuthenticationEntryPoint("/login")
                 )
             }
-            .formLogin(withDefaults())
             .csrf { it.disable() }
             .build()
 
