@@ -1,16 +1,12 @@
 package soaringLizards.blps.config
 
 import org.slf4j.LoggerFactory
-import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.CommandLineRunner
-import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Component
 import soaringLizards.blps.dto.user.Email
-import soaringLizards.blps.dto.user.UserDto
+import soaringLizards.blps.dto.user.RegisterDto
 import soaringLizards.blps.exception.UserAlreadyExistAuthenticationException
-import soaringLizards.blps.repository.UserRepository
 import soaringLizards.blps.service.UserService
-import java.util.Objects.isNull
 
 @Component
 class DatabaseSeeder(
@@ -23,13 +19,12 @@ class DatabaseSeeder(
 
     override fun run(vararg args: String) {
         try {
-            val admin = UserDto(
+            val adminRegisterDto = RegisterDto(
                 adminCredentialsProperties.username,
                 adminCredentialsProperties.password,
-                Email(adminCredentialsProperties.email),
-                "ADMIN",
+                adminCredentialsProperties.email,
             )
-            userService
+            userService.registerUser(adminRegisterDto, "ADMIN")
             logger.info("Default Admin User Created!")
         } catch (e: UserAlreadyExistAuthenticationException) {
             logger.info("Admin User already exists.")

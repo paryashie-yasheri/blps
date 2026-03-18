@@ -1,10 +1,8 @@
 package soaringLizards.blps.repository
 
 import org.jooq.DSLContext
-import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Repository
 import soaringLizards.blps.dto.user.UserDto
-import soaringLizards.blps.dto.user.requests.RegisterDto
 import soaringLizards.blps.jooq.generated.tables.references.USERS
 import java.util.UUID
 

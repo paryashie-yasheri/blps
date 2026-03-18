@@ -1,5 +1,6 @@
 package soaringLizards.blps.dto.user
 
+import soaringLizards.blps.jooq.generated.tables.records.UsersRecord
 import java.util.UUID
 
 data class UserDto(
@@ -8,5 +9,3 @@ data class UserDto(
     val email: Email,
     val role: String,
 )
-
-
