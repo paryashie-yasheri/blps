@@ -25,7 +25,7 @@ class DatabaseSeeder(
             )
             userService.registerUser(adminRegisterDto, "ADMIN")
             logger.info("Default Admin User Created!")
-        } catch (e: UserAlreadyExistAuthenticationException) {
+        } catch (_: UserAlreadyExistAuthenticationException) {
             logger.info("Admin User already exists.")
         }
     }
