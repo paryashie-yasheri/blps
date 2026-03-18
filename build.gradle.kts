@@ -69,6 +69,7 @@ plugins {
     id("io.spring.dependency-management") version "1.1.7"
 
     id("com.google.cloud.tools.jib") version "3.5.2"
+    id("org.openapi.generator") version "7.9.0"
 }
 
 group = "soaringLizards"
@@ -97,6 +98,7 @@ kotlin {
     sourceSets {
         val main by getting {
             kotlin.srcDir("build/generated/main/kotlin")
+            kotlin.srcDir("build/generated/edx/src/main/kotlin")
         }
     }
 }
@@ -142,6 +144,13 @@ dependencies {
     implementation("org.slf4j:jcl-over-slf4j")
 
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.6")
+
+    implementation("com.squareup.retrofit2:retrofit:2.9.0")
+    implementation("com.squareup.retrofit2:converter-moshi:2.9.0")
+    implementation("com.squareup.retrofit2:converter-scalars:2.9.0")
+    implementation("com.squareup.moshi:moshi-kotlin:1.15.0")
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
 
     implementation("io.jsonwebtoken:jjwt-api:0.11.5")
     implementation("net.logstash.logback:logstash-logback-encoder:8.0")
@@ -324,4 +333,50 @@ tasks.register("checkDocker") {
     doLast {
         println("Docker available: ${org.testcontainers.DockerClientFactory.instance().isDockerAvailable}")
     }
+}
+
+val downloadOpenApiSpec by tasks.register<DefaultTask>("downloadOpenApiSpec") {
+    group = "openapi"
+
+    outputs.file(layout.buildDirectory.dir("generated/openapi/openapi.json"))
+    
+    doLast {
+        val outputDir = file(layout.buildDirectory.dir("generated/openapi").get().asFile)
+        outputDir.mkdirs()
+        val outputFile = file("${outputDir.absolutePath}/openapi.json")
+        
+        ant.withGroovyBuilder {
+            "get"(
+                "src" to "http://local.openedx.io/swagger.json",
+                "dest" to outputFile.absolutePath,
+                "usetimestamp" to "true",
+                "verbose" to "false"
+            )
+        }
+        println("Downloaded OpenAPI spec to: ${outputFile.absolutePath}")
+    }
+}
+
+tasks.register<Exec>("generateEdxClient") {
+    group = "openapi"
+    description = "Generate Retrofit client for Open edX API"
+    dependsOn(downloadOpenApiSpec)
+    
+    commandLine(
+        "java", "-jar",
+        "${rootProject.layout.buildDirectory.get().asFile}/openapi-generator-cli/openapi-generator-cli.jar",
+        "generate",
+        "-g", "kotlin",
+        "-i", "${layout.buildDirectory.get().asFile}/generated/openapi/openapi.json",
+        "-o", "${layout.buildDirectory.get().asFile}/generated/edx",
+        "--skip-validate-spec",
+        "-p", "library=jvm-retrofit2",
+        "-p", "interfaceOnly=true",
+        "-p", "useBeanValidation=true",
+        "-p", "enumPropertyNaming=PascalCase",
+        "-p", "generateBuildFile=false",
+        "-p", "generateSupportingFiles=false",
+        "--api-package=soaringLizards.blps.edx.api",
+        "--model-package=soaringLizards.blps.edx.model"
+    )
 }
