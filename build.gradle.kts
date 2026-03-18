@@ -46,7 +46,7 @@ class TestContainerManager(private val imageName: String = "postgres:16.6-alpine
             "POSTGRES_DB" to c.databaseName,
             "POSTGRES_USER" to c.username,
             "POSTGRES_PASSWORD" to c.password,
-            "POSTGRES_SCHEMA" to schema
+            "POSTGRES_SCHEMA" to schema,
         )
     }
 
@@ -92,7 +92,7 @@ kotlin {
     compilerOptions {
         freeCompilerArgs.addAll(
             "-Xjsr305=strict",
-            "-Xannotation-default-target=param-property"
+            "-Xannotation-default-target=param-property",
         )
     }
     sourceSets {
@@ -339,29 +339,57 @@ val downloadOpenApiSpec by tasks.register<DefaultTask>("downloadOpenApiSpec") {
     group = "openapi"
 
     outputs.file(layout.buildDirectory.dir("generated/openapi/openapi.json"))
-    
+
     doLast {
         val outputDir = file(layout.buildDirectory.dir("generated/openapi").get().asFile)
         outputDir.mkdirs()
         val outputFile = file("${outputDir.absolutePath}/openapi.json")
-        
-        ant.withGroovyBuilder {
-            "get"(
-                "src" to "http://local.openedx.io/swagger.json",
-                "dest" to outputFile.absolutePath,
-                "usetimestamp" to "true",
-                "verbose" to "false"
-            )
+        val localSpec = file("src/main/resources/openapi/openapi.json")
+        if (localSpec.exists()) {
+            localSpec.copyTo(outputFile, overwrite = true)
+        } else {
+            ant.withGroovyBuilder {
+                "get"(
+                    "src" to "http://local.openedx.io/swagger.json",
+                    "dest" to outputFile.absolutePath,
+                    "usetimestamp" to "true",
+                    "verbose" to "false",
+                )
+            }
         }
-        println("Downloaded OpenAPI spec to: ${outputFile.absolutePath}")
+    }
+}
+
+val downloadOpenApiGeneratorCli by tasks.register<DefaultTask>("downloadOpenApiGeneratorCli") {
+    group = "openapi"
+    outputs.file(layout.buildDirectory.dir("openapi-generator-cli/openapi-generator-cli.jar"))
+
+    doLast {
+        val outputDir = file(layout.buildDirectory.dir("openapi-generator-cli").get().asFile)
+        outputDir.mkdirs()
+        val jarFile = file("${outputDir.absolutePath}/openapi-generator-cli.jar")
+
+        if (!jarFile.exists()) {
+            ant.withGroovyBuilder {
+                "get"(
+                    "src" to "https://repo1.maven.org/maven2/org/openapitools/openapi-generator-cli/7.9.0/openapi-generator-cli-7.9.0.jar",
+                    "dest" to jarFile.absolutePath,
+                    "usetimestamp" to "true",
+                    "verbose" to "false",
+                )
+            }
+            println("Downloaded OpenAPI Generator CLI to: ${jarFile.absolutePath}")
+        } else {
+            println("OpenAPI Generator CLI already exists: ${jarFile.absolutePath}")
+        }
     }
 }
 
 tasks.register<Exec>("generateEdxClient") {
     group = "openapi"
     description = "Generate Retrofit client for Open edX API"
-    dependsOn(downloadOpenApiSpec)
-    
+    dependsOn(downloadOpenApiSpec, downloadOpenApiGeneratorCli)
+
     commandLine(
         "java", "-jar",
         "${rootProject.layout.buildDirectory.get().asFile}/openapi-generator-cli/openapi-generator-cli.jar",
@@ -377,6 +405,11 @@ tasks.register<Exec>("generateEdxClient") {
         "-p", "generateBuildFile=false",
         "-p", "generateSupportingFiles=false",
         "--api-package=soaringLizards.blps.edx.api",
-        "--model-package=soaringLizards.blps.edx.model"
+        "--model-package=soaringLizards.blps.edx.model",
     )
+}
+
+tasks.named("compileKotlin") {
+    dependsOn("generateEdxClient")
+    dependsOn("generateJooq")
 }
