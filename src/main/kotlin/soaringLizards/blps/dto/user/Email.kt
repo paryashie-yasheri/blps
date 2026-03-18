@@ -11,7 +11,7 @@ value class Email(val value: String) {
             Email(value)
         }
     }
-}
 
-private fun String.isValidEmail(): Boolean =
-    Regex("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$").matches(this)
+    private fun String.isValidEmail(): Boolean =
+        Regex("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$").matches(this)
+}
