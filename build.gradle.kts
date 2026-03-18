@@ -55,11 +55,6 @@ class TestContainerManager(private val imageName: String = "postgres:16.6-alpine
         container?.stop()
         container = null
     }
-
-    val jdbcUrl: String get() = container?.jdbcUrl ?: throw IllegalStateException("Container not started")
-    val username: String get() = container?.username ?: "test"
-    val password: String get() = container?.password ?: "test"
-    val port: String get() = "5432"
 }
 
 plugins {
@@ -407,9 +402,4 @@ tasks.register<Exec>("generateEdxClient") {
         "--api-package=soaringLizards.blps.edx.api",
         "--model-package=soaringLizards.blps.edx.model",
     )
-}
-
-tasks.named("compileKotlin") {
-    dependsOn("generateEdxClient")
-    dependsOn("generateJooq")
 }
