@@ -3,7 +3,6 @@ package soaringLizards.blps.config
 import org.slf4j.LoggerFactory
 import org.springframework.boot.CommandLineRunner
 import org.springframework.stereotype.Component
-import soaringLizards.blps.dto.user.Email
 import soaringLizards.blps.dto.user.RegisterDto
 import soaringLizards.blps.exception.UserAlreadyExistAuthenticationException
 import soaringLizards.blps.service.UserService
