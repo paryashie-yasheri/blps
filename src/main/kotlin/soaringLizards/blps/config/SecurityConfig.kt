@@ -40,6 +40,7 @@ class SecurityConfig {
                     .requestMatchers(
                         "/",
                         "/api/auth/**",
+                        "/login",
                         "/error",
                         "/public/**",
                         "/api/test/roles/public",
@@ -50,12 +51,12 @@ class SecurityConfig {
                     ).permitAll()
                     .anyRequest().authenticated()
             }
+            .formLogin(withDefaults())
             .exceptionHandling { exceptions: ExceptionHandlingConfigurer<HttpSecurity?>? ->
                 exceptions!!.authenticationEntryPoint(
                     LoginUrlAuthenticationEntryPoint("/login")
                 )
             }
-            .formLogin(withDefaults())
             .csrf { it.disable() }
             .build()
 
