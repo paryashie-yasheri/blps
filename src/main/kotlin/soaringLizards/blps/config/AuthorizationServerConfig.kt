@@ -23,8 +23,7 @@ import java.time.Duration
 import java.time.temporal.ChronoUnit
 import javax.crypto.spec.SecretKeySpec
 
-@Configuration(proxyBeanMethods = false)
-@Order(Ordered.HIGHEST_PRECEDENCE)
+@Configuration
 class AuthorizationServerConfig(
     val authorizationServerProperties: AuthorizationServerProperties,
 ) {
