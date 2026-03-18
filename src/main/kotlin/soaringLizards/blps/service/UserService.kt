@@ -2,6 +2,7 @@ package soaringLizards.blps.service
 
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
+import soaringLizards.blps.dto.user.Email
 import soaringLizards.blps.dto.user.UserDto
 import soaringLizards.blps.dto.user.requests.RegisterDto
 import soaringLizards.blps.exception.UserAlreadyExistAuthenticationException
@@ -31,7 +32,7 @@ class UserService(
         val newUser = UserDto(
             request.username,
             passwordEncoder.encode(request.password)!!,
-            request.email,
+            Email(request.email),
             "USER"
         )
 

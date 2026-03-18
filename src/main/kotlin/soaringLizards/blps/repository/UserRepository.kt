@@ -29,7 +29,7 @@ class UserRepository(
             .set(USERS.ROLE, user.role)
             .set(USERS.USERNAME, user.username)
             .set(USERS.PASSWORD_HASH, user.password)
-            .set(USERS.EMAIL, user.email)
+            .set(USERS.EMAIL, user.email.value)
             .execute();
 
 }
