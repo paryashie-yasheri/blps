@@ -4,7 +4,7 @@ import org.jooq.DSLContext
 import org.springframework.stereotype.Repository
 import soaringLizards.blps.dto.user.UserDto
 import soaringLizards.blps.jooq.generated.tables.references.USERS
-import java.util.UUID
+import java.util.*
 
 @Repository
 class UserRepository(
@@ -28,6 +28,6 @@ class UserRepository(
             .set(USERS.USERNAME, user.username)
             .set(USERS.PASSWORD_HASH, user.password)
             .set(USERS.EMAIL, user.email.value)
-            .execute();
+            .execute()
 
 }
