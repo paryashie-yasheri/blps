@@ -23,7 +23,7 @@ class GlobalExceptionHandler {
                 "status" to HttpStatus.NOT_FOUND.value(),
                 "error" to "Not Found",
                 "message" to (ex.message ?: ""),
-            )
+            ),
         )
 
     @ExceptionHandler(ResourceAlreadyExistsException::class)
@@ -34,7 +34,7 @@ class GlobalExceptionHandler {
                 "status" to HttpStatus.CONFLICT.value(),
                 "error" to "Conflict",
                 "message" to (ex.message ?: ""),
-            )
+            ),
         )
 
     @ExceptionHandler(BadCredentialsException::class)
@@ -45,7 +45,7 @@ class GlobalExceptionHandler {
                 "status" to HttpStatus.FORBIDDEN.value(),
                 "error" to "Forbidden",
                 "message" to "Invalid login or password",
-            )
+            ),
         )
 
     @ExceptionHandler(AccessDeniedException::class)
@@ -58,17 +58,19 @@ class GlobalExceptionHandler {
                     "status" to HttpStatus.FORBIDDEN.value(),
                     "error" to "Forbidden",
                     "message" to "Access denied",
-                )
+                ),
             )
 
     @ExceptionHandler(MethodArgumentNotValidException::class)
     fun handleValidation(ex: MethodArgumentNotValidException): ResponseEntity<MutableMap<String, Any>> {
         val errors: MutableMap<String?, String?> = HashMap()
-        ex.bindingResult.allErrors.forEach(Consumer { error: ObjectError? ->
-            val fieldName = (error as FieldError).field
-            val message = error.defaultMessage
-            errors[fieldName] = message
-        })
+        ex.bindingResult.allErrors.forEach(
+            Consumer { error: ObjectError? ->
+                val fieldName = (error as FieldError).field
+                val message = error.defaultMessage
+                errors[fieldName] = message
+            },
+        )
 
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
             hashMapOf(
@@ -77,7 +79,7 @@ class GlobalExceptionHandler {
                 "error" to "Validation Error",
                 "message" to "Validation failed for request",
                 "errors" to errors,
-            )
+            ),
         )
     }
 
@@ -90,7 +92,7 @@ class GlobalExceptionHandler {
                 "error" to "Conflict",
                 "message" to "Data integrity violation",
                 "details" to (ex.getMostSpecificCause().message ?: ""),
-            )
+            ),
         )
 
     @ExceptionHandler(Exception::class)
@@ -103,7 +105,7 @@ class GlobalExceptionHandler {
                 "error" to "Internal Server Error",
                 "message" to "An unexpected error occurred",
                 "details" to (ex.message ?: ""),
-            )
+            ),
         )
     }
 }
