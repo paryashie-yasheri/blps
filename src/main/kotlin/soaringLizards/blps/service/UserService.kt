@@ -32,9 +32,8 @@ class UserService(
 
 
     fun registerUser(request: RegisterDto, role: String): UserResponse {
-        if (userRepository.findByUsername(request.username) != null)
-            throw UserAlreadyExistAuthenticationException("User already exists")
-
+        userRepository.findByUsername(request.username)
+            ?: throw UserAlreadyExistAuthenticationException("User already exists")
 
         val newUser = UserDto(
             request.username,
@@ -48,7 +47,7 @@ class UserService(
         return UserResponse(
             request.username,
             request.email,
-            role
+            role,
         )
     }
 }
