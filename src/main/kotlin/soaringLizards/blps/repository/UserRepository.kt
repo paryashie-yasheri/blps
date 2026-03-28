@@ -16,6 +16,12 @@ class UserRepository(
             .where(USERS.USERNAME.eq(username))
             .fetchOne()
 
+    fun existWithUsername(username: String) =
+        dsl.fetchExists(
+            dsl.selectFrom(USERS)
+                .where(USERS.USERNAME.eq(username)),
+        )
+
 
     fun findById(id: UUID) =
         dsl.select(USERS)

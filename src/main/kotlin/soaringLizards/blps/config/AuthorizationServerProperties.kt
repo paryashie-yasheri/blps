@@ -12,4 +12,4 @@ data class AuthorizationServerProperties(
     val clientSecret: String,
     val clientName: String,
     val clientId: String,
-);
+)
