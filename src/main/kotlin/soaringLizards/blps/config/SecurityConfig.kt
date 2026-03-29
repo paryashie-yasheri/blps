@@ -3,7 +3,6 @@ package soaringLizards.blps.config
 import org.slf4j.LoggerFactory
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
-import org.springframework.core.annotation.Order
 import org.springframework.security.config.Customizer.withDefaults
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
@@ -20,7 +19,6 @@ import soaringLizards.blps.repository.UserRepository
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity(prePostEnabled = true)
-@Order(1)
 class SecurityConfig {
 
     companion object {
@@ -40,6 +38,7 @@ class SecurityConfig {
                     .requestMatchers(
                         "/",
                         "/api/auth/**",
+                        "/login",
                         "/error",
                         "/public/**",
                         "/api/test/roles/public",
@@ -50,12 +49,12 @@ class SecurityConfig {
                     ).permitAll()
                     .anyRequest().authenticated()
             }
+            .formLogin(withDefaults())
             .exceptionHandling { exceptions: ExceptionHandlingConfigurer<HttpSecurity?>? ->
                 exceptions!!.authenticationEntryPoint(
                     LoginUrlAuthenticationEntryPoint("/login")
                 )
             }
-            .formLogin(withDefaults())
             .csrf { it.disable() }
             .build()
 
