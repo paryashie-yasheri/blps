@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-source .env
+source ../.env
 
 curl -v -c cookies.txt -X POST "${SPRING_HOST}/login" \
   -H "Content-Type: application/x-www-form-urlencoded" \

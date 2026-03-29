@@ -3,10 +3,11 @@ package soaringLizards.blps
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.boot.runApplication
+import soaringLizards.blps.config.AdminCredentialsProperties
 import soaringLizards.blps.config.AuthorizationServerProperties
 
 @SpringBootApplication
-@EnableConfigurationProperties(AuthorizationServerProperties::class)
+@EnableConfigurationProperties(AuthorizationServerProperties::class, AdminCredentialsProperties::class)
 class Application
 
 fun main(args: Array<String>) {

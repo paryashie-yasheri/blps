@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-source .env
+source ../.env
 
 curl -i -X POST "${SPRING_HOST}/api/auth/register" \
   -H "Content-Type: application/json" \
