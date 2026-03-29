@@ -1,4 +1,4 @@
-package soaringLizards.blps.exception
+package soaringLizards.blps.advice
 
 import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.http.HttpStatus
@@ -10,6 +10,8 @@ import org.springframework.validation.ObjectError
 import org.springframework.web.bind.MethodArgumentNotValidException
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
+import soaringLizards.blps.exception.ResourceAlreadyExistsException
+import soaringLizards.blps.exception.ResourceNotFoundException
 import java.time.LocalDateTime
 import java.util.function.Consumer
 
