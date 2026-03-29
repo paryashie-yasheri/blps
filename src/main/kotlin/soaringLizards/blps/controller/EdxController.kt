@@ -11,12 +11,12 @@ import soaringLizards.blps.edx.model.Course
 
 @RestController
 @RequestMapping("edx")
-@Tag(name = "Edx")
+@Tag(name = "Контроллер прослойка для общения с Tutor")
 class EdxController(
     val edxService: EdxService,
 ) {
-    @PostMapping()
-    fun getAllCources(@RequestBody data: Course) =
+    @PostMapping
+    fun getAllCourses(@RequestBody data: Course) =
         ResponseEntity.ok().body(edxService.getCoursesApi(data))
 
 }
