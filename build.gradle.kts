@@ -1,34 +1,65 @@
 import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.utility.DockerImageName
 
-class TestContainerManager(private val imageName: String = "postgres:16.6-alpine") {
-    companion object {
-        var containerInstance: TestContainerManager? = null
+val DEFAULT_POSTGRES_IMAGE = "postgres:16.6-alpine"
+val DEFAULT_POSTGRES_DB = "study"
+val DEFAULT_POSTGRES_USER = "test"
+val DEFAULT_POSTGRES_PASSWORD = "test"
+val DEFAULT_POSTGRES_SCHEMA = "public"
 
-        fun getOrCreateContainer(): TestContainerManager {
-            if (containerInstance == null) {
-                containerInstance = TestContainerManager()
-            }
-            containerInstance!!.start()
-            return containerInstance!!
-        }
+fun Map<String, String>.nonBlank(key: String): String? = this[key]?.takeIf { it.isNotBlank() }
+
+data class TestContainerConfig(
+    val imageName: String = DEFAULT_POSTGRES_IMAGE,
+    val databaseName: String = DEFAULT_POSTGRES_DB,
+    val dbUsername: String = DEFAULT_POSTGRES_USER,
+    val dbPassword: String = DEFAULT_POSTGRES_PASSWORD,
+    val schemaName: String = DEFAULT_POSTGRES_SCHEMA,
+)
+
+fun testContainerConfigFromEnv(env: Map<String, String>): TestContainerConfig {
+    val defaults = TestContainerConfig()
+
+    return defaults.copy(
+        imageName = env.nonBlank("POSTGRES_IMAGE") ?: defaults.imageName,
+        databaseName = env.nonBlank("POSTGRES_DB") ?: defaults.databaseName,
+        dbUsername = env.nonBlank("POSTGRES_USER") ?: defaults.dbUsername,
+        dbPassword = env.nonBlank("POSTGRES_PASSWORD") ?: defaults.dbPassword,
+        schemaName = env.nonBlank("POSTGRES_SCHEMA") ?: defaults.schemaName,
+    )
+}
+
+var testContainerManagerInstance: TestContainerManager? = null
+
+fun getOrCreateTestContainerManager(env: Map<String, String>): TestContainerManager {
+    if (testContainerManagerInstance == null) {
+        testContainerManagerInstance = TestContainerManager(testContainerConfigFromEnv(env))
     }
+    testContainerManagerInstance!!.start()
+    return testContainerManagerInstance!!
+}
 
+class TestContainerManager(
+    private val config: TestContainerConfig = TestContainerConfig(),
+) {
     private var container: PostgreSQLContainer<*>? = null
 
     fun start(): PostgreSQLContainer<*> {
         if (container == null) {
-            println("Starting Testcontainers with image: $imageName")
+            println("Starting Testcontainers with image: ${config.imageName}")
             try {
                 container =
-                    PostgreSQLContainer<Nothing>(DockerImageName.parse(imageName).asCompatibleSubstituteFor("postgres"))
+                    PostgreSQLContainer<Nothing>(
+                        DockerImageName.parse(config.imageName).asCompatibleSubstituteFor("postgres"),
+                    )
                         .apply {
-                            withDatabaseName("study")
-                            withUsername("test")
-                            withPassword("test")
+                            withDatabaseName(config.databaseName)
+                            withUsername(config.dbUsername)
+                            withPassword(config.dbPassword)
                             withExposedPorts(5432)
                             start()
                         }
+                ensureSchemaExists(container!!)
                 println("Container started: ${container?.containerId?.substring(0, 12)}")
             } catch (e: Exception) {
                 println("Failed to start container: ${e.message}")
@@ -38,7 +69,22 @@ class TestContainerManager(private val imageName: String = "postgres:16.6-alpine
         return container!!
     }
 
-    fun toPostgresEnv(schema: String = "public"): Map<String, String> {
+    private fun ensureSchemaExists(container: PostgreSQLContainer<*>) {
+        if (config.schemaName.equals("public", ignoreCase = true))
+            return
+
+
+        val escapedSchema = config.schemaName.replace("\"", "\"\"")
+        val escapedUser = config.dbUsername.replace("\"", "\"\"")
+
+        container.createConnection("").use { connection ->
+            connection.createStatement().use { statement ->
+                statement.execute("""CREATE SCHEMA IF NOT EXISTS "$escapedSchema" AUTHORIZATION "$escapedUser"""")
+            }
+        }
+    }
+
+    fun toPostgresEnv(): Map<String, String> {
         val c = container ?: throw IllegalStateException("Container not started")
         return mapOf(
             "POSTGRES_HOST" to c.host,
@@ -46,7 +92,7 @@ class TestContainerManager(private val imageName: String = "postgres:16.6-alpine
             "POSTGRES_DB" to c.databaseName,
             "POSTGRES_USER" to c.username,
             "POSTGRES_PASSWORD" to c.password,
-            "POSTGRES_SCHEMA" to schema,
+            "POSTGRES_SCHEMA" to config.schemaName,
         )
     }
 
@@ -265,7 +311,7 @@ val liquibaseUpdateTestContainer by tasks.register<JavaExec>("liquibaseUpdateTes
 
     doFirst {
 
-        val manager = TestContainerManager.getOrCreateContainer()
+        val manager = getOrCreateTestContainerManager(createEnvMap())
 
         val connectionArgs = createLiquibaseArgs(manager.toPostgresEnv()).toMutableList()
         connectionArgs += "update"
@@ -274,6 +320,7 @@ val liquibaseUpdateTestContainer by tasks.register<JavaExec>("liquibaseUpdateTes
     }
 }
 
+@DisableCachingByDefault
 tasks.register<JavaExec>("generateJooq") {
     group = "jooq"
     classpath = configurations["jooqGenerator"]
@@ -282,7 +329,7 @@ tasks.register<JavaExec>("generateJooq") {
     outputs.upToDateWhen { false }
 
     doFirst {
-        val manager = TestContainerManager.getOrCreateContainer()
+        val manager = getOrCreateTestContainerManager(createEnvMap())
         val pgConfig = manager.toPostgresEnv()
 
         environment(pgConfig)
@@ -290,7 +337,7 @@ tasks.register<JavaExec>("generateJooq") {
     }
 
     doLast {
-        TestContainerManager.containerInstance?.stop()
+        testContainerManagerInstance?.stop()
     }
 }
 
@@ -308,10 +355,11 @@ tasks.register<JavaExec>("generateJooqFromExistingDb") {
     }
 
     doLast {
-        TestContainerManager.containerInstance?.stop()
+        testContainerManagerInstance?.stop()
     }
 }
 
+@DisableCachingByDefault
 tasks.named("generateJooq").configure {
     dependsOn(liquibaseUpdateTestContainer)
 }
