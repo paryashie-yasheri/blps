@@ -2,8 +2,7 @@
 <configuration>
     <jdbc>
         <driver>org.postgresql.Driver</driver>
-        <url
-        >jdbc:postgresql://${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}</url>
+        <url>jdbc:postgresql://${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}?currentSchema=${POSTGRES_SCHEMA}</url>
         <user>${POSTGRES_USER}</user>
         <password>${POSTGRES_PASSWORD}</password>
     </jdbc>
@@ -14,9 +13,10 @@
             <schemata>
                 <schema>
                     <inputSchema>${POSTGRES_SCHEMA}</inputSchema>
+                    <outputSchema>${POSTGRES_SCHEMA}</outputSchema>
                 </schema>
             </schemata>
-            <includes />
+            <includes/>
         </database>
         <generate>
             <records>true</records>
