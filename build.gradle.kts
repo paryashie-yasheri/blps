@@ -91,7 +91,7 @@ kotlin {
         )
     }
     sourceSets {
-        val main by getting {
+        @Suppress("unused") val main by getting {
             kotlin.srcDir("build/generated/main/kotlin")
             kotlin.srcDir("build/generated/edx/src/main/kotlin")
         }
@@ -344,6 +344,7 @@ val downloadOpenApiSpec by tasks.register<DefaultTask>("downloadOpenApiSpec") {
             localSpec.copyTo(outputFile, overwrite = true)
         } else {
             ant.withGroovyBuilder {
+                @Suppress("HttpUrlsUsage")
                 "get"(
                     "src" to "http://local.openedx.io/swagger.json",
                     "dest" to outputFile.absolutePath,
