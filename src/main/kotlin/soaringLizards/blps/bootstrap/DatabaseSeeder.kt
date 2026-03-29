@@ -1,8 +1,9 @@
-package soaringLizards.blps.config
+package soaringLizards.blps.bootstrap
 
 import org.slf4j.LoggerFactory
 import org.springframework.boot.CommandLineRunner
 import org.springframework.stereotype.Component
+import soaringLizards.blps.config.AdminCredentialsProperties
 import soaringLizards.blps.dto.user.RegisterDto
 import soaringLizards.blps.exception.UserAlreadyExistAuthenticationException
 import soaringLizards.blps.service.UserService
