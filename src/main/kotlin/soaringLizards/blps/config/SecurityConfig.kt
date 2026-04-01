@@ -26,9 +26,7 @@ class SecurityConfig {
     }
 
     @Bean
-    fun passwordEncoder(): PasswordEncoder {
-        return BCryptPasswordEncoder()
-    }
+    fun passwordEncoder() = BCryptPasswordEncoder()
 
     @Bean
     fun filterChain(http: HttpSecurity) =
@@ -37,7 +35,7 @@ class SecurityConfig {
                 auth
                     .requestMatchers(
                         "/",
-                        "/api/auth/**",
+                        "/api/**",
                         "/login",
                         "/error",
                         "/public/**",
@@ -52,15 +50,15 @@ class SecurityConfig {
             .formLogin(withDefaults())
             .exceptionHandling { exceptions: ExceptionHandlingConfigurer<HttpSecurity?>? ->
                 exceptions!!.authenticationEntryPoint(
-                    LoginUrlAuthenticationEntryPoint("/login")
+                    LoginUrlAuthenticationEntryPoint("/login"),
                 )
             }
             .csrf { it.disable() }
-            .build()
+            .build()!!
 
     @Bean
-    fun userDetailsService(userRepository: UserRepository): UserDetailsService {
-        return UserDetailsService { username: String ->
+    fun userDetailsService(userRepository: UserRepository) =
+        UserDetailsService { username: String ->
             logger.info("Loading user: $username")
             val user = userRepository.findByUsername(username)
                 ?: throw UsernameNotFoundException("User not found: $username")
@@ -73,5 +71,4 @@ class SecurityConfig {
                 .roles(user.role!!)
                 .build()
         }
-    }
 }

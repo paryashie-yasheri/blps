@@ -32,7 +32,7 @@ fun testContainerConfigFromEnv(env: Map<String, String>): TestContainerConfig {
 var testContainerManagerInstance: TestContainerManager? = null
 
 fun getOrCreateTestContainerManager(env: Map<String, String>): TestContainerManager {
-    if (testContainerManagerInstance == null) {
+    testContainerManagerInstance ?: {
         testContainerManagerInstance = TestContainerManager(testContainerConfigFromEnv(env))
     }
     testContainerManagerInstance!!.start()
@@ -370,12 +370,6 @@ tasks.named("generateJooqFromExistingDb").configure {
 
 tasks.matching { it.name == "generateSources" }.configureEach {
     dependsOn(liquibaseUpdate)
-}
-
-tasks.register("checkDocker") {
-    doLast {
-        println("Docker available: ${org.testcontainers.DockerClientFactory.instance().isDockerAvailable}")
-    }
 }
 
 val downloadOpenApiSpec by tasks.register<DefaultTask>("downloadOpenApiSpec") {
