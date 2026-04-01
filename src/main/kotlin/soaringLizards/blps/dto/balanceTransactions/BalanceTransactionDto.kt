@@ -14,5 +14,3 @@ data class BalanceTransactionDto(
     val description: String?,
     val createdAt: OffsetDateTime,
 )
-
-
