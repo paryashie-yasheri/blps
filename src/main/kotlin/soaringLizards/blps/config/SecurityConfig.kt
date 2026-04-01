@@ -47,6 +47,7 @@ class SecurityConfig {
                     .anyRequest().authenticated()
             }
             .formLogin(withDefaults())
+            .httpBasic(withDefaults())
             .exceptionHandling { exceptions: ExceptionHandlingConfigurer<HttpSecurity?>? ->
                 exceptions!!.authenticationEntryPoint(
                     LoginUrlAuthenticationEntryPoint("/login"),
@@ -56,6 +57,7 @@ class SecurityConfig {
             .build()!!
 
     @Bean
+    // а зачем это вообще нужно
     fun userDetailsService(userRepository: UserRepository) =
         UserDetailsService { username: String ->
             logger.info("Loading user: $username")
