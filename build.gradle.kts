@@ -32,7 +32,7 @@ fun testContainerConfigFromEnv(env: Map<String, String>): TestContainerConfig {
 var testContainerManagerInstance: TestContainerManager? = null
 
 fun getOrCreateTestContainerManager(env: Map<String, String>): TestContainerManager {
-    testContainerManagerInstance ?: {
+    if (testContainerManagerInstance == null) {
         testContainerManagerInstance = TestContainerManager(testContainerConfigFromEnv(env))
     }
     testContainerManagerInstance!!.start()
@@ -265,9 +265,7 @@ val dotenv: Map<String, String> = run {
         .toMap()
 }
 
-fun createEnvMap(): Map<String, String> {
-    return dotenv.ifEmpty { System.getenv() };
-}
+fun createEnvMap() = dotenv.ifEmpty { System.getenv() }!!
 
 fun createLiquibaseArgs(env: Map<String, String>): List<String> {
     val url = "jdbc:postgresql://${env["POSTGRES_HOST"]}:${env["POSTGRES_PORT"]}/${env["POSTGRES_DB"]}"
