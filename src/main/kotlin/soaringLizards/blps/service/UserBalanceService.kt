@@ -28,8 +28,8 @@ class UserBalanceService(
 
         val user = userService.convertSpringUserToUser(currentUser)
 
-        val balance =
-            findBalanceByUserId(user.id!!) ?: throw AccessDeniedException("Not created balance")
+        val balance = userBalanceRepository.findByUserId(user.id!!)
+            ?: throw AccessDeniedException("Not created balance")
 
         return balance.toBalanceResponse()
     }
@@ -37,21 +37,22 @@ class UserBalanceService(
     fun donatePoints(currentUser: User?, request: DonateRequest): TransactionsResponse {
         currentUser ?: throw AccessDeniedException("Not logged in")
 
-        if (request.amount <= 0) {
+        if (request.amount <= 0)
             throw BusinessLogicException("Cant donate zero or negative amount")
-        }
 
         val user = userService.convertSpringUserToUser(currentUser)
-        val balance =
-            findBalanceByUserId(user.id!!) ?: throw AccessDeniedException("Not created balance")
+        val balance = userBalanceRepository.findByUserId(user.id!!)
+            ?: throw AccessDeniedException("Not created balance")
 
-        if (request.amount > balance.currentBalance!!) {
+        if (request.amount > balance.currentBalance!!)
             throw BusinessLogicException("Unsufficient balance")
-        }
 
         val balanceDiff = -request.amount
         val newTransaction = createTransactionOnUser(balance, balanceDiff).toTransactionResponse()
-        val newBalance = balance.copy().with(USER_BALANCES.CURRENT_BALANCE, balance.currentBalance!! + balanceDiff)
+        val newBalance = balance.copy()
+            .with(USER_BALANCES.CURRENT_BALANCE, balance.currentBalance!! + balanceDiff)
+            .with(USER_BALANCES.TOTAL_SPENT, balance.totalSpent!! + request.amount)
+            .with(USER_BALANCES.VERSION, balance.version!! + 1)
 
         userBalanceRepository.update(
             balance.balanceId!!,
@@ -78,17 +79,13 @@ class UserBalanceService(
         )
 
         val newTransaction = transactionService.addTransaction(transaction)
-
-        newTransaction ?: throw BusinessLogicException("Cannot add transaction")
+            ?: throw BusinessLogicException("Cannot add transaction")
 
         return newTransaction
     }
 
     fun findBalanceById(id: UUID) =
         userBalanceRepository.findById(id)
-
-    fun findBalanceByUserId(id: UUID) =
-        userBalanceRepository.findByUserId(id)
 
     fun addUserBalance(userBalanceDto: UserBalanceDto) =
         userBalanceRepository.insert(userBalanceDto)

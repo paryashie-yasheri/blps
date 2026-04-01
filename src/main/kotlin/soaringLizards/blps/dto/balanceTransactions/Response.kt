@@ -17,13 +17,15 @@ fun UserBalancesRecord.toBalanceResponse() = BalanceResponse(
 )
 
 class TransactionsResponse(
-    val currentBalance: Int,
+    val transactionDifference: Int,
     val balanceBefore: Int,
+    val balanceAfter: Int,
     val createdAt: OffsetDateTime,
 )
 
 fun BalanceTransactionsRecord.toTransactionResponse() = TransactionsResponse(
     amount!!,
     balanceBefore!!,
+    balanceAfter!!,
     createdAt!!,
 )

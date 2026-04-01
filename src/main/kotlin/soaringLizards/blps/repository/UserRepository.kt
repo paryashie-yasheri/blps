@@ -28,12 +28,13 @@ class UserRepository(
             .where(USERS.ID.eq(id))
             .fetchOne()
 
-    fun insert(user: UserDto): Int =
+    fun insert(user: UserDto) =
         dsl.insertInto(USERS)
             .set(USERS.ROLE, user.role)
             .set(USERS.USERNAME, user.username)
             .set(USERS.PASSWORD_HASH, user.password)
             .set(USERS.EMAIL, user.email.value)
-            .execute()
+            .returning()
+            .fetchOne()
 
 }
