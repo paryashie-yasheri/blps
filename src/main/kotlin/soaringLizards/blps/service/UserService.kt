@@ -20,7 +20,7 @@ class UserService(
 
     fun getUserFromAuthenticationPrincipal(springUser: User?): UserResponse {
         springUser ?: throw AccessDeniedException("Not logged in")
-        
+
         val user = convertSpringUserToUser(springUser)
         return user.toUserResponse()
     }

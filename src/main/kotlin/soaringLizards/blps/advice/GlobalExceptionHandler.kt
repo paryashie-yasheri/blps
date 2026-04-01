@@ -10,6 +10,7 @@ import org.springframework.validation.ObjectError
 import org.springframework.web.bind.MethodArgumentNotValidException
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
+import org.springframework.web.client.RestClientResponseException
 import soaringLizards.blps.exception.ResourceAlreadyExistsException
 import soaringLizards.blps.exception.ResourceNotFoundException
 import java.time.LocalDateTime
@@ -94,6 +95,18 @@ class GlobalExceptionHandler {
                 "error" to "Conflict",
                 "message" to "Data integrity violation",
                 "details" to (ex.getMostSpecificCause().message ?: ""),
+            ),
+        )
+
+    @ExceptionHandler(RestClientResponseException::class)
+    fun handleRestClientResponse(ex: RestClientResponseException) =
+        ResponseEntity.status(ex.statusCode).body(
+            hashMapOf(
+                "timestamp" to LocalDateTime.now(),
+                "status" to ex.statusCode.value(),
+                "error" to (ex.statusText.ifBlank { "Downstream API Error" }),
+                "message" to "Open edX request failed",
+                "details" to ex.responseBodyAsString,
             ),
         )
 

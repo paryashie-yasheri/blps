@@ -110,6 +110,7 @@ plugins {
     id("io.spring.dependency-management") version "1.1.7"
 
     id("com.google.cloud.tools.jib") version "3.5.2"
+    id("org.openapi.generator") version "7.9.0"
 }
 
 group = "soaringLizards"
@@ -138,6 +139,7 @@ kotlin {
     sourceSets {
         @Suppress("unused") val main by getting {
             kotlin.srcDir("build/generated/main/kotlin")
+            kotlin.srcDir("build/generated/edx-models")
         }
     }
 }
@@ -263,9 +265,7 @@ val dotenv: Map<String, String> = run {
         .toMap()
 }
 
-fun createEnvMap(): Map<String, String> {
-    return dotenv.ifEmpty { System.getenv() };
-}
+fun createEnvMap() = dotenv.ifEmpty { System.getenv() }!!
 
 fun createLiquibaseArgs(env: Map<String, String>): List<String> {
     val url = "jdbc:postgresql://${env["POSTGRES_HOST"]}:${env["POSTGRES_PORT"]}/${env["POSTGRES_DB"]}"
@@ -311,8 +311,7 @@ val liquibaseUpdateTestContainer by tasks.register<JavaExec>("liquibaseUpdateTes
     }
 }
 
-@DisableCachingByDefault
-tasks.register<JavaExec>("generateJooq") {
+val generateJooq = tasks.register<JavaExec>("generateJooq") {
     group = "jooq"
     classpath = configurations["jooqGenerator"]
     mainClass.set("org.jooq.codegen.GenerationTool")
@@ -363,8 +362,96 @@ tasks.matching { it.name == "generateSources" }.configureEach {
     dependsOn(liquibaseUpdate)
 }
 
-tasks.register("checkDocker") {
+val downloadOpenApiSpec by tasks.register<DefaultTask>("downloadOpenApiSpec") {
+    group = "openapi"
+
+    outputs.file(layout.buildDirectory.dir("generated/openapi/openapi.json"))
+
     doLast {
-        println("Docker available: ${org.testcontainers.DockerClientFactory.instance().isDockerAvailable}")
+        try {
+            val outputDir = file(layout.buildDirectory.dir("generated/openapi").get().asFile)
+            outputDir.mkdirs()
+            val outputFile = file("${outputDir.absolutePath}/openapi.json")
+            val localSpec = file("src/main/resources/openapi/openapi.json")
+            if (localSpec.exists()) {
+                localSpec.copyTo(outputFile, overwrite = true)
+            } else {
+                ant.withGroovyBuilder {
+                    @Suppress("HttpUrlsUsage")
+                    "get"(
+                        "src" to "http://local.openedx.io/swagger.json",
+                        "dest" to outputFile.absolutePath,
+                        "usetimestamp" to "true",
+                        "verbose" to "false",
+                    )
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
+}
+
+val downloadOpenApiGeneratorCli by tasks.register<DefaultTask>("downloadOpenApiGeneratorCli") {
+    group = "openapi"
+    outputs.file(layout.buildDirectory.dir("openapi-generator-cli/openapi-generator-cli.jar"))
+
+    doLast {
+        val outputDir = file(layout.buildDirectory.dir("openapi-generator-cli").get().asFile)
+        outputDir.mkdirs()
+        val jarFile = file("${outputDir.absolutePath}/openapi-generator-cli.jar")
+
+        if (!jarFile.exists()) {
+            ant.withGroovyBuilder {
+                "get"(
+                    "src" to "https://repo1.maven.org/maven2/org/openapitools/openapi-generator-cli/7.9.0/openapi-generator-cli-7.9.0.jar",
+                    "dest" to jarFile.absolutePath,
+                    "usetimestamp" to "true",
+                    "verbose" to "false",
+                )
+            }
+            println("Downloaded OpenAPI Generator CLI to: ${jarFile.absolutePath}")
+        } else {
+            println("OpenAPI Generator CLI already exists: ${jarFile.absolutePath}")
+        }
+    }
+}
+
+val generateEdxModels = tasks.register<Exec>("generateEdxModels") {
+    group = "openapi"
+    description = "Generate Kotlin models for Open edX API"
+    dependsOn(downloadOpenApiSpec, downloadOpenApiGeneratorCli)
+
+    val outputDir = layout.buildDirectory.dir("generated/edx-models").get().asFile
+
+    doFirst {
+        delete(outputDir)
+        outputDir.mkdirs()
+    }
+
+    commandLine(
+        "java", "-jar",
+        "${rootProject.layout.buildDirectory.get().asFile}/openapi-generator-cli/openapi-generator-cli.jar",
+        "generate",
+        "-g", "kotlin",
+        "-i", "${layout.buildDirectory.get().asFile}/generated/openapi/openapi.json",
+        "-o", outputDir.absolutePath,
+        "--skip-validate-spec",
+        "--global-property", "models,modelDocs=false,modelTests=false",
+//        "--openapi-generator-ignore-list",
+//        "README.md,build.gradle,build.gradle.kts,settings.gradle,settings.gradle.kts,gradle.properties,gradlew,gradlew.bat,docs/**,src/test/**,gradle/**,.openapi-generator/**,.openapi-generator-ignore",
+        "-p", "serializationLibrary=jackson",
+        "-p", "sourceFolder=.",
+//        "-p", "useBeanValidation=true",
+        "-p", "enumPropertyNaming=PascalCase",
+        "--model-package=soaringLizards.blps.edx.model",
+    )
+}
+
+val codegen by tasks.register<DefaultTask>("codegen") {
+    dependsOn(
+        generateJooq,
+        downloadOpenApiSpec,
+        generateEdxModels
+    )
 }

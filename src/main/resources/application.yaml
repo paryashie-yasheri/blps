@@ -31,6 +31,15 @@ auth:
     secret: ${JWT_SECRET}
     expiration-ms: ${JWT_EXPIRATION_MS:3600000}
 
+edx:
+  api:
+    base-url: ${EDX_API_BASE_URL:http://local.openedx.io/api}
+    username: ${EDX_API_USERNAME:}
+    password: ${EDX_API_PASSWORD:}
+    authorization: ${EDX_API_AUTHORIZATION:}
+    cookie: ${EDX_API_COOKIE:}
+    csrf-token: ${EDX_API_CSRF_TOKEN:}
+
 management:
   endpoints:
     web:

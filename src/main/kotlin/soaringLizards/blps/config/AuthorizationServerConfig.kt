@@ -52,7 +52,7 @@ class AuthorizationServerConfig(
         AuthorizationServerSettings.builder()
             .issuer(authorizationServerProperties.issuerUrl)
             .tokenIntrospectionEndpoint(authorizationServerProperties.introspectionEndpoint)
-            .build()
+            .build()!!
 
 
     @Bean
