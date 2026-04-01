@@ -8,8 +8,9 @@ class UserResponse(
     val role: String,
 )
 
-fun UsersRecord.toUserResponse() = UserResponse(
-    username!!,
-    Email(email!!),
-    role!!
-)
+fun UsersRecord.toUserResponse() =
+    UserResponse(
+        username!!,
+        Email(email!!),
+        role!!,
+    )
