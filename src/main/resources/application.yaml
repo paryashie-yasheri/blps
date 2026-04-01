@@ -33,7 +33,7 @@ auth:
 
 edx:
   api:
-    base-url: ${EDX_API_BASE_URL:http://local.openedx.io}
+    base-url: ${EDX_API_BASE_URL:http://local.openedx.io/api}
 
 management:
   endpoints:

@@ -311,8 +311,7 @@ val liquibaseUpdateTestContainer by tasks.register<JavaExec>("liquibaseUpdateTes
     }
 }
 
-@DisableCachingByDefault
-tasks.register<JavaExec>("generateJooq") {
+val generateJooq = tasks.register<JavaExec>("generateJooq") {
     group = "jooq"
     classpath = configurations["jooqGenerator"]
     mainClass.set("org.jooq.codegen.GenerationTool")
@@ -418,7 +417,7 @@ val downloadOpenApiGeneratorCli by tasks.register<DefaultTask>("downloadOpenApiG
     }
 }
 
-tasks.register<Exec>("generateEdxModels") {
+val generateEdxModels = tasks.register<Exec>("generateEdxModels") {
     group = "openapi"
     description = "Generate Kotlin models for Open edX API"
     dependsOn(downloadOpenApiSpec, downloadOpenApiGeneratorCli)
@@ -439,12 +438,20 @@ tasks.register<Exec>("generateEdxModels") {
         "-o", outputDir.absolutePath,
         "--skip-validate-spec",
         "--global-property", "models,modelDocs=false,modelTests=false",
-        "--openapi-generator-ignore-list",
-        "README.md,build.gradle,build.gradle.kts,settings.gradle,settings.gradle.kts,gradle.properties,gradlew,gradlew.bat,docs/**,src/test/**,gradle/**,.openapi-generator/**,.openapi-generator-ignore",
+//        "--openapi-generator-ignore-list",
+//        "README.md,build.gradle,build.gradle.kts,settings.gradle,settings.gradle.kts,gradle.properties,gradlew,gradlew.bat,docs/**,src/test/**,gradle/**,.openapi-generator/**,.openapi-generator-ignore",
         "-p", "serializationLibrary=jackson",
         "-p", "sourceFolder=.",
-        "-p", "useBeanValidation=true",
+//        "-p", "useBeanValidation=true",
         "-p", "enumPropertyNaming=PascalCase",
         "--model-package=soaringLizards.blps.edx.model",
+    )
+}
+
+val codegen by tasks.register<DefaultTask>("codegen") {
+    dependsOn(
+        generateJooq,
+        downloadOpenApiSpec,
+        generateEdxModels
     )
 }

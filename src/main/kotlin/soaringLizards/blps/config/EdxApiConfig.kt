@@ -14,7 +14,7 @@ import org.springframework.web.client.RestClient
 class EdxApiConfig {
 
     @Suppress("HttpUrlsUsage")
-    @Value("\${edx.api.base-url:http://local.openedx.io}")
+    @Value("\${edx.api.base-url:http://local.openedx.io/api}")
     private lateinit var baseUrl: String
 
     @Bean
