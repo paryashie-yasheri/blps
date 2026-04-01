@@ -1,12 +1,11 @@
 package soaringLizards.blps
 
 import org.springframework.stereotype.Service
-import soaringLizards.blps.edx.api.CoursesApi
-import soaringLizards.blps.edx.model.Course
+import soaringLizards.blps.client.EdxCoursesClient
 
 @Service
 class EdxService(
-    private val coursesApi: CoursesApi,
+    private val edxCoursesClient: EdxCoursesClient,
 ) {
-    fun getCoursesApi(data: Course) = coursesApi.coursesV1CoursesCreate(data)
+    fun getCourses() = edxCoursesClient.listCourses()
 }

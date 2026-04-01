@@ -139,7 +139,7 @@ kotlin {
     sourceSets {
         @Suppress("unused") val main by getting {
             kotlin.srcDir("build/generated/main/kotlin")
-            kotlin.srcDir("build/generated/edx/src/main/kotlin")
+            kotlin.srcDir("build/generated/edx-models")
         }
     }
 }
@@ -185,13 +185,6 @@ dependencies {
     implementation("org.slf4j:jcl-over-slf4j")
 
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.6")
-
-    implementation("com.squareup.retrofit2:retrofit:2.9.0")
-    implementation("com.squareup.retrofit2:converter-moshi:2.9.0")
-    implementation("com.squareup.retrofit2:converter-scalars:2.9.0")
-    implementation("com.squareup.moshi:moshi-kotlin:1.15.0")
-    implementation("com.squareup.okhttp3:okhttp:4.12.0")
-    implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
 
     implementation("io.jsonwebtoken:jjwt-api:0.11.5")
     implementation("net.logstash.logback:logstash-logback-encoder:8.0")
@@ -378,22 +371,26 @@ val downloadOpenApiSpec by tasks.register<DefaultTask>("downloadOpenApiSpec") {
     outputs.file(layout.buildDirectory.dir("generated/openapi/openapi.json"))
 
     doLast {
-        val outputDir = file(layout.buildDirectory.dir("generated/openapi").get().asFile)
-        outputDir.mkdirs()
-        val outputFile = file("${outputDir.absolutePath}/openapi.json")
-        val localSpec = file("src/main/resources/openapi/openapi.json")
-        if (localSpec.exists()) {
-            localSpec.copyTo(outputFile, overwrite = true)
-        } else {
-            ant.withGroovyBuilder {
-                @Suppress("HttpUrlsUsage")
-                "get"(
-                    "src" to "http://local.openedx.io/swagger.json",
-                    "dest" to outputFile.absolutePath,
-                    "usetimestamp" to "true",
-                    "verbose" to "false",
-                )
+        try {
+            val outputDir = file(layout.buildDirectory.dir("generated/openapi").get().asFile)
+            outputDir.mkdirs()
+            val outputFile = file("${outputDir.absolutePath}/openapi.json")
+            val localSpec = file("src/main/resources/openapi/openapi.json")
+            if (localSpec.exists()) {
+                localSpec.copyTo(outputFile, overwrite = true)
+            } else {
+                ant.withGroovyBuilder {
+                    @Suppress("HttpUrlsUsage")
+                    "get"(
+                        "src" to "http://local.openedx.io/swagger.json",
+                        "dest" to outputFile.absolutePath,
+                        "usetimestamp" to "true",
+                        "verbose" to "false",
+                    )
+                }
             }
+        } catch (e: Exception) {
+            e.printStackTrace()
         }
     }
 }
@@ -423,10 +420,17 @@ val downloadOpenApiGeneratorCli by tasks.register<DefaultTask>("downloadOpenApiG
     }
 }
 
-tasks.register<Exec>("generateEdxClient") {
+tasks.register<Exec>("generateEdxModels") {
     group = "openapi"
-    description = "Generate Retrofit client for Open edX API"
+    description = "Generate Kotlin models for Open edX API"
     dependsOn(downloadOpenApiSpec, downloadOpenApiGeneratorCli)
+
+    val outputDir = layout.buildDirectory.dir("generated/edx-models").get().asFile
+
+    doFirst {
+        delete(outputDir)
+        outputDir.mkdirs()
+    }
 
     commandLine(
         "java", "-jar",
@@ -434,15 +438,15 @@ tasks.register<Exec>("generateEdxClient") {
         "generate",
         "-g", "kotlin",
         "-i", "${layout.buildDirectory.get().asFile}/generated/openapi/openapi.json",
-        "-o", "${layout.buildDirectory.get().asFile}/generated/edx",
+        "-o", outputDir.absolutePath,
         "--skip-validate-spec",
-        "-p", "library=jvm-retrofit2",
-        "-p", "interfaceOnly=true",
+        "--global-property", "models,modelDocs=false,modelTests=false",
+        "--openapi-generator-ignore-list",
+        "README.md,build.gradle,build.gradle.kts,settings.gradle,settings.gradle.kts,gradle.properties,gradlew,gradlew.bat,docs/**,src/test/**,gradle/**,.openapi-generator/**,.openapi-generator-ignore",
+        "-p", "serializationLibrary=jackson",
+        "-p", "sourceFolder=.",
         "-p", "useBeanValidation=true",
         "-p", "enumPropertyNaming=PascalCase",
-        "-p", "generateBuildFile=false",
-        "-p", "generateSupportingFiles=false",
-        "--api-package=soaringLizards.blps.edx.api",
         "--model-package=soaringLizards.blps.edx.model",
     )
 }
