@@ -28,3 +28,8 @@ logging:
   level:
     org.springframework.security: DEBUG
     soaringLizards.blps: DEBUG
+
+edx:
+  api:
+    username: ${EDX_API_USERNAME:admin}
+    password: ${EDX_API_PASSWORD:admin}
