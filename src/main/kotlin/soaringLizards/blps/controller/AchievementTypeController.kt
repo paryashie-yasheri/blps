@@ -1,11 +1,11 @@
 package soaringLizards.blps.controller
 
+import jakarta.websocket.server.PathParam
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.web.bind.annotation.*
 import soaringLizards.blps.dto.achievementTypes.AchievementTypeDto
-import soaringLizards.blps.dto.user.RegisterDto
 import soaringLizards.blps.service.AchievementTypeService
-import java.util.UUID
+import java.util.*
 
 @RestController
 @RequestMapping("/api/auth/achievement-type")
@@ -13,7 +13,7 @@ class AchievementTypeController(
     private val achievementTypeService: AchievementTypeService,
 ) {
     @GetMapping("/{id}")
-    fun getById(@RequestParam id: UUID) =
+    fun getById(@PathParam("id") id: UUID) =
         achievementTypeService.getAchievementTypeById(id)
 
     @PostMapping("/")
@@ -23,6 +23,6 @@ class AchievementTypeController(
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
-    fun deleteAchievementType(@RequestParam id: UUID) =
+    fun deleteAchievementType(@PathParam("id") id: UUID) =
         achievementTypeService.deleteAchievementType(id)
 }

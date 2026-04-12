@@ -26,7 +26,8 @@ class BalanceTransactionRepository(
             .set(BALANCE_TRANSACTIONS.ACHIEVEMENT_TYPE_ID, transactionDto.achievementTypeId)
             .set(BALANCE_TRANSACTIONS.DESCRIPTION, transactionDto.description)
             .set(BALANCE_TRANSACTIONS.CREATED_AT, transactionDto.createdAt)
-            .execute()
+            .returning()
+            .fetchOne()
 
     fun delete(id: UUID) =
         dsl.deleteFrom(BALANCE_TRANSACTIONS)
