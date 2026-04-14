@@ -167,6 +167,7 @@ configurations {
 }
 
 dependencies {
+    // springboot
     implementation("org.springframework.boot:spring-boot-starter")
     implementation("org.springframework.boot:spring-boot-starter-jooq")
     implementation("org.springframework.boot:spring-boot-starter-liquibase")
@@ -177,42 +178,46 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-webservices")
     implementation("org.springframework.security:spring-security-oauth2-authorization-server:7.0.3")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
-    implementation("tools.jackson.module:jackson-module-kotlin")
-
-    implementation("org.slf4j:jcl-over-slf4j")
-
+    developmentOnly("org.springframework.boot:spring-boot-devtools")
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.6")
 
-    implementation("io.jsonwebtoken:jjwt-api:0.11.5")
-    implementation("net.logstash.logback:logstash-logback-encoder:8.0")
-    developmentOnly("org.springframework.boot:spring-boot-devtools")
-    runtimeOnly("org.postgresql:postgresql")
-    runtimeOnly("io.jsonwebtoken:jjwt-impl:0.11.5")
-    runtimeOnly("io.jsonwebtoken:jjwt-jackson:0.11.5")
-
-    add("jooqGenerator", "org.jooq:jooq-codegen")
-    add("jooqGenerator", "org.jooq:jooq-meta")
-    add("jooqGenerator", "org.postgresql:postgresql")
-    add("liquibaseRuntime", "org.liquibase:liquibase-core")
-    add("liquibaseRuntime", "org.postgresql:postgresql")
-    add("liquibaseRuntime", "info.picocli:picocli:4.7.6")
-    add("liquibaseRuntime", "com.h2database:h2:2.2.224")
-
-    testImplementation("org.springframework.boot:spring-boot-starter-security-test")
-    testImplementation("org.springframework.boot:spring-boot-starter-webmvc-test")
-    testImplementation("org.springframework.boot:spring-boot-starter-test")
-    testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
-    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test")
+    // db & tests
     testImplementation(enforcedPlatform("org.testcontainers:testcontainers-bom:$testcontainersVersion"))
     testImplementation("org.testcontainers:testcontainers") {
         version { strictly(testcontainersVersion) }
     }
     testImplementation("org.testcontainers:junit-jupiter")
     testImplementation("org.testcontainers:postgresql")
+    add("jooqGenerator", "org.jooq:jooq-codegen")
+    add("jooqGenerator", "org.jooq:jooq-meta")
+    add("jooqGenerator", "org.postgresql:postgresql")
+    add("liquibaseRuntime", "org.liquibase:liquibase-core")
+    add("liquibaseRuntime", "org.postgresql:postgresql")
+    add("liquibaseRuntime", "info.picocli:picocli:4.7.6")
+    add("liquibaseRuntime", "com.h2database:h2:2.2.224") // точн надо?
+    runtimeOnly("org.postgresql:postgresql")
+    testImplementation("org.springframework.boot:spring-boot-starter-webmvc-test")
+    testImplementation("org.springframework.boot:spring-boot-starter-test")
+    testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+
+
+    // security
+    runtimeOnly("io.jsonwebtoken:jjwt-impl:0.11.5")
+    runtimeOnly("io.jsonwebtoken:jjwt-jackson:0.11.5")
+    testImplementation("org.springframework.boot:spring-boot-starter-security-test")
+
     // s3
     implementation("software.amazon.awssdk:s3:2.42.33")
     implementation("software.amazon.awssdk:apache-client:2.42.33")
+
+    // other
+    implementation("org.slf4j:jcl-over-slf4j")
+    implementation("io.jsonwebtoken:jjwt-api:0.11.5")
+    implementation("net.logstash.logback:logstash-logback-encoder:8.0")
+    implementation("tools.jackson.module:jackson-module-kotlin")
+
 }
 
 configurations.all {
@@ -437,6 +442,6 @@ val codegen by tasks.register<DefaultTask>("codegen") {
     dependsOn(
         generateJooq,
         downloadOpenApiSpec,
-        generateEdxModels
+        generateEdxModels,
     )
 }
