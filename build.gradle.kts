@@ -210,6 +210,9 @@ dependencies {
     testImplementation("org.testcontainers:junit-jupiter")
     testImplementation("org.testcontainers:postgresql")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+    // s3
+    implementation("software.amazon.awssdk:s3:2.42.33")
+    implementation("software.amazon.awssdk:apache-client:2.42.33")
 }
 
 configurations.all {
