@@ -3,6 +3,7 @@ package soaringLizards.blps.config
 import org.slf4j.LoggerFactory
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import org.springframework.core.annotation.Order
 import org.springframework.security.config.Customizer.withDefaults
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
@@ -27,7 +28,9 @@ class SecurityConfig {
     @Bean
     fun passwordEncoder() = BCryptPasswordEncoder()
 
+
     @Bean
+    @Order(2)
     fun filterChain(http: HttpSecurity) =
         http
             .authorizeHttpRequests { auth ->
@@ -42,6 +45,7 @@ class SecurityConfig {
                         "/api-docs",
                         "/swagger-ui/**",
                         "/swagger-ui.html",
+                        "/oauth2/**",
                         "/v3/api-docs/**",
                     ).permitAll()
                     .anyRequest().authenticated()

@@ -178,7 +178,7 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-webmvc")
     implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("org.springframework.boot:spring-boot-starter-webservices")
-    implementation("org.springframework.security:spring-security-oauth2-authorization-server:7.0.3")
+    implementation("org.springframework.boot:spring-boot-starter-oauth2-authorization-server")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
     implementation("tools.jackson.module:jackson-module-kotlin")
 
@@ -265,7 +265,15 @@ val dotenv: Map<String, String> = run {
         .toMap()
 }
 
-fun createEnvMap() = dotenv.ifEmpty { System.getenv() }!!
+<<<<<<< Updated upstream
+fun createEnvMap(): Map<String, String> {
+    return dotenv.ifEmpty { System.getenv() }
+}
+=======
+fun createEnvMap(): Map<String, String> {
+    return dotenv.ifEmpty { System.getenv() }
+}
+>>>>>>> Stashed changes
 
 fun createLiquibaseArgs(env: Map<String, String>): List<String> {
     val url = "jdbc:postgresql://${env["POSTGRES_HOST"]}:${env["POSTGRES_PORT"]}/${env["POSTGRES_DB"]}"
