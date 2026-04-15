@@ -26,5 +26,8 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v5
 
+      - name: Setup and build project
+        run: ./gradlew codegen bootjar
+
       - name: Run tests
-        run: ./gradlew codegen test --no-daemon
+        run: ./gradlew test --no-daemon

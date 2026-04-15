@@ -167,10 +167,8 @@ configurations {
 }
 
 dependencies {
+    // springboot
     implementation("org.springframework.boot:spring-boot-starter")
-    implementation("org.springframework.boot:spring-boot-starter-data-jdbc")
-    implementation("org.springframework.boot:spring-boot-starter-data-jpa")
-    implementation("org.springframework.boot:spring-boot-starter-jdbc")
     implementation("org.springframework.boot:spring-boot-starter-jooq")
     implementation("org.springframework.boot:spring-boot-starter-liquibase")
     implementation("org.springframework.boot:spring-boot-starter-security")
@@ -180,48 +178,46 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-webservices")
     implementation("org.springframework.security:spring-security-oauth2-authorization-server:7.0.3")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
-    implementation("tools.jackson.module:jackson-module-kotlin")
-
-    implementation("org.slf4j:jcl-over-slf4j")
-
+    developmentOnly("org.springframework.boot:spring-boot-devtools")
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.6")
 
-    implementation("io.jsonwebtoken:jjwt-api:0.11.5")
-    implementation("net.logstash.logback:logstash-logback-encoder:8.0")
-    developmentOnly("org.springframework.boot:spring-boot-devtools")
-    runtimeOnly("org.postgresql:postgresql")
-    runtimeOnly("io.micrometer:micrometer-registry-prometheus")
-    runtimeOnly("io.jsonwebtoken:jjwt-impl:0.11.5")
-    runtimeOnly("io.jsonwebtoken:jjwt-jackson:0.11.5")
-
-    add("jooqGenerator", "org.jooq:jooq-codegen")
-    add("jooqGenerator", "org.jooq:jooq-meta")
-    add("jooqGenerator", "org.postgresql:postgresql")
-    add("liquibaseRuntime", "org.liquibase:liquibase-core")
-    add("liquibaseRuntime", "org.postgresql:postgresql")
-    add("liquibaseRuntime", "info.picocli:picocli:4.7.6")
-    add("liquibaseRuntime", "com.h2database:h2:2.2.224")
-    runtimeOnly("org.postgresql:postgresql")
-
-    testImplementation("org.springframework.boot:spring-boot-starter-data-jdbc-test")
-    testImplementation("org.springframework.boot:spring-boot-starter-data-jpa-test")
-    testImplementation("org.springframework.boot:spring-boot-starter-jdbc-test")
-    testImplementation("org.springframework.boot:spring-boot-starter-jooq-test")
-    testImplementation("org.springframework.boot:spring-boot-starter-liquibase-test")
-    testImplementation("org.springframework.boot:spring-boot-starter-security-test")
-    testImplementation("org.springframework.boot:spring-boot-starter-webmvc-test")
-    testImplementation("org.springframework.boot:spring-boot-starter-webservices-test")
-    testImplementation("org.springframework.boot:spring-boot-starter-websocket-test")
-    testImplementation("org.springframework.boot:spring-boot-starter-test")
-    testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
-    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test")
+    // db & tests
     testImplementation(enforcedPlatform("org.testcontainers:testcontainers-bom:$testcontainersVersion"))
     testImplementation("org.testcontainers:testcontainers") {
         version { strictly(testcontainersVersion) }
     }
     testImplementation("org.testcontainers:junit-jupiter")
     testImplementation("org.testcontainers:postgresql")
+    add("jooqGenerator", "org.jooq:jooq-codegen")
+    add("jooqGenerator", "org.jooq:jooq-meta")
+    add("jooqGenerator", "org.postgresql:postgresql")
+    add("liquibaseRuntime", "org.liquibase:liquibase-core")
+    add("liquibaseRuntime", "org.postgresql:postgresql")
+    add("liquibaseRuntime", "info.picocli:picocli:4.7.6")
+    add("liquibaseRuntime", "com.h2database:h2:2.2.224") // точн надо?
+    runtimeOnly("org.postgresql:postgresql")
+    testImplementation("org.springframework.boot:spring-boot-starter-webmvc-test")
+    testImplementation("org.springframework.boot:spring-boot-starter-test")
+    testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+
+
+    // security
+    runtimeOnly("io.jsonwebtoken:jjwt-impl:0.11.5")
+    runtimeOnly("io.jsonwebtoken:jjwt-jackson:0.11.5")
+    testImplementation("org.springframework.boot:spring-boot-starter-security-test")
+
+    // s3
+    implementation("software.amazon.awssdk:s3:2.42.33")
+    implementation("software.amazon.awssdk:apache-client:2.42.33")
+
+    // other
+    implementation("org.slf4j:jcl-over-slf4j")
+    implementation("io.jsonwebtoken:jjwt-api:0.11.5")
+    implementation("net.logstash.logback:logstash-logback-encoder:8.0")
+    implementation("tools.jackson.module:jackson-module-kotlin")
+
 }
 
 configurations.all {
@@ -230,12 +226,6 @@ configurations.all {
         force("org.testcontainers:jdbc:$testcontainersVersion")
         force("org.testcontainers:database-commons:$testcontainersVersion")
     }
-}
-
-allOpen {
-    annotation("jakarta.persistence.Entity")
-    annotation("jakarta.persistence.MappedSuperclass")
-    annotation("jakarta.persistence.Embeddable")
 }
 
 tasks.withType<Test> {
@@ -362,96 +352,8 @@ tasks.matching { it.name == "generateSources" }.configureEach {
     dependsOn(liquibaseUpdate)
 }
 
-val downloadOpenApiSpec by tasks.register<DefaultTask>("downloadOpenApiSpec") {
-    group = "openapi"
-
-    outputs.file(layout.buildDirectory.dir("generated/openapi/openapi.json"))
-
-    doLast {
-        try {
-            val outputDir = file(layout.buildDirectory.dir("generated/openapi").get().asFile)
-            outputDir.mkdirs()
-            val outputFile = file("${outputDir.absolutePath}/openapi.json")
-            val localSpec = file("src/main/resources/openapi/openapi.json")
-            if (localSpec.exists()) {
-                localSpec.copyTo(outputFile, overwrite = true)
-            } else {
-                ant.withGroovyBuilder {
-                    @Suppress("HttpUrlsUsage")
-                    "get"(
-                        "src" to "http://local.openedx.io/swagger.json",
-                        "dest" to outputFile.absolutePath,
-                        "usetimestamp" to "true",
-                        "verbose" to "false",
-                    )
-                }
-            }
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
-    }
-}
-
-val downloadOpenApiGeneratorCli by tasks.register<DefaultTask>("downloadOpenApiGeneratorCli") {
-    group = "openapi"
-    outputs.file(layout.buildDirectory.dir("openapi-generator-cli/openapi-generator-cli.jar"))
-
-    doLast {
-        val outputDir = file(layout.buildDirectory.dir("openapi-generator-cli").get().asFile)
-        outputDir.mkdirs()
-        val jarFile = file("${outputDir.absolutePath}/openapi-generator-cli.jar")
-
-        if (!jarFile.exists()) {
-            ant.withGroovyBuilder {
-                "get"(
-                    "src" to "https://repo1.maven.org/maven2/org/openapitools/openapi-generator-cli/7.9.0/openapi-generator-cli-7.9.0.jar",
-                    "dest" to jarFile.absolutePath,
-                    "usetimestamp" to "true",
-                    "verbose" to "false",
-                )
-            }
-            println("Downloaded OpenAPI Generator CLI to: ${jarFile.absolutePath}")
-        } else {
-            println("OpenAPI Generator CLI already exists: ${jarFile.absolutePath}")
-        }
-    }
-}
-
-val generateEdxModels = tasks.register<Exec>("generateEdxModels") {
-    group = "openapi"
-    description = "Generate Kotlin models for Open edX API"
-    dependsOn(downloadOpenApiSpec, downloadOpenApiGeneratorCli)
-
-    val outputDir = layout.buildDirectory.dir("generated/edx-models").get().asFile
-
-    doFirst {
-        delete(outputDir)
-        outputDir.mkdirs()
-    }
-
-    commandLine(
-        "java", "-jar",
-        "${rootProject.layout.buildDirectory.get().asFile}/openapi-generator-cli/openapi-generator-cli.jar",
-        "generate",
-        "-g", "kotlin",
-        "-i", "${layout.buildDirectory.get().asFile}/generated/openapi/openapi.json",
-        "-o", outputDir.absolutePath,
-        "--skip-validate-spec",
-        "--global-property", "models,modelDocs=false,modelTests=false",
-//        "--openapi-generator-ignore-list",
-//        "README.md,build.gradle,build.gradle.kts,settings.gradle,settings.gradle.kts,gradle.properties,gradlew,gradlew.bat,docs/**,src/test/**,gradle/**,.openapi-generator/**,.openapi-generator-ignore",
-        "-p", "serializationLibrary=jackson",
-        "-p", "sourceFolder=.",
-//        "-p", "useBeanValidation=true",
-        "-p", "enumPropertyNaming=PascalCase",
-        "--model-package=soaringLizards.blps.edx.model",
-    )
-}
-
 val codegen by tasks.register<DefaultTask>("codegen") {
     dependsOn(
         generateJooq,
-        downloadOpenApiSpec,
-        generateEdxModels
     )
 }
