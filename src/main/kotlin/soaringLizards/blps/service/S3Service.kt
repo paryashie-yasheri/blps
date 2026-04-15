@@ -17,6 +17,7 @@ import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignReques
 import java.net.URI
 import java.time.Duration
 
+// TODO: прикрутить какую нибудь имаджрепу чтобы в ней хранилось соответствие урла картинки и к какому достижению оно относится
 @Service
 class S3Service(
     val s3Properties: S3Properties,
@@ -87,13 +88,14 @@ class S3Service(
         .url()
         .toString()
 
+    // fixme: добавить проверку названия на расширение картинки чтобы нормальное было (типа пнг или типа того)
     fun upload(file: MultipartFile) =
         s3Client.putObject(
             createPutObjectRequest(file),
             RequestBody.fromInputStream(file.inputStream, file.size),
         )
 
-    fun delete(key: String): Unit = TODO()
+    fun delete(key: String): Unit = TODO(key)
 
     private fun createPutObjectRequest(file: MultipartFile) =
         PutObjectRequest
