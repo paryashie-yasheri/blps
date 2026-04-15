@@ -1,0 +1,56 @@
+server:
+  port: 8080
+
+spring:
+  config:
+    import: optional:file:.env[.properties]
+  profiles:
+    default: test
+  application:
+    name: blps
+  datasource:
+    url: jdbc:h2:mem:testdb
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: 
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: true
+  liquibase:
+    enabled: false
+    
+  security:
+    oauth2:
+      authorization-server:
+        issuer-url: http://localhost:8080/oauth2
+        introspection-endpoint: http://localhost:8080/oauth2/introspect
+        jwt-secret: default-jwt-secret-key
+        scopes: read,write
+        redirect-uri: http://localhost:8080/login/oauth2/code/custom
+        client-name: blps-client
+        client-id: blps-client
+        client-secret: blps-secret
+
+  auth:
+    jwt:
+      secret: test-jwt-secret-key-for-blps-mvp
+      expiration-ms: 3600000
+
+app:
+  jwt:
+    staff:
+      secret: blps-staff-jwt-secret-key-2024-min-32-chars
+      issuer: blps-internal
+      expiration-minutes: 60
+  lms:
+    issuer-uri: http://46.16.36.172/auth/realms/master
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  metrics:
+    tags:
+      application: ${spring.application.name}

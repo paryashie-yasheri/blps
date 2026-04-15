@@ -22,29 +22,41 @@ spring:
     multipart:
       max-file-size: 6MB
       max-request-size: 6MB
+  security:
+    oauth2:
+      authorization-server:
+        issuer-url: ${SPRING_SECURITY_OAUTH2_AUTHORIZATION_SERVER_ISSUER_URL:http://localhost:8080/oauth2}
+        introspection-endpoint: ${SPRING_SECURITY_OAUTH2_AUTHORIZATION_SERVER_INTROSPECTION_ENDPOINT:http://localhost:8080/oauth2/introspect}
+        jwt-secret: ${SPRING_SECURITY_OAUTH2_AUTHORIZATION_SERVER_JWT_SECRET:default-jwt-secret-key}
+        scopes: ${SPRING_SECURITY_OAUTH2_AUTHORIZATION_SERVER_SCOPES:read,write}
+        redirect-uri: ${SPRING_SECURITY_OAUTH2_AUTHORIZATION_SERVER_REDIRECT_URI:http://localhost:8080/login/oauth2/code/custom}
+        client-name: ${SPRING_SECURITY_OAUTH2_AUTHORIZATION_SERVER_CLIENT_NAME:blps-client}
+        client-id: ${SPRING_SECURITY_OAUTH2_AUTHORIZATION_SERVER_CLIENT_ID:blps-client}
+        client-secret: ${SPRING_SECURITY_OAUTH2_AUTHORIZATION_SERVER_CLIENT_SECRET:blps-secret}
   env:
     config:
       port: ${server.port}
       host: ${SPRING_HOST:"http://localhost:${server.port}/"}
-auth:
-  jwt:
-    secret: ${JWT_SECRET}
-    expiration-ms: ${JWT_EXPIRATION_MS:3600000}
+  auth:
+    jwt:
+      secret: ${JWT_SECRET}
+      expiration-ms: ${JWT_EXPIRATION_MS:3600000}
 
-edx:
-  api:
-    base-url: ${EDX_API_BASE_URL:http://local.openedx.io/api}
-    username: ${EDX_API_USERNAME:}
-    password: ${EDX_API_PASSWORD:}
-    authorization: ${EDX_API_AUTHORIZATION:}
-    cookie: ${EDX_API_COOKIE:}
-    csrf-token: ${EDX_API_CSRF_TOKEN:}
+app:
+  jwt:
+    staff:
+      secret: ${APP_JWT_STAFF_SECRET:blps-staff-jwt-secret-key-2024-min-32-chars}
+      expiration-minutes: 60
+  lms:
+    issuer-uri: ${APP_LMS_ISSUER_URI:http://local.openedx.io/oauth2/}
 
 management:
   endpoints:
     web:
       exposure:
         include: health,info
+  security:
+    enabled: false
   metrics:
     tags:
       application: ${spring.application.name}

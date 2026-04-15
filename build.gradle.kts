@@ -221,6 +221,7 @@ dependencies {
     }
     testImplementation("org.testcontainers:junit-jupiter")
     testImplementation("org.testcontainers:postgresql")
+    testImplementation("org.mockito.kotlin:mockito-kotlin:5.2.1")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
@@ -265,15 +266,9 @@ val dotenv: Map<String, String> = run {
         .toMap()
 }
 
-<<<<<<< Updated upstream
 fun createEnvMap(): Map<String, String> {
     return dotenv.ifEmpty { System.getenv() }
 }
-=======
-fun createEnvMap(): Map<String, String> {
-    return dotenv.ifEmpty { System.getenv() }
-}
->>>>>>> Stashed changes
 
 fun createLiquibaseArgs(env: Map<String, String>): List<String> {
     val url = "jdbc:postgresql://${env["POSTGRES_HOST"]}:${env["POSTGRES_PORT"]}/${env["POSTGRES_DB"]}"
@@ -460,6 +455,6 @@ val codegen by tasks.register<DefaultTask>("codegen") {
     dependsOn(
         generateJooq,
         downloadOpenApiSpec,
-        generateEdxModels
+        generateEdxModels,
     )
 }

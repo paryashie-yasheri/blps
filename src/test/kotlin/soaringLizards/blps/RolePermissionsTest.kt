@@ -3,8 +3,8 @@ package soaringLizards.blps
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 import org.springframework.security.test.context.support.WithMockUser
 import org.springframework.test.context.DynamicPropertyRegistry
 import org.springframework.test.context.DynamicPropertySource
@@ -47,12 +47,12 @@ class RolePermissionsTest {
     }
 
     @Test
-    @WithMockUser(roles = ["USER"])
-    fun `user endpoint should be accessible with USER role - authenticated`() {
+    @WithMockUser(roles = ["OPENEDX_USER"])
+    fun `user endpoint should be accessible with OPENEDX_USER role - authenticated`() {
         mockMvc.get("/api/test/roles/user")
             .andExpect {
                 status { isOk() }
-                content { string("User endpoint - requires USER role") }
+                content { string("User endpoint - requires OPENEDX_USER role") }
             }
     }
 
@@ -85,8 +85,8 @@ class RolePermissionsTest {
     }
 
     @Test
-    @WithMockUser(roles = ["USER"])
-    fun `staff endpoint should be forbidden for USER role`() {
+    @WithMockUser(roles = ["OPENEDX_USER"])
+    fun `staff endpoint should be forbidden for OPENEDX_USER role`() {
         mockMvc.get("/api/test/roles/staff")
             .andExpect {
                 status { isForbidden() }
@@ -113,8 +113,8 @@ class RolePermissionsTest {
     }
 
     @Test
-    @WithMockUser(roles = ["USER"])
-    fun `admin endpoint should be forbidden for USER role`() {
+    @WithMockUser(roles = ["OPENEDX_USER"])
+    fun `admin endpoint should be forbidden for OPENEDX_USER role`() {
         mockMvc.get("/api/test/roles/admin")
             .andExpect {
                 status { isForbidden() }
@@ -131,12 +131,12 @@ class RolePermissionsTest {
     }
 
     @Test
-    @WithMockUser(roles = ["USER"])
-    fun `user-or-staff endpoint should be accessible with USER role`() {
+    @WithMockUser(roles = ["OPENEDX_USER"])
+    fun `user-or-staff endpoint should be accessible with OPENEDX_USER role`() {
         mockMvc.get("/api/test/roles/user-or-staff")
             .andExpect {
                 status { isOk() }
-                content { string("User or Staff endpoint - requires USER or STAFF role") }
+                content { string("User or Staff endpoint - requires OPENEDX_USER or STAFF role") }
             }
     }
 
@@ -146,7 +146,7 @@ class RolePermissionsTest {
         mockMvc.get("/api/test/roles/user-or-staff")
             .andExpect {
                 status { isOk() }
-                content { string("User or Staff endpoint - requires USER or STAFF role") }
+                content { string("User or Staff endpoint - requires OPENEDX_USER or STAFF role") }
             }
     }
 
@@ -180,8 +180,8 @@ class RolePermissionsTest {
     }
 
     @Test
-    @WithMockUser(roles = ["USER"])
-    fun `staff-or-admin endpoint should be forbidden for USER role`() {
+    @WithMockUser(roles = ["OPENEDX_USER"])
+    fun `staff-or-admin endpoint should be forbidden for OPENEDX_USER role`() {
         mockMvc.get("/api/test/roles/staff-or-admin")
             .andExpect {
                 status { isForbidden() }
@@ -189,8 +189,8 @@ class RolePermissionsTest {
     }
 
     @Test
-    @WithMockUser(roles = ["USER"])
-    fun `any-authenticated endpoint should be accessible with USER role`() {
+    @WithMockUser(roles = ["OPENEDX_USER"])
+    fun `any-authenticated endpoint should be accessible with OPENEDX_USER role`() {
         mockMvc.get("/api/test/roles/any-authenticated")
             .andExpect {
                 status { isOk() }
@@ -227,7 +227,7 @@ class RolePermissionsTest {
     }
 
     @Test
-    @WithMockUser(roles = ["USER", "STAFF", "ADMIN"])
+    @WithMockUser(roles = ["OPENEDX_USER", "STAFF", "ADMIN"])
     fun `user with multiple roles should access all respective endpoints`() {
         mockMvc.get("/api/test/roles/user")
             .andExpect { status { isOk() } }
