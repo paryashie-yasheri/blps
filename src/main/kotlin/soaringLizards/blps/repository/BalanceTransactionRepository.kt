@@ -1,6 +1,7 @@
 package soaringLizards.blps.repository
 
 import org.jooq.DSLContext
+import org.springdoc.core.converters.models.Pageable
 import org.springframework.stereotype.Repository
 import soaringLizards.blps.dto.balanceTransactions.BalanceTransactionDto
 import soaringLizards.blps.jooq.generated.tables.references.BALANCE_TRANSACTIONS
@@ -11,9 +12,15 @@ class BalanceTransactionRepository(
     private val dsl: DSLContext,
 ) {
     fun findById(id: UUID) =
-        dsl.select(BALANCE_TRANSACTIONS)
+        dsl.selectFrom(BALANCE_TRANSACTIONS)
             .where(BALANCE_TRANSACTIONS.TRANSACTION_ID.eq(id))
             .fetchOne()
+
+    fun getAllByUserId(id: UUID, pageable: Pageable) =
+        dsl.selectFrom(BALANCE_TRANSACTIONS)
+            .where(BALANCE_TRANSACTIONS.TRANSACTION_ID.eq(id))
+            .limit(pageable.size).offset(pageable.page * pageable.size)
+            .fetch().toList()
 
     fun insert(transactionDto: BalanceTransactionDto) =
         dsl.insertInto(BALANCE_TRANSACTIONS)

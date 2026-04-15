@@ -42,24 +42,25 @@ class AuthorizationServerConfig(
                         .refreshTokenTimeToLive(Duration.of(120, ChronoUnit.MINUTES))
                         .reuseRefreshTokens(false)
                         .authorizationCodeTimeToLive(Duration.of(30, ChronoUnit.SECONDS))
-                        .build()
+                        .build(),
                 )
-                .build()
+                .build(),
         )
 
-    @Bean
+@Bean
     fun authorizationServerSettings() =
         AuthorizationServerSettings.builder()
             .issuer(authorizationServerProperties.issuerUrl)
             .tokenIntrospectionEndpoint(authorizationServerProperties.introspectionEndpoint)
-            .build()!!
+            .tokenEndpoint("/oauth2/token")
+            .build()
 
 
     @Bean
     fun jwkSource(): JWKSource<SecurityContext> {
         val secretKey = SecretKeySpec(
             authorizationServerProperties.jwtSecret.toByteArray(),
-            "HMAC"
+            "HMAC",
         )
         return ImmutableSecret(secretKey)
     }

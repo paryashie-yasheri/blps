@@ -29,10 +29,46 @@ class UserService(
         return user.toUserResponse()
     }
 
+    fun getUserByUsername(username: String): UserResponse? {
+        val user = userRepository.findByUsername(username)
+        return user?.toUserResponse()
+    }
+
     fun convertSpringUserToUser(springUser: User) =
         userRepository.findByUsername(springUser.username)
             ?: throw UserNotFoundException("User not found in database")
 
+    fun authenticateStaff(username: String, password: String): UserResponse? {
+        val user = userRepository.findByUsername(username)
+            ?: return null
+
+        if (user.role != "STAFF" && user.role != "ADMIN")
+            return null
+
+        if (passwordEncoder.matches(password, user.passwordHash)) {
+            return user.toUserResponse()
+        } else {
+            return null
+        }
+    }
+
+    fun authenticateOrCreateOpenedxUser(username: String): UserResponse? {
+        val existingUser = userRepository.findByUsername(username)
+        return if (existingUser != null) {
+            // Allow any existing user to login as OPENEDX_USER
+            existingUser.toUserResponse()
+        } else {
+            // Auto-create new OPENEDX_USER
+            val newUser = UserDto(
+                username = username,
+                password = passwordEncoder.encode("openedx-auto-${username}")!!,
+                email = soaringLizards.blps.dto.user.Email("${username}@openedx.local"),
+                role = "OPENEDX_USER",
+            )
+            val inserted = userRepository.insert(newUser)
+            inserted?.toUserResponse()
+        }
+    }
 
     @Transactional
     fun registerUser(request: RegisterDto, role: String): UserResponse {

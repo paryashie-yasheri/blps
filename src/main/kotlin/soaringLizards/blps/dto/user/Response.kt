@@ -8,6 +8,14 @@ class UserResponse(
     val role: String,
 )
 
+class LoginResponseDto(
+    val accessToken: String,
+    val tokenType: String,
+    val expiresIn: Long,
+    val username: String,
+    val role: String,
+)
+
 fun UsersRecord.toUserResponse() =
     UserResponse(
         username!!,

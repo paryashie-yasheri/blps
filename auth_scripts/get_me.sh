@@ -1,5 +1,3 @@
-#!/usr/bin/env bash
-
+#!/bin/bash
 source ../.env
-
-curl -v -b cookies.txt -X GET "${SPRING_HOST}/api/auth/me"
+curl -s -H "Authorization: Bearer $1" "${SPRING_HOST}/api/auth/me"
