@@ -1,12 +1,14 @@
 package soaringLizards.blps.controller
 
 import org.springframework.security.access.prepost.PreAuthorize
-import org.springframework.web.bind.annotation.*
+import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RestController
 
 @RestController
 @RequestMapping("/api/achievements")
-class AchievementController() {
-    
+class AchievementController {
+
     @GetMapping("/available")
     @PreAuthorize("hasRole('STAFF')")
     fun getAvailableAchievements() =
@@ -18,7 +20,7 @@ class AchievementController() {
                     "description" to "Complete your first course",
                     "points" to 100,
                     "icon" to "trophy",
-                    "claimed" to false
+                    "claimed" to false,
                 ),
                 mapOf(
                     "id" to "achievement-2",
@@ -26,8 +28,8 @@ class AchievementController() {
                     "description" to "Complete a course in under 24 hours",
                     "points" to 250,
                     "icon" to "lightning",
-                    "claimed" to true
-                )
-            )
+                    "claimed" to true,
+                ),
+            ),
         )
 }
