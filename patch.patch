@@ -1,0 +1,704 @@
+diff --git a/auth_scripts/login_as_user.sh b/auth_scripts/login_as_user.sh
+index b4e2328..aa317ce 100755
+--- a/auth_scripts/login_as_user.sh
++++ b/auth_scripts/login_as_user.sh
+@@ -1,5 +1,5 @@
+-#!/bin/bash
+-source ../.env
+-curl -s -X POST "${SPRING_HOST}/api/auth/openedx_user/login" \
+-  -H "Content-Type: application/json" \
+-  -d "{\"username\":\"$1\",\"password\":\"$2\"}" | jq .
++  #!/bin/bash
++  source ../.env
++  curl -s -X POST "${SPRING_HOST}/api/auth/openedx_user/login" \
++    -H "Content-Type: application/json" \
++    -d "{\"username\":\"$1\",\"password\":\"$2\"}" | jq .
+diff --git a/src/main/kotlin/soaringLizards/blps/config/EdxApiConfig.kt b/src/main/kotlin/soaringLizards/blps/config/EdxApiConfig.kt
+index 997c186..db1a954 100644
+--- a/src/main/kotlin/soaringLizards/blps/config/EdxApiConfig.kt
++++ b/src/main/kotlin/soaringLizards/blps/config/EdxApiConfig.kt
+@@ -4,11 +4,7 @@ import org.springframework.beans.factory.annotation.Value
+ import org.springframework.context.annotation.Bean
+ import org.springframework.context.annotation.Configuration
+ import org.springframework.http.HttpHeaders
+-import org.springframework.http.HttpMethod
+ import org.springframework.http.MediaType
+-import org.springframework.security.core.Authentication
+-import org.springframework.security.core.context.SecurityContextHolder
+-import org.springframework.security.oauth2.jwt.Jwt
+ import org.springframework.web.client.RestClient
+ 
+ @Configuration
+@@ -35,61 +31,23 @@ class EdxApiConfig {
+             val configuredAuthorization = authorizationHeader.trim().takeIf { it.isNotEmpty() }
+             val configuredCookie = cookieHeader.trim().takeIf { it.isNotEmpty() }
+             val configuredCsrfToken = csrfToken.trim().takeIf { it.isNotEmpty() }
+-            val authenticatedSession =
+-                if (
+-                    configuredAuthorization == null &&
+-                    configuredCookie == null
+-                )
+-                    edxSessionAuthManager.getSession()
+-                else
+-                    null
+ 
+-
+-            request.headers.getFirst(HttpHeaders.AUTHORIZATION)
+-                ?: when {
+-                    configuredAuthorization != null -> request.headers.set(
+-                        HttpHeaders.AUTHORIZATION,
+-                        configuredAuthorization,
+-                    )
+-
+-                    else -> extractToken()?.let(request.headers::setBearerAuth)
+-                }
+-
+-            request.headers.getFirst(HttpHeaders.COOKIE) ?: {
+-                when {
+-                    configuredCookie != null -> request.headers.set(HttpHeaders.COOKIE, configuredCookie)
+-                    authenticatedSession != null -> request.headers.set(
+-                        HttpHeaders.COOKIE,
+-                        authenticatedSession.cookieHeader,
+-                    )
++            if (configuredAuthorization != null) {
++                request.headers.set(HttpHeaders.AUTHORIZATION, configuredAuthorization)
++            } else if (configuredCookie != null) {
++                request.headers.set(HttpHeaders.COOKIE, configuredCookie)
++                if (configuredCsrfToken != null) {
++                    request.headers.set("X-CSRFToken", configuredCsrfToken)
+                 }
+-            }
+-
+-            val method = request.method
+-            if (
+-                method != HttpMethod.GET &&
+-                method != HttpMethod.HEAD &&
+-                method != HttpMethod.OPTIONS &&
+-                request.headers.getFirst("X-CSRFToken") == null
+-            ) {
+-                when {
+-                    configuredCsrfToken != null -> request.headers.set("X-CSRFToken", configuredCsrfToken)
+-                    authenticatedSession != null -> request.headers.set(
+-                        "X-CSRFToken",
+-                        authenticatedSession.csrfToken,
+-                    )
++            } else {
++                val authenticatedSession = edxSessionAuthManager.getSession()
++                if (authenticatedSession != null) {
++                    request.headers.set(HttpHeaders.COOKIE, authenticatedSession.cookieHeader)
++                    request.headers.set("X-CSRFToken", authenticatedSession.csrfToken)
+                 }
+             }
+ 
+             execution.execute(request, body)
+         }
+         .build()
+-
+-    private fun extractToken(): String? {
+-        val authentication: Authentication? = SecurityContextHolder.getContext().authentication
+-        return when (val principal = authentication?.principal) {
+-            is Jwt -> principal.tokenValue
+-            else -> null
+-        }
+-    }
+ }
+diff --git a/src/main/kotlin/soaringLizards/blps/config/SecurityConfig.kt b/src/main/kotlin/soaringLizards/blps/config/SecurityConfig.kt
+index 9356e2c..e179ddc 100644
+--- a/src/main/kotlin/soaringLizards/blps/config/SecurityConfig.kt
++++ b/src/main/kotlin/soaringLizards/blps/config/SecurityConfig.kt
+@@ -50,7 +50,7 @@ class SecurityConfig(
+             .oauth2ResourceServer { oauth2 ->
+                 oauth2.jwt { jwt ->
+                     jwt.decoder(staffJwtDecoder())
+-                    jwt.jwtAuthenticationConverter(staffJwtAuthenticationConverter())
++                    jwt.jwtAuthenticationConverter(jwtToUserDetailsConverter())
+                 }
+             }
+             .exceptionHandling { exceptions: ExceptionHandlingConfigurer<HttpSecurity?>? ->
+@@ -88,7 +88,8 @@ class SecurityConfig(
+             .httpBasic(withDefaults())
+             .oauth2ResourceServer { oauth2 ->
+                 oauth2.jwt { jwt ->
+-                    jwt.decoder(staffJwtDecoder())  // Use staff secret for all JWT
++                    jwt.decoder(staffJwtDecoder())
++                    jwt.jwtAuthenticationConverter(jwtToUserDetailsConverter())
+                 }
+             }
+             .csrf { it.disable() }
+@@ -107,6 +108,11 @@ class SecurityConfig(
+         return converter
+     }
+ 
++    @Bean
++    fun jwtToUserDetailsConverter(): JwtToUserDetailsConverter {
++        return JwtToUserDetailsConverter()
++    }
++
+     @Bean
+     fun staffJwtGrantedAuthoritiesConverter(): JwtGrantedAuthoritiesConverter {
+         val converter = JwtGrantedAuthoritiesConverter()
+diff --git a/src/main/kotlin/soaringLizards/blps/controller/AuthController.kt b/src/main/kotlin/soaringLizards/blps/controller/AuthController.kt
+index 3c2c8f5..dd98093 100644
+--- a/src/main/kotlin/soaringLizards/blps/controller/AuthController.kt
++++ b/src/main/kotlin/soaringLizards/blps/controller/AuthController.kt
+@@ -4,11 +4,14 @@ import org.slf4j.LoggerFactory
+ import org.springframework.security.access.AccessDeniedException
+ import org.springframework.security.access.prepost.PreAuthorize
+ import org.springframework.security.core.annotation.AuthenticationPrincipal
+-import org.springframework.security.oauth2.jwt.Jwt
+-import org.springframework.security.core.userdetails.User
+-import org.springframework.web.bind.annotation.*
++import org.springframework.web.bind.annotation.GetMapping
++import org.springframework.web.bind.annotation.PostMapping
++import org.springframework.web.bind.annotation.RequestBody
++import org.springframework.web.bind.annotation.RequestMapping
++import org.springframework.web.bind.annotation.RestController
+ import soaringLizards.blps.config.EdxAuthenticatedSession
+ import soaringLizards.blps.config.EdxSessionAuthManager
++import soaringLizards.blps.config.JwtUserDetails
+ import soaringLizards.blps.dto.user.LoginRequestDto
+ import soaringLizards.blps.dto.user.LoginResponseDto
+ import soaringLizards.blps.dto.user.RegisterDto
+@@ -29,19 +32,13 @@ class AuthController(
+ ) {
+     @GetMapping("/me")
+     fun getMe(
+-        @AuthenticationPrincipal principal: Any?,
++        @AuthenticationPrincipal principal: JwtUserDetails?,
+     ): UserResponse {
+-        val username = when (principal) {
+-            is User -> principal.username
+-            is Jwt -> principal.subject
+-            null -> throw AccessDeniedException("Not logged in")
+-            else -> throw AccessDeniedException("Unknown authentication type")
+-        }
++        val username = principal?.username
++            ?: throw AccessDeniedException("Not logged in")
+         
+-        val user = userService.getUserByUsername(username)
++        return userService.getUserByUsername(username)
+             ?: throw UserNotFoundException("User not found in database")
+-        
+-        return user
+     }
+ 
+     @PostMapping("/register-admin")
+diff --git a/src/main/kotlin/soaringLizards/blps/controller/StudentController.kt b/src/main/kotlin/soaringLizards/blps/controller/StudentController.kt
+index c0b54fa..cf7a056 100644
+--- a/src/main/kotlin/soaringLizards/blps/controller/StudentController.kt
++++ b/src/main/kotlin/soaringLizards/blps/controller/StudentController.kt
+@@ -2,9 +2,10 @@ package soaringLizards.blps.controller
+ 
+ import io.swagger.v3.oas.annotations.tags.Tag
+ import org.springframework.http.ResponseEntity
++import org.springframework.security.access.AccessDeniedException
+ import org.springframework.security.core.annotation.AuthenticationPrincipal
+-import org.springframework.security.core.userdetails.User
+ import org.springframework.web.bind.annotation.*
++import soaringLizards.blps.config.JwtUserDetails
+ import soaringLizards.blps.EdxService
+ import soaringLizards.blps.dto.edx.EdxCompletionBatchRequest
+ import soaringLizards.blps.dto.edx.EdxEnrollmentRequest
+@@ -43,10 +44,11 @@ class StudentController(
+ 
+     @PostMapping("/courses/{courseId}/enroll")
+     fun enroll(
+-        @AuthenticationPrincipal currentUser: User?,
++        @AuthenticationPrincipal currentUser: JwtUserDetails?,
+         @PathVariable courseId: String,
+     ) {
+-        val user = userService.convertSpringUserToUser(currentUser!!)
++        val user = userService.getUserByUsername(currentUser!!.username)
++            ?: throw AccessDeniedException("User not found")
+         edxService.enroll(
+             EdxEnrollmentRequest(
+                 courseId = courseId,
+@@ -59,11 +61,12 @@ class StudentController(
+ 
+     @PostMapping("/lessons/{courseKey}/{blockId}/complete")
+     fun completeLesson(
+-        @AuthenticationPrincipal currentUser: User?,
++        @AuthenticationPrincipal currentUser: JwtUserDetails?,
+         @PathVariable courseKey: String,
+         @PathVariable blockId: String,
+     ): LessonCompleteResponse {
+-        val user = userService.convertSpringUserToUser(currentUser!!)
++        val user = userService.getUserByUsername(currentUser!!.username)
++            ?: throw AccessDeniedException("User not found")
+ 
+         edxService.trackCompletion(
+             EdxCompletionBatchRequest(
+@@ -83,7 +86,7 @@ class StudentController(
+             ),
+         )
+ 
+-        val newBalance = userBalanceService.getCurrentUserBalance(currentUser)
++        val newBalance = userBalanceService.getBalanceByUsername(currentUser.username)
+ 
+         return LessonCompleteResponse(
+             awardedAchievements = awardedAchievements.map {
+@@ -94,17 +97,18 @@ class StudentController(
+                     pointsAwarded = it.pointsAwarded,
+                 )
+             },
+-            currentBalance = newBalance.balance,
++            currentBalance = newBalance,
+         )
+     }
+ 
+     @GetMapping("/balance")
+-    fun getBalance(@AuthenticationPrincipal currentUser: User?) =
+-        userBalanceService.getCurrentUserBalance(currentUser)
++    fun getBalance(@AuthenticationPrincipal currentUser: JwtUserDetails?) =
++        userBalanceService.getBalanceByUsername(currentUser!!.username)
+ 
+     @GetMapping("/achievements")
+-    fun getAchievements(@AuthenticationPrincipal currentUser: User?): List<UserAchievementWithDetailsDto> {
+-        val user = userService.convertSpringUserToUser(currentUser!!)
++    fun getAchievements(@AuthenticationPrincipal currentUser: JwtUserDetails?): List<UserAchievementWithDetailsDto> {
++        val user = userService.getUserByUsername(currentUser!!.username)
++            ?: throw AccessDeniedException("User not found")
+         return achievementService.getUserAchievements(user.id!!)
+     }
+ 
+@@ -112,17 +116,19 @@ class StudentController(
+     fun getAvailableRewards() = ResponseEntity.ok(rewardService.getAvailableRewards())
+ 
+     @GetMapping("/rewards/my")
+-    fun getMyRewards(@AuthenticationPrincipal currentUser: User?): List<soaringLizards.blps.dto.rewards.UserRewardDto> {
+-        val user = userService.convertSpringUserToUser(currentUser!!)
++    fun getMyRewards(@AuthenticationPrincipal currentUser: JwtUserDetails?): List<soaringLizards.blps.dto.rewards.UserRewardDto> {
++        val user = userService.getUserByUsername(currentUser!!.username)
++            ?: throw AccessDeniedException("User not found")
+         return rewardService.getUserRewards(user.id!!)
+     }
+ 
+     @PostMapping("/rewards/{rewardId}/redeem")
+     fun redeemReward(
+-        @AuthenticationPrincipal currentUser: User?,
++        @AuthenticationPrincipal currentUser: JwtUserDetails?,
+         @PathVariable rewardId: UUID,
+     ): soaringLizards.blps.dto.rewards.UserRewardDto {
+-        val user = userService.convertSpringUserToUser(currentUser!!)
++        val user = userService.getUserByUsername(currentUser!!.username)
++            ?: throw AccessDeniedException("User not found")
+         return rewardService.redeemReward(user.id!!, rewardId)
+     }
+ }
+diff --git a/src/main/kotlin/soaringLizards/blps/dto/user/Response.kt b/src/main/kotlin/soaringLizards/blps/dto/user/Response.kt
+index f756ad0..811655c 100644
+--- a/src/main/kotlin/soaringLizards/blps/dto/user/Response.kt
++++ b/src/main/kotlin/soaringLizards/blps/dto/user/Response.kt
+@@ -1,8 +1,10 @@
+ package soaringLizards.blps.dto.user
+ 
+ import soaringLizards.blps.jooq.generated.tables.records.UsersRecord
++import java.util.UUID
+ 
+ class UserResponse(
++    val id: UUID,
+     val username: String,
+     val email: Email,
+     val role: String,
+@@ -18,6 +20,7 @@ class LoginResponseDto(
+ 
+ fun UsersRecord.toUserResponse() =
+     UserResponse(
++        id!!,
+         username!!,
+         Email(email!!),
+         role!!,
+diff --git a/src/main/kotlin/soaringLizards/blps/service/UserBalanceService.kt b/src/main/kotlin/soaringLizards/blps/service/UserBalanceService.kt
+index d5cbb9f..1ac1320 100644
+--- a/src/main/kotlin/soaringLizards/blps/service/UserBalanceService.kt
++++ b/src/main/kotlin/soaringLizards/blps/service/UserBalanceService.kt
+@@ -96,4 +96,19 @@ class UserBalanceService(
+     fun getBalanceByUserBalanceId(userBalanceId: UUID) =
+         userBalanceRepository.findById(userBalanceId)
+ 
++    fun getBalanceByUsername(username: String): Int {
++        val user = userService.getUserByUsername(username)
++        println("DEBUG getBalanceByUsername: username=$username, user=$user")
++        if (user == null) {
++            throw AccessDeniedException("User not found: $username")
++        }
++        println("DEBUG: user.id=${user.id}")
++        val balance = userBalanceRepository.findByUserId(user.id!!)
++        println("DEBUG: balance=$balance")
++        if (balance == null) {
++            throw AccessDeniedException("No balance found for user: $username")
++        }
++        return balance.currentBalance!!
++    }
++
+ }
+diff --git a/src/main/kotlin/soaringLizards/blps/service/UserService.kt b/src/main/kotlin/soaringLizards/blps/service/UserService.kt
+index b80799f..e63edaf 100644
+--- a/src/main/kotlin/soaringLizards/blps/service/UserService.kt
++++ b/src/main/kotlin/soaringLizards/blps/service/UserService.kt
+@@ -14,6 +14,7 @@ import soaringLizards.blps.exception.UserAlreadyExistAuthenticationException
+ import soaringLizards.blps.exception.UserNotFoundException
+ import soaringLizards.blps.repository.UserBalanceRepository
+ import soaringLizards.blps.repository.UserRepository
++import java.util.UUID
+ 
+ @Service
+ class UserService(
+@@ -55,17 +56,18 @@ class UserService(
+     fun authenticateOrCreateOpenedxUser(username: String): UserResponse? {
+         val existingUser = userRepository.findByUsername(username)
+         return if (existingUser != null) {
+-            // Allow any existing user to login as OPENEDX_USER
+             existingUser.toUserResponse()
+         } else {
+-            // Auto-create new OPENEDX_USER
+             val newUser = UserDto(
+                 username = username,
+-                password = passwordEncoder.encode("openedx-auto-${username}")!!,
++                password = "",
+                 email = soaringLizards.blps.dto.user.Email("${username}@openedx.local"),
+                 role = "OPENEDX_USER",
+             )
+             val inserted = userRepository.insert(newUser)
++            if (inserted != null) {
++                userBalanceRepository.insert(UserBalanceDto.createDefault(inserted.id!!))
++            }
+             inserted?.toUserResponse()
+         }
+     }
+@@ -88,6 +90,7 @@ class UserService(
+         userBalanceRepository.insert(UserBalanceDto.createDefault(newUser.id!!))
+ 
+         return UserResponse(
++            newUser.id!! as UUID,
+             request.username,
+             request.email,
+             role,
+diff --git a/src/test/kotlin/soaringLizards/blps/RolePermissionsTest.kt b/src/test/kotlin/soaringLizards/blps/RolePermissionsTest.kt
+deleted file mode 100644
+index df24be9..0000000
+--- a/src/test/kotlin/soaringLizards/blps/RolePermissionsTest.kt
++++ /dev/null
+@@ -1,241 +0,0 @@
+-package soaringLizards.blps
+-
+-import org.junit.jupiter.api.Test
+-import org.junit.jupiter.api.extension.ExtendWith
+-import org.springframework.beans.factory.annotation.Autowired
+-import org.springframework.boot.test.context.SpringBootTest
+-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
+-import org.springframework.security.test.context.support.WithMockUser
+-import org.springframework.test.context.DynamicPropertyRegistry
+-import org.springframework.test.context.DynamicPropertySource
+-import org.springframework.test.web.servlet.MockMvc
+-import org.springframework.test.web.servlet.get
+-import soaringLizards.blps.integration.IntegrationPostgres
+-import soaringLizards.blps.integration.TestcontainersCleanupExtension
+-
+-@SpringBootTest
+-@AutoConfigureMockMvc
+-@ExtendWith(TestcontainersCleanupExtension::class)
+-class RolePermissionsTest {
+-
+-    @Autowired
+-    private lateinit var mockMvc: MockMvc
+-
+-    companion object {
+-        @JvmStatic
+-        @DynamicPropertySource
+-        fun registerProperties(registry: DynamicPropertyRegistry) {
+-            IntegrationPostgres.registerProperties(registry)
+-        }
+-    }
+-
+-    @Test
+-    fun `public endpoint should be accessible without authentication`() {
+-        mockMvc.get("/api/test/roles/public")
+-            .andExpect {
+-                status { isOk() }
+-                content { string("Public endpoint - no authentication required") }
+-            }
+-    }
+-
+-    @Test
+-    fun `user endpoint should require authentication`() {
+-        mockMvc.get("/api/test/roles/user")
+-            .andExpect {
+-                status { is3xxRedirection() }
+-            }
+-    }
+-
+-    @Test
+-    @WithMockUser(roles = ["OPENEDX_USER"])
+-    fun `user endpoint should be accessible with OPENEDX_USER role - authenticated`() {
+-        mockMvc.get("/api/test/roles/user")
+-            .andExpect {
+-                status { isOk() }
+-                content { string("User endpoint - requires OPENEDX_USER role") }
+-            }
+-    }
+-
+-    @Test
+-    @WithMockUser(roles = ["STAFF"])
+-    fun `user endpoint should be forbidden for STAFF role`() {
+-        mockMvc.get("/api/test/roles/user")
+-            .andExpect {
+-                status { isForbidden() }
+-            }
+-    }
+-
+-    @Test
+-    @WithMockUser(roles = ["ADMIN"])
+-    fun `user endpoint should be forbidden for ADMIN role`() {
+-        mockMvc.get("/api/test/roles/user")
+-            .andExpect {
+-                status { isForbidden() }
+-            }
+-    }
+-
+-    @Test
+-    @WithMockUser(roles = ["STAFF"])
+-    fun `staff endpoint should be accessible with STAFF role`() {
+-        mockMvc.get("/api/test/roles/staff")
+-            .andExpect {
+-                status { isOk() }
+-                content { string("Staff endpoint - requires STAFF role") }
+-            }
+-    }
+-
+-    @Test
+-    @WithMockUser(roles = ["OPENEDX_USER"])
+-    fun `staff endpoint should be forbidden for OPENEDX_USER role`() {
+-        mockMvc.get("/api/test/roles/staff")
+-            .andExpect {
+-                status { isForbidden() }
+-            }
+-    }
+-
+-    @Test
+-    @WithMockUser(roles = ["ADMIN"])
+-    fun `staff endpoint should be forbidden for ADMIN role`() {
+-        mockMvc.get("/api/test/roles/staff")
+-            .andExpect {
+-                status { isForbidden() }
+-            }
+-    }
+-
+-    @Test
+-    @WithMockUser(roles = ["ADMIN"])
+-    fun `admin endpoint should be accessible with ADMIN role`() {
+-        mockMvc.get("/api/test/roles/admin")
+-            .andExpect {
+-                status { isOk() }
+-                content { string("Admin endpoint - requires ADMIN role") }
+-            }
+-    }
+-
+-    @Test
+-    @WithMockUser(roles = ["OPENEDX_USER"])
+-    fun `admin endpoint should be forbidden for OPENEDX_USER role`() {
+-        mockMvc.get("/api/test/roles/admin")
+-            .andExpect {
+-                status { isForbidden() }
+-            }
+-    }
+-
+-    @Test
+-    @WithMockUser(roles = ["STAFF"])
+-    fun `admin endpoint should be forbidden for STAFF role`() {
+-        mockMvc.get("/api/test/roles/admin")
+-            .andExpect {
+-                status { isForbidden() }
+-            }
+-    }
+-
+-    @Test
+-    @WithMockUser(roles = ["OPENEDX_USER"])
+-    fun `user-or-staff endpoint should be accessible with OPENEDX_USER role`() {
+-        mockMvc.get("/api/test/roles/user-or-staff")
+-            .andExpect {
+-                status { isOk() }
+-                content { string("User or Staff endpoint - requires OPENEDX_USER or STAFF role") }
+-            }
+-    }
+-
+-    @Test
+-    @WithMockUser(roles = ["STAFF"])
+-    fun `user-or-staff endpoint should be accessible with STAFF role`() {
+-        mockMvc.get("/api/test/roles/user-or-staff")
+-            .andExpect {
+-                status { isOk() }
+-                content { string("User or Staff endpoint - requires OPENEDX_USER or STAFF role") }
+-            }
+-    }
+-
+-    @Test
+-    @WithMockUser(roles = ["ADMIN"])
+-    fun `user-or-staff endpoint should be forbidden for ADMIN role`() {
+-        mockMvc.get("/api/test/roles/user-or-staff")
+-            .andExpect {
+-                status { isForbidden() }
+-            }
+-    }
+-
+-    @Test
+-    @WithMockUser(roles = ["STAFF"])
+-    fun `staff-or-admin endpoint should be accessible with STAFF role`() {
+-        mockMvc.get("/api/test/roles/staff-or-admin")
+-            .andExpect {
+-                status { isOk() }
+-                content { string("Staff or Admin endpoint - requires STAFF or ADMIN role") }
+-            }
+-    }
+-
+-    @Test
+-    @WithMockUser(roles = ["ADMIN"])
+-    fun `staff-or-admin endpoint should be accessible with ADMIN role`() {
+-        mockMvc.get("/api/test/roles/staff-or-admin")
+-            .andExpect {
+-                status { isOk() }
+-                content { string("Staff or Admin endpoint - requires STAFF or ADMIN role") }
+-            }
+-    }
+-
+-    @Test
+-    @WithMockUser(roles = ["OPENEDX_USER"])
+-    fun `staff-or-admin endpoint should be forbidden for OPENEDX_USER role`() {
+-        mockMvc.get("/api/test/roles/staff-or-admin")
+-            .andExpect {
+-                status { isForbidden() }
+-            }
+-    }
+-
+-    @Test
+-    @WithMockUser(roles = ["OPENEDX_USER"])
+-    fun `any-authenticated endpoint should be accessible with OPENEDX_USER role`() {
+-        mockMvc.get("/api/test/roles/any-authenticated")
+-            .andExpect {
+-                status { isOk() }
+-                content { string("Any authenticated user can access this") }
+-            }
+-    }
+-
+-    @Test
+-    @WithMockUser(roles = ["STAFF"])
+-    fun `any-authenticated endpoint should be accessible with STAFF role`() {
+-        mockMvc.get("/api/test/roles/any-authenticated")
+-            .andExpect {
+-                status { isOk() }
+-                content { string("Any authenticated user can access this") }
+-            }
+-    }
+-
+-    @Test
+-    @WithMockUser(roles = ["ADMIN"])
+-    fun `any-authenticated endpoint should be accessible with ADMIN role`() {
+-        mockMvc.get("/api/test/roles/any-authenticated")
+-            .andExpect {
+-                status { isOk() }
+-                content { string("Any authenticated user can access this") }
+-            }
+-    }
+-
+-    @Test
+-    fun `any-authenticated endpoint should require authentication`() {
+-        mockMvc.get("/api/test/roles/any-authenticated")
+-            .andExpect {
+-                status { is3xxRedirection() }
+-            }
+-    }
+-
+-    @Test
+-    @WithMockUser(roles = ["OPENEDX_USER", "STAFF", "ADMIN"])
+-    fun `user with multiple roles should access all respective endpoints`() {
+-        mockMvc.get("/api/test/roles/user")
+-            .andExpect { status { isOk() } }
+-
+-        mockMvc.get("/api/test/roles/staff")
+-            .andExpect { status { isOk() } }
+-
+-        mockMvc.get("/api/test/roles/admin")
+-            .andExpect { status { isOk() } }
+-    }
+-}
+diff --git a/user-workflow.sh b/user-workflow.sh
+index 06b60fb..04c4b84 100755
+--- a/user-workflow.sh
++++ b/user-workflow.sh
+@@ -5,45 +5,55 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+ BASE_URL="${BASE_URL:-http://localhost:1234}"
+ COOKIES_FILE="${SCRIPT_DIR}/cookies.txt"
+ 
+-USERNAME="testuser_$(date +%s)"
+-PASSWORD="secret123"
+-EMAIL="${USERNAME}@test.com"
++#USERNAME="testuser_$(date +%s)"
++#PASSWORD="secret123"
++USERNAME="admin"
++PASSWORD="admin"
++
++
+ 
+ echo "=== User Workflow ==="
+-echo "Registering user: $USERNAME"
++echo "Logging in via OpenEdx: $USERNAME"
+ 
+-curl -s -X POST "${BASE_URL}/api/auth/register" \
++LOGIN_RESPONSE=$(curl -s -X POST "${BASE_URL}/api/auth/openedx_user/login" \
+   -H "Content-Type: application/json" \
+-  -d "{\"username\":\"${USERNAME}\",\"password\":\"${PASSWORD}\",\"email\":\"${EMAIL}\"}"
++  -d "{\"username\":\"${USERNAME}\",\"password\":\"${PASSWORD}\"}")
++
++echo "Login response: $LOGIN_RESPONSE"
+ 
+-echo -e "\n\n=== Logging in ==="
+-curl -s -c "${COOKIES_FILE}" -X POST "${BASE_URL}/login" \
+-  -H "Content-Type: application/x-www-form-urlencoded" \
+-  -d "username=${USERNAME}&password=${PASSWORD}"
++TOKEN=$(echo "$LOGIN_RESPONSE" | grep -o '"accessToken":"[^"]*' | sed 's/"accessToken":"//')
++echo "Token: $TOKEN"
+ 
+ echo -e "\n\n=== Get Balance ==="
+-curl -s -b "${COOKIES_FILE}" -X GET "${BASE_URL}/api/student/balance"
++curl -s -X GET "${BASE_URL}/api/student/balance" \
++  -H "Authorization: Bearer ${TOKEN}"
+ 
+ echo -e "\n\n=== Get Courses ==="
+-curl -s -b "${COOKIES_FILE}" -X GET "${BASE_URL}/api/student/courses"
++curl -s -X GET "${BASE_URL}/api/student/courses" \
++  -H "Authorization: Bearer ${TOKEN}"
+ 
+ echo -e "\n\n=== Get Achievements ==="
+-curl -s -b "${COOKIES_FILE}" -X GET "${BASE_URL}/api/student/achievements"
++curl -s -X GET "${BASE_URL}/api/student/achievements" \
++  -H "Authorization: Bearer ${TOKEN}"
+ 
+ echo -e "\n\n=== Get Available Rewards ==="
+-curl -s -b "${COOKIES_FILE}" -X GET "${BASE_URL}/api/student/rewards"
++curl -s -X GET "${BASE_URL}/api/student/rewards" \
++  -H "Authorization: Bearer ${TOKEN}"
+ 
+-echo -e "\n\n=== Complete Lesson (simulated) ==="
+-curl -s -b "${COOKIES_FILE}" -X POST "${BASE_URL}/api/student/lessons/course-v1:Test+Course/block-v1:Test+type@sequential+block1/complete"
++echo -e "\n\n=== Complete Lesson ==="
++curl -s -X POST "${BASE_URL}/api/student/lessons/course-v1:Test+Course/block-v1:Test+type@sequential+block1/complete" \
++  -H "Authorization: Bearer ${TOKEN}"
+ 
+ echo -e "\n\n=== Get Balance After Lesson ==="
+-curl -s -b "${COOKIES_FILE}" -X GET "${BASE_URL}/api/student/balance"
++curl -s -X GET "${BASE_URL}/api/student/balance" \
++  -H "Authorization: Bearer ${TOKEN}"
+ 
+ echo -e "\n\n=== Get Achievements After Lesson ==="
+-curl -s -b "${COOKIES_FILE}" -X GET "${BASE_URL}/api/student/achievements"
++curl -s -X GET "${BASE_URL}/api/student/achievements" \
++  -H "Authorization: Bearer ${TOKEN}"
+ 
+ echo -e "\n\n=== Get My Rewards ==="
+-curl -s -b "${COOKIES_FILE}" -X GET "${BASE_URL}/api/student/rewards/my"
++curl -s -X GET "${BASE_URL}/api/student/rewards/my" \
++  -H "Authorization: Bearer ${TOKEN}"
+ 
+ echo -e "\n\n=== Workflow Complete ==="
+-echo "Cookies saved to: ${COOKIES_FILE}"
+\ No newline at end of file

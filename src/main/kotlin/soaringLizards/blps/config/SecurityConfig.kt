@@ -50,7 +50,7 @@ class SecurityConfig(
             .oauth2ResourceServer { oauth2 ->
                 oauth2.jwt { jwt ->
                     jwt.decoder(staffJwtDecoder())
-                    jwt.jwtAuthenticationConverter(staffJwtAuthenticationConverter())
+                    jwt.jwtAuthenticationConverter(jwtToUserDetailsConverter())
                 }
             }
             .exceptionHandling { exceptions: ExceptionHandlingConfigurer<HttpSecurity?>? ->
@@ -88,7 +88,8 @@ class SecurityConfig(
             .httpBasic(withDefaults())
             .oauth2ResourceServer { oauth2 ->
                 oauth2.jwt { jwt ->
-                    jwt.decoder(staffJwtDecoder())  // Use staff secret for all JWT
+                    jwt.decoder(staffJwtDecoder())
+                    jwt.jwtAuthenticationConverter(jwtToUserDetailsConverter())
                 }
             }
             .csrf { it.disable() }
@@ -105,6 +106,11 @@ class SecurityConfig(
         val converter = JwtAuthenticationConverter()
         converter.setJwtGrantedAuthoritiesConverter(staffJwtGrantedAuthoritiesConverter())
         return converter
+    }
+
+    @Bean
+    fun jwtToUserDetailsConverter(): JwtToUserDetailsConverter {
+        return JwtToUserDetailsConverter()
     }
 
     @Bean

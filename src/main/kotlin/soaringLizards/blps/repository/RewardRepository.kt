@@ -35,6 +35,15 @@ class RewardRepository(
             .set(REWARDS.QUANTITY, request.quantity)
             .execute()
 
+    fun insert(name: String, description: String?, pointsCost: Int, isActive: Boolean, quantity: Int?): Int =
+        dsl.insertInto(REWARDS)
+            .set(REWARDS.NAME, name)
+            .set(REWARDS.DESCRIPTION, description)
+            .set(REWARDS.POINTS_COST, pointsCost)
+            .set(REWARDS.IS_ACTIVE, isActive)
+            .set(REWARDS.QUANTITY, quantity)
+            .execute()
+
     fun update(id: UUID, request: RewardUpdateRequest): Int {
         val query = dsl.update(REWARDS)
             .set(REWARDS.NAME, request.name ?: "")

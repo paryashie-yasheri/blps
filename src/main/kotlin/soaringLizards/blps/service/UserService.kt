@@ -14,6 +14,7 @@ import soaringLizards.blps.exception.UserAlreadyExistAuthenticationException
 import soaringLizards.blps.exception.UserNotFoundException
 import soaringLizards.blps.repository.UserBalanceRepository
 import soaringLizards.blps.repository.UserRepository
+import java.util.UUID
 
 @Service
 class UserService(
@@ -55,19 +56,24 @@ class UserService(
     fun authenticateOrCreateOpenedxUser(username: String): UserResponse? {
         val existingUser = userRepository.findByUsername(username)
         return if (existingUser != null) {
-            // Allow any existing user to login as OPENEDX_USER
             existingUser.toUserResponse()
         } else {
-            // Auto-create new OPENEDX_USER
-            val newUser = UserDto(
-                username = username,
-                password = passwordEncoder.encode("openedx-auto-${username}")!!,
-                email = soaringLizards.blps.dto.user.Email("${username}@openedx.local"),
-                role = "OPENEDX_USER",
-            )
-            val inserted = userRepository.insert(newUser)
-            inserted?.toUserResponse()
+            registerOpenedxUser(username)
         }
+    }
+
+    fun registerOpenedxUser(username: String): UserResponse {
+        val exists = userRepository.existWithUsername(username)
+        if (exists) {
+            return userRepository.findByUsername(username)!!.toUserResponse()
+        }
+        
+        val request = RegisterDto(
+            username = username,
+            password = "",
+            email = soaringLizards.blps.dto.user.Email("${username}@openedx.local"),
+        )
+        return registerUser(request, "OPENEDX_USER")
     }
 
     @Transactional
@@ -88,6 +94,7 @@ class UserService(
         userBalanceRepository.insert(UserBalanceDto.createDefault(newUser.id!!))
 
         return UserResponse(
+            newUser.id!! as UUID,
             request.username,
             request.email,
             role,

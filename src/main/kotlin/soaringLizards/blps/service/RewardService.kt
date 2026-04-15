@@ -27,6 +27,15 @@ class RewardService(
         return rewards.map { it.toRewardDto() }
     }
 
+    fun getAllRewards(): List<RewardDto> {
+        val rewards = rewardRepository.findAll()
+        return rewards.map { it.toRewardDto() }
+    }
+
+    fun createReward(name: String, description: String?, pointsCost: Int, isActive: Boolean, quantity: Int?) {
+        rewardRepository.insert(name, description, pointsCost, isActive, quantity)
+    }
+
     fun getUserRewards(userId: UUID): List<UserRewardDto> {
         val balance = userBalanceRepository.findByUserId(userId)
             ?: throw AccessDeniedException("Balance not found")

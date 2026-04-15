@@ -1,8 +1,10 @@
 package soaringLizards.blps.dto.user
 
 import soaringLizards.blps.jooq.generated.tables.records.UsersRecord
+import java.util.UUID
 
 class UserResponse(
+    val id: UUID,
     val username: String,
     val email: Email,
     val role: String,
@@ -18,6 +20,7 @@ class LoginResponseDto(
 
 fun UsersRecord.toUserResponse() =
     UserResponse(
+        id!!,
         username!!,
         Email(email!!),
         role!!,

@@ -96,4 +96,19 @@ class UserBalanceService(
     fun getBalanceByUserBalanceId(userBalanceId: UUID) =
         userBalanceRepository.findById(userBalanceId)
 
+    fun getBalanceByUsername(username: String): Int {
+        val user = userService.getUserByUsername(username)
+        println("DEBUG getBalanceByUsername: username=$username, user=$user")
+        if (user == null) {
+            throw AccessDeniedException("User not found: $username")
+        }
+        println("DEBUG: user.id=${user.id}")
+        val balance = userBalanceRepository.findByUserId(user.id!!)
+        println("DEBUG: balance=$balance")
+        if (balance == null) {
+            throw AccessDeniedException("No balance found for user: $username")
+        }
+        return balance.currentBalance!!
+    }
+
 }

@@ -4,11 +4,14 @@ import org.slf4j.LoggerFactory
 import org.springframework.security.access.AccessDeniedException
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.security.core.annotation.AuthenticationPrincipal
-import org.springframework.security.oauth2.jwt.Jwt
-import org.springframework.security.core.userdetails.User
-import org.springframework.web.bind.annotation.*
+import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.PostMapping
+import org.springframework.web.bind.annotation.RequestBody
+import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RestController
 import soaringLizards.blps.config.EdxAuthenticatedSession
 import soaringLizards.blps.config.EdxSessionAuthManager
+import soaringLizards.blps.config.JwtUserDetails
 import soaringLizards.blps.dto.user.LoginRequestDto
 import soaringLizards.blps.dto.user.LoginResponseDto
 import soaringLizards.blps.dto.user.RegisterDto
@@ -29,19 +32,13 @@ class AuthController(
 ) {
     @GetMapping("/me")
     fun getMe(
-        @AuthenticationPrincipal principal: Any?,
+        @AuthenticationPrincipal principal: JwtUserDetails?,
     ): UserResponse {
-        val username = when (principal) {
-            is User -> principal.username
-            is Jwt -> principal.subject
-            null -> throw AccessDeniedException("Not logged in")
-            else -> throw AccessDeniedException("Unknown authentication type")
-        }
+        val username = principal?.username
+            ?: throw AccessDeniedException("Not logged in")
         
-        val user = userService.getUserByUsername(username)
+        return userService.getUserByUsername(username)
             ?: throw UserNotFoundException("User not found in database")
-        
-        return user
     }
 
     @PostMapping("/register-admin")

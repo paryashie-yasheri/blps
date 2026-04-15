@@ -2,9 +2,10 @@ package soaringLizards.blps.controller
 
 import io.swagger.v3.oas.annotations.tags.Tag
 import org.springframework.http.ResponseEntity
+import org.springframework.security.access.AccessDeniedException
 import org.springframework.security.core.annotation.AuthenticationPrincipal
-import org.springframework.security.core.userdetails.User
 import org.springframework.web.bind.annotation.*
+import soaringLizards.blps.config.JwtUserDetails
 import soaringLizards.blps.EdxService
 import soaringLizards.blps.dto.edx.EdxCompletionBatchRequest
 import soaringLizards.blps.dto.edx.EdxEnrollmentRequest
@@ -43,10 +44,11 @@ class StudentController(
 
     @PostMapping("/courses/{courseId}/enroll")
     fun enroll(
-        @AuthenticationPrincipal currentUser: User?,
+        @AuthenticationPrincipal currentUser: JwtUserDetails?,
         @PathVariable courseId: String,
     ) {
-        val user = userService.convertSpringUserToUser(currentUser!!)
+        val user = userService.getUserByUsername(currentUser!!.username)
+            ?: throw AccessDeniedException("User not found")
         edxService.enroll(
             EdxEnrollmentRequest(
                 courseId = courseId,
@@ -59,11 +61,12 @@ class StudentController(
 
     @PostMapping("/lessons/{courseKey}/{blockId}/complete")
     fun completeLesson(
-        @AuthenticationPrincipal currentUser: User?,
+        @AuthenticationPrincipal currentUser: JwtUserDetails?,
         @PathVariable courseKey: String,
         @PathVariable blockId: String,
     ): LessonCompleteResponse {
-        val user = userService.convertSpringUserToUser(currentUser!!)
+        val user = userService.getUserByUsername(currentUser!!.username)
+            ?: throw AccessDeniedException("User not found")
 
         edxService.trackCompletion(
             EdxCompletionBatchRequest(
@@ -83,7 +86,7 @@ class StudentController(
             ),
         )
 
-        val newBalance = userBalanceService.getCurrentUserBalance(currentUser)
+        val newBalance = userBalanceService.getBalanceByUsername(currentUser.username)
 
         return LessonCompleteResponse(
             awardedAchievements = awardedAchievements.map {
@@ -94,17 +97,18 @@ class StudentController(
                     pointsAwarded = it.pointsAwarded,
                 )
             },
-            currentBalance = newBalance.balance,
+            currentBalance = newBalance,
         )
     }
 
     @GetMapping("/balance")
-    fun getBalance(@AuthenticationPrincipal currentUser: User?) =
-        userBalanceService.getCurrentUserBalance(currentUser)
+    fun getBalance(@AuthenticationPrincipal currentUser: JwtUserDetails?) =
+        userBalanceService.getBalanceByUsername(currentUser!!.username)
 
     @GetMapping("/achievements")
-    fun getAchievements(@AuthenticationPrincipal currentUser: User?): List<UserAchievementWithDetailsDto> {
-        val user = userService.convertSpringUserToUser(currentUser!!)
+    fun getAchievements(@AuthenticationPrincipal currentUser: JwtUserDetails?): List<UserAchievementWithDetailsDto> {
+        val user = userService.getUserByUsername(currentUser!!.username)
+            ?: throw AccessDeniedException("User not found")
         return achievementService.getUserAchievements(user.id!!)
     }
 
@@ -112,17 +116,19 @@ class StudentController(
     fun getAvailableRewards() = ResponseEntity.ok(rewardService.getAvailableRewards())
 
     @GetMapping("/rewards/my")
-    fun getMyRewards(@AuthenticationPrincipal currentUser: User?): List<soaringLizards.blps.dto.rewards.UserRewardDto> {
-        val user = userService.convertSpringUserToUser(currentUser!!)
+    fun getMyRewards(@AuthenticationPrincipal currentUser: JwtUserDetails?): List<soaringLizards.blps.dto.rewards.UserRewardDto> {
+        val user = userService.getUserByUsername(currentUser!!.username)
+            ?: throw AccessDeniedException("User not found")
         return rewardService.getUserRewards(user.id!!)
     }
 
     @PostMapping("/rewards/{rewardId}/redeem")
     fun redeemReward(
-        @AuthenticationPrincipal currentUser: User?,
+        @AuthenticationPrincipal currentUser: JwtUserDetails?,
         @PathVariable rewardId: UUID,
     ): soaringLizards.blps.dto.rewards.UserRewardDto {
-        val user = userService.convertSpringUserToUser(currentUser!!)
+        val user = userService.getUserByUsername(currentUser!!.username)
+            ?: throw AccessDeniedException("User not found")
         return rewardService.redeemReward(user.id!!, rewardId)
     }
 }

@@ -18,4 +18,7 @@ class AchievementTypeService(
     fun getAchievementTypeById(achievementTypeId: UUID) =
         achievementTypeRepository.findById(achievementTypeId)
 
+    fun getAllAchievementTypes() =
+        achievementTypeRepository.findAllDto()
+
 }

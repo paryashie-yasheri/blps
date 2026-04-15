@@ -24,6 +24,22 @@ class AchievementTypeRepository(
         dsl.selectFrom(ACHIEVEMENT_TYPES)
             .fetch()
 
+    fun findAllDto(): List<AchievementTypeDto> =
+        dsl.selectFrom(ACHIEVEMENT_TYPES)
+            .fetch()
+            .map { record ->
+                AchievementTypeDto(
+                    code = record.code ?: "",
+                    name = record.name ?: "",
+                    description = record.description ?: "",
+                    pointsAwarded = record.pointsAwarded ?: 0,
+                    icon = record.icon ?: "",
+                    isRepeatable = record.isRepeatable ?: false,
+                    isActive = record.isActive ?: true,
+                    conditions = emptyMap(),
+                )
+            }
+
     fun insert(typeDto: AchievementTypeDto) =
         dsl.insertInto(ACHIEVEMENT_TYPES)
             .set(ACHIEVEMENT_TYPES.CODE, typeDto.code)
