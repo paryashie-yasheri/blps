@@ -15,6 +15,15 @@ class AchievementTypeRepository(
             .where(ACHIEVEMENT_TYPES.ACHIEVEMENT_TYPE_ID.eq(id))
             .fetchOne()
 
+    fun findAllActive(): List<soaringLizards.blps.jooq.generated.tables.records.AchievementTypesRecord> =
+        dsl.selectFrom(ACHIEVEMENT_TYPES)
+            .where(ACHIEVEMENT_TYPES.IS_ACTIVE.eq(true))
+            .fetch()
+
+    fun findAll(): List<soaringLizards.blps.jooq.generated.tables.records.AchievementTypesRecord> =
+        dsl.selectFrom(ACHIEVEMENT_TYPES)
+            .fetch()
+
     fun insert(typeDto: AchievementTypeDto) =
         dsl.insertInto(ACHIEVEMENT_TYPES)
             .set(ACHIEVEMENT_TYPES.CODE, typeDto.code)

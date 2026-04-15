@@ -6,11 +6,9 @@ import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import soaringLizards.blps.dto.balanceTransactions.*
 import soaringLizards.blps.dto.userBalances.UserBalanceDto
-import soaringLizards.blps.dto.userBalances.toUserBalanceDto
 import soaringLizards.blps.exception.BusinessLogicException
 import soaringLizards.blps.jooq.generated.tables.records.BalanceTransactionsRecord
 import soaringLizards.blps.jooq.generated.tables.records.UserBalancesRecord
-import soaringLizards.blps.jooq.generated.tables.references.USER_BALANCES
 import soaringLizards.blps.repository.UserBalanceRepository
 import java.time.OffsetDateTime
 import java.util.*
@@ -49,14 +47,16 @@ class UserBalanceService(
 
         val balanceDiff = -request.amount
         val newTransaction = createTransactionOnUser(balance, balanceDiff).toTransactionResponse()
-        val newBalance = balance.copy()
-            .with(USER_BALANCES.CURRENT_BALANCE, balance.currentBalance!! + balanceDiff)
-            .with(USER_BALANCES.TOTAL_SPENT, balance.totalSpent!! + request.amount)
-            .with(USER_BALANCES.VERSION, balance.version!! + 1)
+        
+        val newCurrentBalance = balance.currentBalance!! + balanceDiff
+        val newTotalSpent = balance.totalSpent!! + request.amount
 
         userBalanceRepository.update(
             balance.balanceId!!,
-            newBalance.toUserBalanceDto(),
+            newCurrentBalance,
+            balance.totalEarned!!,
+            newTotalSpent,
+            balance.version!! + 1,
         )
 
         return newTransaction

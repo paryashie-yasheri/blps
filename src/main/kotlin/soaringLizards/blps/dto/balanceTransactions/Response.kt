@@ -5,15 +5,17 @@ import soaringLizards.blps.jooq.generated.tables.records.UserBalancesRecord
 import java.time.OffsetDateTime
 
 class BalanceResponse(
+    val balance: Int,
     val currentBalance: Int,
     val totalEarned: Int,
     val totalSpent: Int,
 )
 
 fun UserBalancesRecord.toBalanceResponse() = BalanceResponse(
-    currentBalance!!,
-    totalEarned!!,
-    totalSpent!!,
+    balance = currentBalance!!,
+    currentBalance = currentBalance!!,
+    totalEarned = totalEarned!!,
+    totalSpent = totalSpent!!,
 )
 
 class TransactionsResponse(
