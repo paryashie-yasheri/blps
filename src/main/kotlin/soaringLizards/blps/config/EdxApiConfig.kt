@@ -28,64 +28,62 @@ class EdxApiConfig {
     private lateinit var csrfToken: String
 
     @Bean
-    fun edxRestClient(edxSessionAuthManager: EdxSessionAuthManager): RestClient {
-        return RestClient.builder()
-            .baseUrl(baseUrl.trimEnd('/'))
-            .defaultHeader(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE)
-            .requestInterceptor { request, body, execution ->
-                val configuredAuthorization = authorizationHeader.trim().takeIf { it.isNotEmpty() }
-                val configuredCookie = cookieHeader.trim().takeIf { it.isNotEmpty() }
-                val configuredCsrfToken = csrfToken.trim().takeIf { it.isNotEmpty() }
-                val authenticatedSession =
-                    if (
-                        configuredAuthorization == null &&
-                        configuredCookie == null
-                    )
-                        edxSessionAuthManager.getSession()
-                    else
-                        null
-
-
-                request.headers.getFirst(HttpHeaders.AUTHORIZATION)
-                    ?: when {
-                        configuredAuthorization != null -> request.headers.set(
-                            HttpHeaders.AUTHORIZATION,
-                            configuredAuthorization,
-                        )
-
-                        else -> extractToken()?.let(request.headers::setBearerAuth)
-                    }
-
-                request.headers.getFirst(HttpHeaders.COOKIE) ?: {
-                    when {
-                        configuredCookie != null -> request.headers.set(HttpHeaders.COOKIE, configuredCookie)
-                        authenticatedSession != null -> request.headers.set(
-                            HttpHeaders.COOKIE,
-                            authenticatedSession.cookieHeader,
-                        )
-                    }
-                }
-
-                val method = request.method
+    fun edxRestClient(edxSessionAuthManager: EdxSessionAuthManager) = RestClient.builder()
+        .baseUrl(baseUrl.trimEnd('/'))
+        .defaultHeader(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE)
+        .requestInterceptor { request, body, execution ->
+            val configuredAuthorization = authorizationHeader.trim().takeIf { it.isNotEmpty() }
+            val configuredCookie = cookieHeader.trim().takeIf { it.isNotEmpty() }
+            val configuredCsrfToken = csrfToken.trim().takeIf { it.isNotEmpty() }
+            val authenticatedSession =
                 if (
-                    method != HttpMethod.GET &&
-                    method != HttpMethod.HEAD &&
-                    method != HttpMethod.OPTIONS &&
-                    request.headers.getFirst("X-CSRFToken") == null
-                ) {
-                    when {
-                        configuredCsrfToken != null -> request.headers.set("X-CSRFToken", configuredCsrfToken)
-                        authenticatedSession != null -> request.headers.set(
-                            "X-CSRFToken",
-                            authenticatedSession.csrfToken,
-                        )
-                    }
+                    configuredAuthorization == null &&
+                    configuredCookie == null
+                )
+                    edxSessionAuthManager.getSession()
+                else
+                    null
+
+
+            request.headers.getFirst(HttpHeaders.AUTHORIZATION)
+                ?: when {
+                    configuredAuthorization != null -> request.headers.set(
+                        HttpHeaders.AUTHORIZATION,
+                        configuredAuthorization,
+                    )
+
+                    else -> extractToken()?.let(request.headers::setBearerAuth)
                 }
 
-                execution.execute(request, body)
+            request.headers.getFirst(HttpHeaders.COOKIE) ?: {
+                when {
+                    configuredCookie != null -> request.headers.set(HttpHeaders.COOKIE, configuredCookie)
+                    authenticatedSession != null -> request.headers.set(
+                        HttpHeaders.COOKIE,
+                        authenticatedSession.cookieHeader,
+                    )
+                }
             }
-            .build()
-    }
+
+            val method = request.method
+            if (
+                method != HttpMethod.GET &&
+                method != HttpMethod.HEAD &&
+                method != HttpMethod.OPTIONS &&
+                request.headers.getFirst("X-CSRFToken") == null
+            ) {
+                when {
+                    configuredCsrfToken != null -> request.headers.set("X-CSRFToken", configuredCsrfToken)
+                    authenticatedSession != null -> request.headers.set(
+                        "X-CSRFToken",
+                        authenticatedSession.csrfToken,
+                    )
+                }
+            }
+
+            execution.execute(request, body)
+        }
+        .build()
 
     private fun extractToken(): String? {
         val authentication: Authentication? = SecurityContextHolder.getContext().authentication

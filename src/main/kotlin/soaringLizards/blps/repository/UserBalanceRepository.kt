@@ -29,13 +29,12 @@ data class UserBalanceRepository(
             .set(USER_BALANCES.VERSION, balanceDto.version)
             .execute()
 
-    fun update(balanceId: UUID, balanceDto: UserBalanceDto): Int =
+    fun update(balanceId: UUID, newBalance: Int, newTotalEarned: Int, newTotalSpent: Int, newVersion: Int): Int =
         dsl.update(USER_BALANCES)
-            .set(USER_BALANCES.USER_ID, balanceDto.userId)
-            .set(USER_BALANCES.CURRENT_BALANCE, balanceDto.currentBalance)
-            .set(USER_BALANCES.TOTAL_EARNED, balanceDto.totalEarned)
-            .set(USER_BALANCES.TOTAL_SPENT, balanceDto.totalSpent)
-            .set(USER_BALANCES.VERSION, balanceDto.version)
+            .set(USER_BALANCES.CURRENT_BALANCE, newBalance)
+            .set(USER_BALANCES.TOTAL_EARNED, newTotalEarned)
+            .set(USER_BALANCES.TOTAL_SPENT, newTotalSpent)
+            .set(USER_BALANCES.VERSION, newVersion)
             .where(USER_BALANCES.BALANCE_ID.eq(balanceId))
             .execute()
 

@@ -1,0 +1,153 @@
+{
+  "_type": "export",
+  "__export_format": 4,
+  "__export_date": "2026-04-15T19:45:00.000Z",
+  "__export_source": "insomnia.desktop.app:v2024.7.2",
+  "resources": [
+    {
+      "_id": "env_base",
+      "_type": "environment",
+      "name": "Base",
+      "data": {
+        "base_url": "http://localhost:1234",
+        "username": "testuser_{{ timestamp }}",
+        "password": "secret123",
+        "email": "testuser_{{ timestamp }}@test.com"
+      },
+      "isPrivate": false
+    },
+    {
+      "_id": "wrk_user_workflow",
+      "_type": "workspace",
+      "name": "User Workflow",
+      "description": "BPMN User Workflow - Student endpoints"
+    },
+    {
+      "_id": "req_register",
+      "_type": "request",
+      "parentId": "wrk_user_workflow",
+      "name": "1. Register User",
+      "url": "{{ base_url }}/api/auth/register",
+      "method": "POST",
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\"username\":\"{{ username }}\",\"password\":\"{{ password }}\",\"email\":\"{{ email }}\"}"
+      }
+    },
+    {
+      "_id": "req_login",
+      "_type": "request",
+      "parentId": "wrk_user_workflow",
+      "name": "2. Login",
+      "url": "{{ base_url }}/login",
+      "method": "POST",
+      "headers": [
+        { "name": "Content-Type", "value": "application/x-www-form-urlencoded" }
+      ],
+      "body": {
+        "type": "form-urlencoded",
+        "formUrlEncoded": [
+          { "key": "username", "value": "{{ username }}" },
+          { "key": "password", "value": "{{ password }}" }
+        ]
+      }
+    },
+    {
+      "_id": "req_get_courses",
+      "_type": "request",
+      "parentId": "wrk_user_workflow",
+      "name": "3. Get Courses",
+      "url": "{{ base_url }}/api/student/courses",
+      "method": "GET",
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" }
+      ]
+    },
+    {
+      "_id": "req_get_balance",
+      "_type": "request",
+      "parentId": "wrk_user_workflow",
+      "name": "4. Get Balance",
+      "url": "{{ base_url }}/api/student/balance",
+      "method": "GET",
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" }
+      ]
+    },
+    {
+      "_id": "req_complete_lesson",
+      "_type": "request",
+      "parentId": "wrk_user_workflow",
+      "name": "5. Complete Lesson",
+      "url": "{{ base_url }}/api/student/lessons/course-v1:Test+Course/block-v1:Test+type@sequential+block1/complete",
+      "method": "POST",
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" }
+      ]
+    },
+    {
+      "_id": "req_get_achievements",
+      "_type": "request",
+      "parentId": "wrk_user_workflow",
+      "name": "6. Get Achievements",
+      "url": "{{ base_url }}/api/student/achievements",
+      "method": "GET",
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" }
+      ]
+    },
+    {
+      "_id": "req_get_rewards",
+      "_type": "request",
+      "parentId": "wrk_user_workflow",
+      "name": "7. Get Available Rewards",
+      "url": "{{ base_url }}/api/student/rewards",
+      "method": "GET",
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" }
+      ]
+    },
+    {
+      "_id": "req_redeem_reward",
+      "_type": "request",
+      "parentId": "wrk_user_workflow",
+      "name": "8. Redeem Reward",
+      "url": "{{ base_url }}/api/student/rewards/{reward_id}/redeem",
+      "method": "POST",
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" }
+      ]
+    },
+    {
+      "_id": "req_get_my_rewards",
+      "_type": "request",
+      "parentId": "wrk_user_workflow",
+      "name": "9. Get My Rewards",
+      "url": "{{ base_url }}/api/student/rewards/my",
+      "method": "GET",
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" }
+      ]
+    },
+    {
+      "_id": "fol_user_workflow",
+      "_type": "request_group",
+      "parentId": "wrk_user_workflow",
+      "name": "User Workflow",
+      "requests": [
+        "req_register",
+        "req_login",
+        "req_get_courses",
+        "req_get_balance",
+        "req_complete_lesson",
+        "req_get_achievements",
+        "req_get_rewards",
+        "req_redeem_reward",
+        "req_get_my_rewards"
+      ]
+    }
+  ]
+}

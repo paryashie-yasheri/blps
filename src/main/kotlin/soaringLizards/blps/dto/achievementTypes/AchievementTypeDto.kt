@@ -8,4 +8,5 @@ data class AchievementTypeDto(
     val icon: String,
     val isRepeatable: Boolean,
     val isActive: Boolean,
+    val conditions: Map<String, Any> = emptyMap(),
 )
