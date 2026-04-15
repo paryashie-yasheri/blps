@@ -4,8 +4,11 @@ import io.swagger.v3.oas.annotations.tags.Tag
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
+import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
+import org.springframework.web.multipart.MultipartFile
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider
 import software.amazon.awssdk.http.apache.ApacheHttpClient
@@ -13,10 +16,12 @@ import software.amazon.awssdk.regions.Region
 import software.amazon.awssdk.services.s3.S3Client
 import software.amazon.awssdk.services.s3.S3Configuration
 import software.amazon.awssdk.services.s3.model.GetObjectRequest
+import software.amazon.awssdk.services.s3.model.PutObjectRequest
 import software.amazon.awssdk.services.s3.presigner.S3Presigner
 import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest
 import java.net.URI
 import java.time.Duration
+import java.util.UUID
 
 @RestController
 @RequestMapping("/api/s3")
@@ -84,6 +89,22 @@ class S3Controller(
             .url()
             .toString()
 
+    @PostMapping(consumes = ["multipart/form-data"])
+    fun upload(@RequestParam file: MultipartFile) =
+        s3Client
+            .putObject(
+                PutObjectRequest
+                    .builder()
+                    .bucket(bucket)
+                    .key(UUID.randomUUID().toString() + ".png")
+                    .build()!!,
+                software.amazon.awssdk.core.sync.RequestBody
+                    .fromInputStream(
+                        file.inputStream,
+                        file.size,
+                    ),
+            )
+
     @Suppress("HttpUrlsUsage")
     private fun normalizeEndpoint(endpoint: String) =
         URI.create(
@@ -99,5 +120,6 @@ class S3Controller(
             tenantId.isBlank() -> accessKey
             else -> "$tenantId:$accessKey"
         }
+
 
 }
