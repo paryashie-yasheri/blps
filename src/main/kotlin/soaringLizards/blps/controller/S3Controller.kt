@@ -19,7 +19,6 @@ class S3Controller(
     private val s3Service: S3Service,
 ) {
     @GetMapping("/{key}")
-    @PreAuthorize("hasAnyRole('USER', 'STAFF', 'ADMIN')") // как отметить что любой авторизованный может получить ссылку?
     fun get(@PathVariable("key") key: String) = s3Service.get(key)
 
     @PostMapping(consumes = ["multipart/form-data"])
