@@ -8,11 +8,6 @@ spring:
     default: dev
   application:
     name: blps
-  datasource:
-    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5432}/${POSTGRES_DB:studs}?currentSchema=${POSTGRES_SCHEMA:public}
-    username: ${POSTGRES_USER:}
-    password: ${POSTGRES_PASSWORD:}
-    driver-class-name: org.postgresql.Driver
   liquibase:
     change-log: classpath:db/db.changelog-master.yaml
     enabled: true
@@ -26,6 +21,28 @@ spring:
     config:
       port: ${server.port}
       host: ${SPRING_HOST:"http://localhost:${server.port}/"}
+
+app:
+  datasource:
+    xa:
+      host: ${POSTGRES_HOST:localhost}
+      port: ${POSTGRES_PORT:5432}
+      database: ${POSTGRES_DB:studs}
+      username: ${POSTGRES_USER:}
+      password: ${POSTGRES_PASSWORD:}
+      schema: ${POSTGRES_SCHEMA:public}
+      unique-resource-name: ${POSTGRES_XA_RESOURCE_NAME:main-postgres-xa}
+      min-pool-size: ${POSTGRES_XA_MIN_POOL_SIZE:1}
+      max-pool-size: ${POSTGRES_XA_MAX_POOL_SIZE:8}
+      borrow-connection-timeout-seconds: ${POSTGRES_XA_BORROW_TIMEOUT_SECONDS:30}
+      maintenance-interval-seconds: ${POSTGRES_XA_MAINTENANCE_INTERVAL_SECONDS:60}
+      max-idle-time-seconds: ${POSTGRES_XA_MAX_IDLE_TIME_SECONDS:60}
+      test-query: ${POSTGRES_XA_TEST_QUERY:SELECT 1}
+  atomikos:
+    log-base-dir: ${ATOMIKOS_LOG_BASE_DIR:${java.io.tmpdir}/blps-atomikos}
+    tm-unique-name: ${ATOMIKOS_TM_UNIQUE_NAME:${spring.application.name}-tm}
+    transaction-timeout-seconds: ${ATOMIKOS_TRANSACTION_TIMEOUT_SECONDS:30}
+
 auth:
   jwt:
     secret: ${JWT_SECRET}
