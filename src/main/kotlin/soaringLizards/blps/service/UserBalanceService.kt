@@ -34,6 +34,7 @@ class UserBalanceService(
         return balance.toBalanceResponse()
     }
 
+    @Transactional
     fun donatePoints(currentUser: User?, request: DonateRequest): TransactionsResponse {
         currentUser ?: throw AccessDeniedException("Not logged in")
 
@@ -62,7 +63,6 @@ class UserBalanceService(
         return newTransaction
     }
 
-    @Transactional
     fun createTransactionOnUser(userBalance: UserBalancesRecord, balanceDiff: Int): BalanceTransactionsRecord {
         val currentBalance = userBalance.currentBalance!!
 

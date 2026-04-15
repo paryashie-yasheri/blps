@@ -180,6 +180,10 @@ dependencies {
     implementation("org.jetbrains.kotlin:kotlin-reflect")
     developmentOnly("org.springframework.boot:spring-boot-devtools")
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.6")
+    implementation("jakarta.transaction:jakarta.transaction-api:2.0.1")
+    implementation("com.atomikos:transactions-jta:6.0.0:jakarta")
+    implementation("com.atomikos:transactions-jdbc:6.0.0:jakarta")
+    implementation("org.postgresql:postgresql")
 
     // db & tests
     testImplementation(enforcedPlatform("org.testcontainers:testcontainers-bom:$testcontainersVersion"))
@@ -195,7 +199,6 @@ dependencies {
     add("liquibaseRuntime", "org.postgresql:postgresql")
     add("liquibaseRuntime", "info.picocli:picocli:4.7.6")
     add("liquibaseRuntime", "com.h2database:h2:2.2.224") // точн надо?
-    runtimeOnly("org.postgresql:postgresql")
     testImplementation("org.springframework.boot:spring-boot-starter-webmvc-test")
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
@@ -356,4 +359,8 @@ val codegen by tasks.register<DefaultTask>("codegen") {
     dependsOn(
         generateJooq,
     )
+}
+
+tasks.named("compileKotlin").configure {
+    dependsOn(generateJooq)
 }
