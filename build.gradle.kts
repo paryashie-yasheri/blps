@@ -360,7 +360,3 @@ val codegen by tasks.register<DefaultTask>("codegen") {
         generateJooq,
     )
 }
-
-tasks.named("compileKotlin").configure {
-    dependsOn(generateJooq)
-}
