@@ -4,6 +4,8 @@ server:
 spring:
   config:
     import: optional:file:.env[.properties]
+  profiles:
+    default: test
   application:
     name: blps
   datasource:
@@ -19,10 +21,6 @@ spring:
     enabled: false
     
   security:
-    admin-credentials:
-      username: admin
-      password: admin
-      email: admin@admin.com
     oauth2:
       authorization-server:
         issuer-url: http://localhost:8080/oauth2
