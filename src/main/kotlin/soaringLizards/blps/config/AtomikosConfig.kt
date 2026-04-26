@@ -87,6 +87,7 @@ class AtomikosConfig(
 
     @Bean(initMethod = "init", destroyMethod = "close")
     @Primary
+    @DependsOn("atomikosPropertyInitializer", "atomikosTransactionManager", "atomikosUserTransaction")
     fun dataSource(): DataSource {
         val xaDataSource = PGXADataSource().apply {
             serverNames = arrayOf(xaDataSourceProperties.host)
