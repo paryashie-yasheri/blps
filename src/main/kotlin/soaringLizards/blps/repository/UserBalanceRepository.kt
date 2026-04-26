@@ -7,7 +7,7 @@ import soaringLizards.blps.jooq.generated.tables.references.USER_BALANCES
 import java.util.*
 
 @Repository
-data class UserBalanceRepository(
+class UserBalanceRepository(
     private val dsl: DSLContext,
 ) {
     fun findById(id: UUID) =

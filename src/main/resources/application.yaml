@@ -3,7 +3,7 @@ server:
 
 spring:
   config:
-    import: optional:file:.env[.properties]
+    import: optional:file:./.env[.properties]
   profiles:
     default: dev
   application:
@@ -53,6 +53,11 @@ app:
     log-base-dir: ${ATOMIKOS_LOG_BASE_DIR:${java.io.tmpdir}/blps-atomikos}
     tm-unique-name: ${ATOMIKOS_TM_UNIQUE_NAME:${spring.application.name}-tm}
     transaction-timeout-seconds: ${ATOMIKOS_TRANSACTION_TIMEOUT_SECONDS:30}
+  jwt:
+    staff:
+      secret: ${APP_JWT_STAFF_SECRET:${JWT_SECRET:}}
+      issuer: ${APP_JWT_STAFF_ISSUER:blps-internal}
+      expiration-minutes: ${APP_JWT_STAFF_EXPIRATION_MINUTES:60}
 
 auth:
   jwt:

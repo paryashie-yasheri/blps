@@ -176,6 +176,7 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-webmvc")
     implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("org.springframework.boot:spring-boot-starter-webservices")
+    implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("org.springframework.security:spring-security-oauth2-authorization-server:7.0.3")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
     developmentOnly("org.springframework.boot:spring-boot-devtools")
@@ -238,7 +239,9 @@ tasks.withType<Test> {
 
 
 tasks.test {
+    environment("SPRING_PROFILES_ACTIVE", "test")
     environment("api.version", "1.44")
+    systemProperty("spring.profiles.active", "test")
     systemProperty("api.version", "1.44")
 
     testLogging {
@@ -287,15 +290,17 @@ val liquibaseUpdate by tasks.register<JavaExec>("liquibaseUpdate") {
     args = connectionArgs
 }
 
-
 val liquibaseUpdateTestContainer by tasks.register<JavaExec>("liquibaseUpdateTestContainer") {
     group = "liquibase"
-    description = "Apply database migrations before code generation"
+
+    outputs.upToDateWhen { false }
+    outputs.cacheIf { false }
+    doNotTrackState("Liquibase uses Testcontainers/Docker external state")
+
     classpath = configurations["liquibaseRuntime"]
     mainClass.set("liquibase.integration.commandline.Main")
 
     doFirst {
-
         val manager = getOrCreateTestContainerManager(createEnvMap())
 
         val connectionArgs = createLiquibaseArgs(manager.toPostgresEnv()).toMutableList()
@@ -357,6 +362,9 @@ tasks.matching { it.name == "generateSources" }.configureEach {
 }
 
 val codegen by tasks.register<DefaultTask>("codegen") {
+    doNotTrackState("codegen depends on external DB/Testcontainers/server")
+    outputs.upToDateWhen { false }
+    outputs.cacheIf { false }
     dependsOn(
         generateJooq,
     )
