@@ -239,7 +239,9 @@ tasks.withType<Test> {
 
 
 tasks.test {
+    environment("SPRING_PROFILES_ACTIVE", "test")
     environment("api.version", "1.44")
+    systemProperty("spring.profiles.active", "test")
     systemProperty("api.version", "1.44")
 
     testLogging {
