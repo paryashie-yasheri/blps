@@ -1,3 +1,3 @@
 package soaringLizards.blps.exception
 
-class LmsException : RuntimeException()
+class LmsException(val errors: Map<String, String>) : RuntimeException()

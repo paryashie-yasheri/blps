@@ -8,9 +8,10 @@ import org.springframework.transaction.annotation.Transactional
 import org.springframework.web.bind.annotation.RequestBody
 import soaringLizards.blps.config.EdxSessionAuthManager
 import soaringLizards.blps.controller.AuthController
-import soaringLizards.blps.dto.edx.EdxAuthenticatedSession
 import soaringLizards.blps.dto.user.*
 import soaringLizards.blps.dto.userBalances.UserBalanceDto
+import soaringLizards.blps.exception.BusinessLogicException
+import soaringLizards.blps.exception.LmsException
 import soaringLizards.blps.exception.UserAlreadyExistAuthenticationException
 import soaringLizards.blps.exception.UserNotFoundException
 import soaringLizards.blps.jooq.generated.tables.records.UsersRecord
@@ -107,20 +108,11 @@ class UserService(
 
         val lmsResult = try {
             edxSessionAuthManager.authenticateUser(request.username, request.password)
+        } catch (e: LmsException) {
+            throw e
         } catch (e: Exception) {
             logger.error("LMS authentication error: ${e.message}")
-            mapOf("error" to "LMS_UNAVAILABLE", "message" to e.message)
-        }
-
-        if (lmsResult is Map<*, *>) {
-            val errorMsg = (lmsResult["message"] as? String) ?: "LMS error"
-            logger.warn("LMS error for user ${request.username}: $errorMsg")
-            throw AccessDeniedException(errorMsg)
-        }
-
-        if (lmsResult !is EdxAuthenticatedSession) {
-            logger.warn("LMS validation failed for user: ${request.username}")
-            throw AccessDeniedException("Invalid LMS credentials")
+            throw BusinessLogicException("LMS_UNAVAILABLE, message: ${e.message}")
         }
 
         val email = edxSessionAuthManager.getUserEmail(lmsResult, request.username)
