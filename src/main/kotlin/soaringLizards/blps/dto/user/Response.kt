@@ -1,5 +1,6 @@
 package soaringLizards.blps.dto.user
 
+import soaringLizards.blps.config.userDetails.JwtUserDetails
 import soaringLizards.blps.jooq.generated.tables.records.UsersRecord
 
 class UserResponse(
@@ -21,4 +22,11 @@ fun UsersRecord.toUserResponse() =
         username!!,
         Email(email!!),
         role!!,
+    )
+
+fun JwtUserDetails.toUserResponse() =
+    UserResponse(
+        username,
+        Email("test@mail.com"),
+        role,
     )

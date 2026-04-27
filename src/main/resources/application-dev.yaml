@@ -38,5 +38,6 @@ logging:
 
 edx:
   api:
+    base-url: "http://local.openedx.io/api"
     username: ${EDX_API_USERNAME:admin}
     password: ${EDX_API_PASSWORD:admin}

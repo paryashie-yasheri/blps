@@ -1,77 +1,87 @@
 package soaringLizards.blps.service
 
+import org.slf4j.LoggerFactory
 import org.springframework.security.access.AccessDeniedException
-import org.springframework.security.core.userdetails.User
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
-import soaringLizards.blps.dto.user.RegisterDto
-import soaringLizards.blps.dto.user.UserDto
-import soaringLizards.blps.dto.user.UserResponse
-import soaringLizards.blps.dto.user.toUserResponse
+import org.springframework.web.bind.annotation.RequestBody
+import soaringLizards.blps.config.EdxSessionAuthManager
+import soaringLizards.blps.controller.AuthController
+import soaringLizards.blps.dto.edx.EdxAuthenticatedSession
+import soaringLizards.blps.dto.user.*
 import soaringLizards.blps.dto.userBalances.UserBalanceDto
 import soaringLizards.blps.exception.UserAlreadyExistAuthenticationException
 import soaringLizards.blps.exception.UserNotFoundException
+import soaringLizards.blps.jooq.generated.tables.records.UsersRecord
 import soaringLizards.blps.repository.UserBalanceRepository
 import soaringLizards.blps.repository.UserRepository
+import java.time.Instant
+
+private val logger = LoggerFactory.getLogger(AuthController::class.java)
 
 @Service
 class UserService(
     private val passwordEncoder: PasswordEncoder,
     private val userRepository: UserRepository,
     private val userBalanceRepository: UserBalanceRepository,
+    private val jwtTokenService: JwtTokenService,
+    private val edxSessionAuthManager: EdxSessionAuthManager,
 ) {
-
-    fun getUserFromAuthenticationPrincipal(springUser: User?): UserResponse {
-        springUser ?: throw AccessDeniedException("Not logged in")
-
-        val user = convertSpringUserToUser(springUser)
-        return user.toUserResponse()
-    }
-
     fun getUserByUsername(username: String): UserResponse? {
         val user = userRepository.findByUsername(username)
         return user?.toUserResponse()
     }
 
-    fun convertSpringUserToUser(springUser: User) =
-        userRepository.findByUsername(springUser.username)
+    fun authenticateStaff(username: String, password: String): UsersRecord {
+        val user = userRepository.findByUsername(username)
             ?: throw UserNotFoundException("User not found in database")
 
-    fun authenticateStaff(username: String, password: String): UserResponse? {
-        val user = userRepository.findByUsername(username)
-            ?: return null
-
         if (user.role != "STAFF" && user.role != "ADMIN")
-            return null
+            throw AccessDeniedException("User not authorized to access")
 
-        if (passwordEncoder.matches(password, user.passwordHash)) {
-            return user.toUserResponse()
-        } else {
-            return null
-        }
+        if (passwordEncoder.matches(password, user.passwordHash))
+            throw AccessDeniedException("Wrong password")
+
+        return user
     }
 
-    fun authenticateOrCreateOpenedxUser(username: String): UserResponse? {
+    fun loginStaff(request: LoginRequestDto): LoginResponseDto {
+        val user = authenticateStaff(request.username, request.password)
+
+        val token = jwtTokenService.generateToken(
+            user.id!!,
+            user.username!!,
+            Email(user.email!!),
+            setOf(user.role!!),
+        )
+
+        return LoginResponseDto(
+            accessToken = token,
+            tokenType = "Bearer",
+            expiresIn = jwtTokenService.staffJwtExpirationMinutes * 60,
+            username = user.username!!,
+            role = user.role!!,
+        )
+    }
+
+    fun authenticateOrCreateOpenedxUser(username: String, email: Email): UsersRecord {
         val existingUser = userRepository.findByUsername(username)
+
         return if (existingUser != null) {
-            // Allow any existing user to login as OPENEDX_USER
-            existingUser.toUserResponse()
+            existingUser
         } else {
-            // Auto-create new OPENEDX_USER
-            val newUser = UserDto(
+            val newUser = RegisterDto(
                 username = username,
-                password = passwordEncoder.encode("openedx-auto-${username}")!!,
-                email = soaringLizards.blps.dto.user.Email("${username}@openedx.local"),
-                role = "OPENEDX_USER",
+                password = "i will be changed", //TODO
+                email = email,
             )
-            val inserted = userRepository.insert(newUser)
-            inserted?.toUserResponse()
+            registerUser(newUser, "OPENEDX_USER")
         }
     }
 
     @Transactional
-    fun registerUser(request: RegisterDto, role: String): UserResponse {
+    fun registerUser(request: RegisterDto, role: String): UsersRecord {
         if (userRepository.existWithUsername(request.username))
             throw UserAlreadyExistAuthenticationException("User already exists")
 
@@ -87,10 +97,51 @@ class UserService(
 
         userBalanceRepository.insert(UserBalanceDto.createDefault(newUser.id!!))
 
-        return UserResponse(
+        return newUser
+    }
+
+
+    @Transactional
+    fun loginOpenedxUser(@RequestBody request: LoginRequestDto): LoginResponseDto {
+        logger.info("Login attempt for user: ${request.username}")
+
+        val lmsResult = try {
+            edxSessionAuthManager.authenticateUser(request.username, request.password)
+        } catch (e: Exception) {
+            logger.error("LMS authentication error: ${e.message}")
+            mapOf("error" to "LMS_UNAVAILABLE", "message" to e.message)
+        }
+
+        if (lmsResult is Map<*, *>) {
+            val errorMsg = (lmsResult["message"] as? String) ?: "LMS error"
+            logger.warn("LMS error for user ${request.username}: $errorMsg")
+            throw AccessDeniedException(errorMsg)
+        }
+
+        if (lmsResult !is EdxAuthenticatedSession) {
+            logger.warn("LMS validation failed for user: ${request.username}")
+            throw AccessDeniedException("Invalid LMS credentials")
+        }
+
+        val user = authenticateOrCreateOpenedxUser(
             request.username,
-            request.email,
-            role,
+            Email("placeholder_${request.username}@mail.com"),
+        )
+
+        val token = jwtTokenService.generateToken(
+            user.id!!,
+            user.username!!,
+            Email(user.email!!),
+            setOf("OPENEDX_USER"),
+            lmsResult,
+        )
+
+        return LoginResponseDto(
+            accessToken = token,
+            tokenType = "Bearer",
+            expiresIn = lmsResult.expiresAt.epochSecond - Instant.now().epochSecond,
+            username = user.username!!,
+            role = "OPENEDX_USER",
         )
     }
 }

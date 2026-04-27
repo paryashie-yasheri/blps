@@ -4,7 +4,7 @@ import org.slf4j.LoggerFactory
 import org.springframework.boot.context.event.ApplicationReadyEvent
 import org.springframework.context.ApplicationListener
 import org.springframework.stereotype.Component
-import soaringLizards.blps.config.AdminCredentialsProperties
+import soaringLizards.blps.config.properties.AdminCredentialsProperties
 import soaringLizards.blps.dto.user.RegisterDto
 import soaringLizards.blps.exception.UserAlreadyExistAuthenticationException
 import soaringLizards.blps.service.UserService

@@ -7,31 +7,21 @@ import org.springframework.http.MediaType
 import org.springframework.stereotype.Component
 import org.springframework.util.LinkedMultiValueMap
 import org.springframework.web.client.RestClient
+import soaringLizards.blps.dto.edx.EdxAuthenticatedSession
 import tools.jackson.databind.ObjectMapper
 import tools.jackson.module.kotlin.jacksonObjectMapper
 import java.nio.charset.StandardCharsets
 import java.time.Instant
-import java.util.Base64
-import java.util.concurrent.locks.ReentrantLock
-import kotlin.concurrent.withLock
+import java.util.*
 
 private val logger = LoggerFactory.getLogger(EdxSessionAuthManager::class.java)
 
-data class EdxAuthenticatedSession(
-    val cookieHeader: String,
-    val csrfToken: String,
-    val expiresAt: Instant?,
-)
 
 @Component
 class EdxSessionAuthManager(
     @Suppress("HttpUrlsUsage")
-    @Value("\${edx.api.base-url:http://local.openedx.io/api}")
+    @Value($$"${edx.api.base-url:http://local.openedx.io/api}")
     private val baseUrl: String,
-    @Value("\${edx.api.username:}")
-    private val username: String,
-    @Value("\${edx.api.password:}")
-    private val password: String,
 ) {
     private val objectMapper: ObjectMapper = jacksonObjectMapper()
 
@@ -42,107 +32,8 @@ class EdxSessionAuthManager(
             .build()
     }
 
-    private val lock = ReentrantLock()
-
-    @Volatile
-    private var cachedSession: EdxAuthenticatedSession? = null
-
-    fun getSession(): EdxAuthenticatedSession? {
-        logger.info("getSession called, username set: ${username.isNotBlank()}")
-        
-        if (username.isBlank() || password.isBlank()) {
-            logger.warn("LMS credentials not configured")
-            return null
-        }
-
-        cachedSession?.takeIf(::isValid)?.let { 
-            logger.info("Using cached LMS session")
-            return it 
-        }
-
-        return lock.withLock {
-            cachedSession?.takeIf(::isValid)?.let { return@withLock it }
-            logger.info("Authenticating with LMS...")
-            authenticate().also { 
-                cachedSession = it 
-                logger.info("LMS authentication ${if (it != null) "SUCCESS" else "FAILED"}")
-            }
-        }
-    }
-
     private fun isValid(session: EdxAuthenticatedSession): Boolean =
-        session.expiresAt?.isAfter(Instant.now().plusSeconds(60)) ?: true
-
-    private fun authenticate(): EdxAuthenticatedSession {
-        logger.info("Starting LMS authentication...")
-        
-        val cookies = linkedMapOf<String, String>()
-
-        authClient.get()
-            .uri("/user/v1/account/login_session/")
-            .exchange { _, response ->
-                logger.info("LMS login init status: ${response.statusCode}")
-                mergeCookies(cookies, response.headers[HttpHeaders.SET_COOKIE].orEmpty())
-
-                if (response.statusCode.isError) {
-                    val body = response.body.readAllBytes().toString(StandardCharsets.UTF_8)
-                    logger.error("LMS login init failed: $body")
-                    error("Failed to initialize Open edX login session: $body")
-                }
-            }
-
-        val csrfToken = cookies["csrftoken"]
-            ?: run {
-                logger.error("LMS did not return csrftoken")
-                error("Open edX login initialization did not return csrftoken")
-            }
-        
-        logger.debug("Got CSRF token: ${csrfToken.take(10)}...")
-
-        val formData = LinkedMultiValueMap<String, String>().apply {
-            add("email_or_username", username)
-            add("password", password)
-        }
-
-        val loginResponse = authClient.post()
-            .uri("/user/v2/account/login_session/")
-            .contentType(MediaType.APPLICATION_FORM_URLENCODED)
-            .header("X-CSRFToken", csrfToken)
-            .header(HttpHeaders.COOKIE, buildCookieHeader(cookies))
-            .body(formData)
-            .exchange { _, response ->
-                val body = response.body.readAllBytes().toString(StandardCharsets.UTF_8)
-                mergeCookies(cookies, response.headers[HttpHeaders.SET_COOKIE].orEmpty())
-
-                if (response.statusCode.isError) {
-                    logger.error("LMS login failed: $body")
-                    error("Open edX login failed: $body")
-                }
-
-                body
-            }
-
-        val loginJson = objectMapper.readTree(loginResponse)
-        if (!loginJson.path("success").asBoolean(false)) {
-            val message = loginJson.path("value").asText("unknown authentication error")
-            logger.error("LMS login returned failure: $message")
-            error("Open edX login failed: $message")
-        }
-
-        val refreshedCsrfToken = cookies["csrftoken"]
-            ?: run {
-                logger.error("LMS did not return csrftoken after login")
-                error("Authenticated Open edX session did not return csrftoken")
-            }
-
-        logger.info("LMS authentication successful for user: $username")
-        
-        return EdxAuthenticatedSession(
-            cookieHeader = buildCookieHeader(cookies),
-            csrfToken = refreshedCsrfToken,
-            expiresAt = extractExpiry(cookies["edx-jwt-cookie-header-payload"]),
-        )
-    }
+        session.expiresAt.isAfter(Instant.now().plusSeconds(60)) ?: true
 
     private fun mergeCookies(cookies: MutableMap<String, String>, setCookieHeaders: List<String>) {
         setCookieHeaders.forEach { header ->
@@ -178,9 +69,9 @@ class EdxSessionAuthManager(
         }.getOrNull()
     }
 
-fun authenticateUser(userEmail: String, password: String): Any {
+    fun authenticateUser(userEmail: String, password: String): Any {
         logger.info("Attempting LMS user authentication for: $userEmail")
-        
+
         val cookies = linkedMapOf<String, String>()
 
         logger.info("Step 1: Getting LMS login session...")
@@ -235,7 +126,7 @@ fun authenticateUser(userEmail: String, password: String): Any {
 
             val loginJson = objectMapper.readTree(loginResponse)
             logger.info("LMS login response JSON: $loginJson")
-            
+
             if (!loginJson.path("success").asBoolean(false)) {
                 val errorCode = loginJson.path("error_code").asText("incorrect_credentials")
                 val message = loginJson.path("value").asText("Authentication failed")
@@ -248,12 +139,18 @@ fun authenticateUser(userEmail: String, password: String): Any {
                 logger.warn("LMS did not return csrftoken after login")
                 return mapOf("error" to "NO_CSRF_AFTER_LOGIN", "message" to "LMS did not return CSRF token after login")
             }
+            val expiresAt = extractExpiry(cookies["edx-jwt-cookie-header-payload"])
+                ?: return mapOf(
+                    "error" to "NO_EXPIRES_AT_AFTER_LOGIN",
+                    "message" to "LMS did not return expiresAt after login",
+                )
+
 
             logger.info("LMS authentication SUCCESS for user: $userEmail")
             EdxAuthenticatedSession(
                 cookieHeader = buildCookieHeader(cookies),
                 csrfToken = refreshedCsrfToken,
-                expiresAt = extractExpiry(cookies["edx-jwt-cookie-header-payload"]),
+                expiresAt = expiresAt,
             )
         } catch (e: Exception) {
             logger.error("LMS authentication exception: ${e.message}", e)

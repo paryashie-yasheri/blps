@@ -1,21 +1,19 @@
 package soaringLizards.blps.client
 
-import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.http.MediaType
 import org.springframework.stereotype.Component
-import org.springframework.web.client.RestClient
-import soaringLizards.blps.dto.edx.EdxCourse
-import soaringLizards.blps.dto.edx.EdxCourseMetadataResponse
-import soaringLizards.blps.dto.edx.EdxCourseOutlineResponse
-import soaringLizards.blps.dto.edx.EdxCoursesResponse
+import soaringLizards.blps.dto.edx.*
 
 @Component
 class EdxCoursesClient(
-    @Qualifier("edxRestClient")
-    private val edxRestClient: RestClient,
+    val edxApiClientFactory: EdxApiClientFactory,
 ) {
-    fun listCourses(page: Int? = null, pageSize: Int? = null): EdxCoursesResponse {
-        val response = edxRestClient.get()
+    fun listCourses(
+        edxAuthenticatedSession: EdxAuthenticatedSession,
+        page: Int? = null,
+        pageSize: Int? = null,
+    ) =
+        edxApiClientFactory.createForUser(edxAuthenticatedSession).get()
             .uri { builder ->
                 builder.path("/courses/v1/courses/")
                 if (page != null)
@@ -26,26 +24,37 @@ class EdxCoursesClient(
             }
             .accept(MediaType.APPLICATION_JSON)
             .retrieve()
+            .body(EdxCoursesResponse::class.java)!!
 
-        return response.body(EdxCoursesResponse::class.java)!!
-    }
 
-    fun getCourse(courseKey: String): EdxCourse =
-        edxRestClient.get()
+    fun getCourse(edxAuthenticatedSession: EdxAuthenticatedSession, courseKey: String) =
+        edxApiClientFactory
+            .createForUser(edxAuthenticatedSession)
+            .get()
             .uri("/courses/v1/courses/{courseKey}", courseKey)
             .accept(MediaType.APPLICATION_JSON)
             .retrieve()
             .body(EdxCourse::class.java)!!
 
-    fun getCourseMetadata(courseKey: String): EdxCourseMetadataResponse =
-        edxRestClient.get()
+    fun getCourseMetadata(
+        edxAuthenticatedSession: EdxAuthenticatedSession,
+        courseKey: String,
+    ) =
+        edxApiClientFactory
+            .createForUser(edxAuthenticatedSession)
+            .get()
             .uri("/course_home/v1/course_metadata/{courseKey}", courseKey)
             .accept(MediaType.APPLICATION_JSON)
             .retrieve()
             .body(EdxCourseMetadataResponse::class.java)!!
 
-    fun getCourseOutline(courseKey: String): EdxCourseOutlineResponse =
-        edxRestClient.get()
+    fun getCourseOutline(
+        edxAuthenticatedSession: EdxAuthenticatedSession,
+        courseKey: String,
+    ) =
+        edxApiClientFactory
+            .createForUser(edxAuthenticatedSession)
+            .get()
             .uri("/course_home/v1/outline/{courseKey}", courseKey)
             .accept(MediaType.APPLICATION_JSON)
             .retrieve()
