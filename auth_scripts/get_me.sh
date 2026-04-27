@@ -1,3 +1,6 @@
 #!/bin/bash
 source ../.env
-curl -s -H "Authorization: Bearer $1" "${SPRING_HOST}/api/auth/me"
+
+token=$(cat .token.txt)
+echo "$token"
+curl -H "Authorization: Bearer ${token}" "${SPRING_HOST}/api/auth/me"

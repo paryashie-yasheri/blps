@@ -123,9 +123,12 @@ class UserService(
             throw AccessDeniedException("Invalid LMS credentials")
         }
 
+        val email = edxSessionAuthManager.getUserEmail(lmsResult, request.username)
+            ?: "placeholder_${request.username}@mail.com"
+
         val user = authenticateOrCreateOpenedxUser(
             request.username,
-            Email("placeholder_${request.username}@mail.com"),
+            Email(email),
         )
 
         val token = jwtTokenService.generateToken(

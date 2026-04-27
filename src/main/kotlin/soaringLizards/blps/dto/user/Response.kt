@@ -27,6 +27,6 @@ fun UsersRecord.toUserResponse() =
 fun JwtUserDetails.toUserResponse() =
     UserResponse(
         username,
-        Email("test@mail.com"),
+        email,
         role,
     )

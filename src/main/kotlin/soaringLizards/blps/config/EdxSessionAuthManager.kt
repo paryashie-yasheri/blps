@@ -157,4 +157,34 @@ class EdxSessionAuthManager(
             mapOf("error" to "LMS_EXCEPTION", "message" to e.message)
         }
     }
+
+    fun getUserEmail(session: EdxAuthenticatedSession, username: String): String? {
+        logger.info("Fetching email from LMS for user: $username")
+
+        return try {
+            val response = authClient.get()
+                .uri("/user/v1/accounts/{username}", username)
+                .header(HttpHeaders.COOKIE, session.cookieHeader)
+                .header("X-CSRFToken", session.csrfToken)
+                .exchange { _, resp ->
+                    if (resp.statusCode.isError) {
+                        val body = resp.body.readAllBytes().toString(StandardCharsets.UTF_8)
+                        logger.warn("Failed to fetch user email: ${resp.statusCode}, body: $body")
+                        null
+                    } else {
+                        resp.body.readAllBytes().toString(StandardCharsets.UTF_8)
+                    }
+                }
+
+            response?.let {
+                val json = objectMapper.readTree(it)
+                val email = json.path("email").asText(null)
+                logger.info("Got email for $username: $email")
+                email
+            }
+        } catch (e: Exception) {
+            logger.error("Failed to get user email: ${e.message}", e)
+            null
+        }
+    }
 }
