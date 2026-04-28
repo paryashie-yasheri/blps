@@ -11,6 +11,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
 import org.springframework.web.client.RestClientResponseException
+import org.springframework.http.converter.HttpMessageNotReadableException
 import soaringLizards.blps.exception.ResourceAlreadyExistsException
 import soaringLizards.blps.exception.ResourceNotFoundException
 import java.time.LocalDateTime
@@ -41,7 +42,7 @@ class GlobalExceptionHandler {
         )
 
     @ExceptionHandler(BadCredentialsException::class)
-    fun handleBadCredentials(ex: BadCredentialsException?) =
+    fun handleBadCredentials() =
         ResponseEntity.status(HttpStatus.FORBIDDEN).body(
             hashMapOf(
                 "timestamp" to LocalDateTime.now(),
@@ -52,7 +53,7 @@ class GlobalExceptionHandler {
         )
 
     @ExceptionHandler(AccessDeniedException::class)
-    fun handleAccessDenied(ex: AccessDeniedException?) =
+    fun handleAccessDenied() =
         ResponseEntity
             .status(HttpStatus.FORBIDDEN)
             .body(
@@ -85,6 +86,18 @@ class GlobalExceptionHandler {
             ),
         )
     }
+
+    @ExceptionHandler(HttpMessageNotReadableException::class)
+    fun handleUnreadableMessage(ex: HttpMessageNotReadableException) =
+        ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+            hashMapOf(
+                "timestamp" to LocalDateTime.now(),
+                "status" to HttpStatus.BAD_REQUEST.value(),
+                "error" to "Bad Request",
+                "message" to "Request body is invalid",
+                "details" to (ex.mostSpecificCause.message ?: ex.message ?: ""),
+            ),
+        )
 
     @ExceptionHandler(DataIntegrityViolationException::class)
     fun handleDataIntegrityViolation(ex: DataIntegrityViolationException) =

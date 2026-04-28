@@ -3,6 +3,7 @@ package soaringLizards.blps.service
 import org.springframework.stereotype.Service
 import org.springframework.transaction.support.TransactionTemplate
 import org.springframework.web.multipart.MultipartFile
+import soaringLizards.blps.dto.achievementTypes.AchievementEventType
 import soaringLizards.blps.dto.achievementTypes.AchievementConditionRequest
 import soaringLizards.blps.dto.achievementTypes.AchievementConditionResponse
 import soaringLizards.blps.dto.achievementTypes.AchievementTypeResponse
@@ -115,12 +116,6 @@ class AchievementTypeService(
     private fun validateRequest(request: AchievementTypeUpsertRequest) {
         if (request.conditions.isEmpty())
             throw BusinessLogicException("Achievement conditions must not be empty")
-
-        request.conditions.forEach { condition ->
-            if (condition.eventType != SUPPORTED_EVENT_TYPE) {
-                throw BusinessLogicException("Unsupported achievement event type: ${condition.eventType}")
-            }
-        }
     }
 
     private fun createAchievementTypeInTransaction(
@@ -179,7 +174,7 @@ class AchievementTypeService(
             conditions = conditions.map { condition ->
                 AchievementConditionResponse(
                     conditionId = condition.conditionId.toString(),
-                    eventType = condition.eventType.orEmpty(),
+                    eventType = condition.eventType.toAchievementEventType(),
                     coursePattern = condition.coursePattern,
                     blockPattern = condition.blockPattern,
                     minCompletion = condition.minCompletion,
@@ -204,13 +199,13 @@ class AchievementTypeService(
         AchievementCondition(
             conditionId = null,
             achievementTypeId = achievementTypeId,
-            eventType = eventType,
+            eventType = eventType.value,
             coursePattern = coursePattern,
             blockPattern = blockPattern,
             minCompletion = minCompletion,
         )
 
-    companion object {
-        private const val SUPPORTED_EVENT_TYPE = "lesson_complete"
-    }
+    private fun String?.toAchievementEventType(): AchievementEventType =
+        this?.let(AchievementEventType::fromValue)
+            ?: throw IllegalStateException("Achievement condition event type must not be null")
 }

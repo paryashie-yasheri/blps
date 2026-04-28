@@ -12,12 +12,13 @@ import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 import org.springframework.boot.test.context.TestConfiguration
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Import
 import org.springframework.context.annotation.Primary
 import org.springframework.http.MediaType
+import org.springframework.mock.web.MockMultipartFile
 import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user
 import org.springframework.test.context.DynamicPropertyRegistry
 import org.springframework.test.context.DynamicPropertySource
@@ -26,6 +27,7 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delet
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
+import soaringLizards.blps.dto.achievementTypes.AchievementEventType
 import soaringLizards.blps.dto.achievementTypes.AchievementConditionRequest
 import soaringLizards.blps.dto.achievementTypes.AchievementTypeUpsertRequest
 import soaringLizards.blps.entity.AchievementCondition
@@ -39,7 +41,6 @@ import tools.jackson.databind.ObjectMapper
 import java.util.UUID
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
-import org.springframework.mock.web.MockMultipartFile
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -97,13 +98,13 @@ class AchievementControllerIntegrationTest {
             isActive = true,
             conditions = listOf(
                 AchievementConditionRequest(
-                    eventType = "lesson_complete",
+                    eventType = AchievementEventType.LESSON_COMPLETE,
                     coursePattern = "course-v1:ITMO+*",
                     blockPattern = "block-v1:*intro*",
                     minCompletion = 1.0,
                 ),
                 AchievementConditionRequest(
-                    eventType = "lesson_complete",
+                    eventType = AchievementEventType.LESSON_COMPLETE,
                     coursePattern = "course-v1:ITMO+*",
                     minCompletion = 1.0,
                 ),
@@ -164,7 +165,7 @@ class AchievementControllerIntegrationTest {
             isActive = true,
             conditions = listOf(
                 AchievementConditionRequest(
-                    eventType = "lesson_complete",
+                    eventType = AchievementEventType.LESSON_COMPLETE,
                     coursePattern = "course-v1:NEW+*",
                     blockPattern = "block-v1:*new*",
                     minCompletion = 0.9,
@@ -232,7 +233,7 @@ class AchievementControllerIntegrationTest {
             isActive = true,
             conditions = listOf(
                 AchievementConditionRequest(
-                    eventType = "lesson_complete",
+                    eventType = AchievementEventType.LESSON_COMPLETE,
                     coursePattern = "course-v1:ITMO+*",
                     minCompletion = 1.0,
                 ),
@@ -245,6 +246,37 @@ class AchievementControllerIntegrationTest {
                 .with(user("student").roles("OPENEDX_USER")),
         )
             .andExpect(status().isForbidden)
+    }
+
+    @Test
+    fun `POST multipart returns bad request for unsupported event type`() {
+        mockMvc.perform(
+            multipart("/api/achievements")
+                .file(
+                    jsonPart(
+                        """
+                        {
+                          "code": "invalid_event",
+                          "name": "Invalid Event",
+                          "description": "Invalid event type",
+                          "pointsAwarded": 10,
+                          "isRepeatable": false,
+                          "isActive": true,
+                          "conditions": [
+                            {
+                              "eventType": "course_complete",
+                              "coursePattern": "course-v1:ITMO+*",
+                              "minCompletion": 1.0
+                            }
+                          ]
+                        }
+                        """.trimIndent(),
+                    ),
+                )
+                .with(user("staff").roles("STAFF")),
+        )
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.error").value("Bad Request"))
     }
 
     private fun insertAchievementType(
@@ -276,6 +308,14 @@ class AchievementControllerIntegrationTest {
             "",
             MediaType.APPLICATION_JSON_VALUE,
             objectMapper.writeValueAsBytes(request),
+        )
+
+    private fun jsonPart(request: String) =
+        MockMultipartFile(
+            "request",
+            "",
+            MediaType.APPLICATION_JSON_VALUE,
+            request.toByteArray(),
         )
 
     private fun imagePart(filename: String) =

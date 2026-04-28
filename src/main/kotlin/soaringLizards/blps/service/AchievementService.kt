@@ -171,7 +171,7 @@ class AchievementService(
         return userAchievementRepository.findByBalanceId(balance.balanceId!!)
             .map { achievement ->
                 achievement.copy(
-                    iconUrl = achievement.icon?.let { s3Service.get(it) },
+                    iconUrl = achievement.iconKey?.let { s3Service.get(it) },
                 )
             }
     }

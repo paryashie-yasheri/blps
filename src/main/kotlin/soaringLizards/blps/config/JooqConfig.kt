@@ -4,6 +4,7 @@ import org.jooq.DSLContext
 import org.jooq.SQLDialect
 import org.jooq.conf.Settings
 import org.jooq.impl.DSL
+import org.jooq.impl.DataSourceConnectionProvider
 import org.jooq.impl.DefaultConfiguration
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
@@ -21,7 +22,7 @@ class JooqConfig(
     @Bean
     fun dslContext(): DSLContext {
         val txAware = TransactionAwareDataSourceProxy(dataSource)
-        val connectionProvider = org.jooq.impl.DataSourceConnectionProvider(txAware)
+        val connectionProvider = DataSourceConnectionProvider(txAware)
 
         val configuration = DefaultConfiguration().apply {
             setSQLDialect(SQLDialect.POSTGRES)

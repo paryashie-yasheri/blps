@@ -5,7 +5,6 @@ import jakarta.validation.constraints.DecimalMax
 import jakarta.validation.constraints.DecimalMin
 import jakarta.validation.constraints.Min
 import jakarta.validation.constraints.NotBlank
-import jakarta.validation.constraints.Pattern
 import jakarta.validation.constraints.Size
 
 data class AchievementTypeUpsertRequest(
@@ -24,9 +23,7 @@ data class AchievementTypeUpsertRequest(
 )
 
 data class AchievementConditionRequest(
-    @field:NotBlank
-    @field:Pattern(regexp = "lesson_complete")
-    val eventType: String,
+    val eventType: AchievementEventType,
     val coursePattern: String? = null,
     val blockPattern: String? = null,
     @field:DecimalMin("0.0")
@@ -49,7 +46,7 @@ data class AchievementTypeResponse(
 
 data class AchievementConditionResponse(
     val conditionId: String,
-    val eventType: String,
+    val eventType: AchievementEventType,
     val coursePattern: String?,
     val blockPattern: String?,
     val minCompletion: Double?,

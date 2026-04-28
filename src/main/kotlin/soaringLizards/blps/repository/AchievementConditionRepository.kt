@@ -15,9 +15,8 @@ class AchievementConditionRepository(
     private val dsl: DSLContext,
 ) {
     fun findByAchievementTypeIds(achievementTypeIds: Collection<UUID>): Map<UUID, List<AchievementCondition>> {
-        if (achievementTypeIds.isEmpty()) {
+        if (achievementTypeIds.isEmpty())
             return emptyMap()
-        }
 
         return dsl.select(
             CONDITION_ID,
