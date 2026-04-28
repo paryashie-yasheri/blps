@@ -26,23 +26,25 @@ class UserBalanceRepository(
             ?.into(UserBalancesRecord::class.java)
             ?.let { mapToEntity(it) }
 
-    fun insert(balanceDto: UserBalanceDto): Int =
+    fun insert(balanceDto: UserBalanceDto) =
         dsl.insertInto(USER_BALANCES)
             .set(USER_BALANCES.USER_ID, balanceDto.userId)
             .set(USER_BALANCES.CURRENT_BALANCE, balanceDto.currentBalance)
             .set(USER_BALANCES.TOTAL_EARNED, balanceDto.totalEarned)
             .set(USER_BALANCES.TOTAL_SPENT, balanceDto.totalSpent)
             .set(USER_BALANCES.VERSION, balanceDto.version)
-            .execute()
+            .returning()
+            .fetchOne()
 
-    fun update(balanceId: UUID, newBalance: Int, newTotalEarned: Int, newTotalSpent: Int, newVersion: Int): Int =
+    fun update(balanceId: UUID, newBalance: Int, newTotalEarned: Int, newTotalSpent: Int, newVersion: Int) =
         dsl.update(USER_BALANCES)
             .set(USER_BALANCES.CURRENT_BALANCE, newBalance)
             .set(USER_BALANCES.TOTAL_EARNED, newTotalEarned)
             .set(USER_BALANCES.TOTAL_SPENT, newTotalSpent)
             .set(USER_BALANCES.VERSION, newVersion)
             .where(USER_BALANCES.BALANCE_ID.eq(balanceId))
-            .execute()
+            .returning()
+            .fetchOne()
 
     fun delete(id: UUID) =
         dsl.deleteFrom(USER_BALANCES)

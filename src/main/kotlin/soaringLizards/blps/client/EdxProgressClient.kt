@@ -1,35 +1,35 @@
 package soaringLizards.blps.client
 
-import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.http.MediaType
 import org.springframework.stereotype.Component
-import org.springframework.web.client.RestClient
-import soaringLizards.blps.dto.edx.EdxCompletionBatchRequest
-import soaringLizards.blps.dto.edx.EdxCompletionBatchResponse
-import soaringLizards.blps.dto.edx.EdxCourseProgressResponse
-import soaringLizards.blps.dto.edx.EdxSubsectionCompletionResponse
+import soaringLizards.blps.dto.edx.*
 
 @Component
 class EdxProgressClient(
-    @Qualifier("edxRestClient")
-    private val edxRestClient: RestClient,
+    val edxApiClientFactory: EdxApiClientFactory,
 ) {
-    fun getProgress(courseKey: String): EdxCourseProgressResponse =
-        edxRestClient.get()
+    fun getRestClient(edxAuthenticatedSession: EdxAuthenticatedSession) =
+        edxApiClientFactory.createForUser(edxAuthenticatedSession)
+
+    fun getProgress(session: EdxAuthenticatedSession, courseKey: String): EdxCourseProgressResponse =
+        getRestClient(session).get()
             .uri("/course_home/v1/progress/{courseKey}", courseKey)
             .accept(MediaType.APPLICATION_JSON)
             .retrieve()
             .body(EdxCourseProgressResponse::class.java)!!
 
-    fun getProgress(courseKey: String, studentId: String): EdxCourseProgressResponse =
-        edxRestClient.get()
+    fun getProgress(session: EdxAuthenticatedSession, courseKey: String, studentId: String): EdxCourseProgressResponse =
+        getRestClient(session).get()
             .uri("/course_home/v1/progress/{courseKey}/{studentId}", courseKey, studentId)
             .accept(MediaType.APPLICATION_JSON)
             .retrieve()
             .body(EdxCourseProgressResponse::class.java)!!
 
-    fun trackCompletion(request: EdxCompletionBatchRequest): EdxCompletionBatchResponse? =
-        edxRestClient.post()
+    fun trackCompletion(
+        session: EdxAuthenticatedSession,
+        request: EdxCompletionBatchRequest,
+    ): EdxCompletionBatchResponse? =
+        getRestClient(session).post()
             .uri("/completion/v1/completion-batch")
             .contentType(MediaType.APPLICATION_JSON)
             .accept(MediaType.APPLICATION_JSON)
@@ -38,11 +38,12 @@ class EdxProgressClient(
             .body(EdxCompletionBatchResponse::class.java)
 
     fun getSubsectionCompletion(
+        session: EdxAuthenticatedSession,
         username: String,
         courseKey: String,
         subsectionId: String,
     ): EdxSubsectionCompletionResponse =
-        edxRestClient.get()
+        getRestClient(session).get()
             .uri(
                 "/completion/v1/subsection-completion/{username}/{courseKey}/{subsectionId}",
                 username,

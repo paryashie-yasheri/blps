@@ -1,20 +1,15 @@
 package soaringLizards.blps.controller
 
 import io.swagger.v3.oas.annotations.tags.Tag
-import org.springframework.http.ResponseEntity
+import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.security.core.annotation.AuthenticationPrincipal
-import org.springframework.security.core.userdetails.User
 import org.springframework.web.bind.annotation.*
-import soaringLizards.blps.EdxService
+import soaringLizards.blps.config.userDetails.JwtUserDetails
 import soaringLizards.blps.dto.edx.EdxCompletionBatchRequest
 import soaringLizards.blps.dto.edx.EdxEnrollmentRequest
 import soaringLizards.blps.dto.userAchievements.UserAchievementWithDetailsDto
-import soaringLizards.blps.service.AchievementContext
-import soaringLizards.blps.service.AchievementService
-import soaringLizards.blps.service.RewardService
-import soaringLizards.blps.service.UserBalanceService
-import soaringLizards.blps.service.UserService
-import java.util.UUID
+import soaringLizards.blps.service.*
+import java.util.*
 
 @Tag(name = "Студент - управление курсами, достижениями и наградами")
 @RestController
@@ -26,55 +21,64 @@ class StudentController(
     private val rewardService: RewardService,
     private val userService: UserService,
 ) {
+    @PreAuthorize("hasRole('OPENEDX_USER')")
     @GetMapping("/courses")
     fun getCourses(
+        @AuthenticationPrincipal currentUser: JwtUserDetails,
         @RequestParam(required = false) page: Int?,
         @RequestParam(required = false) pageSize: Int?,
-    ) = ResponseEntity.ok(edxService.getCourses(page, pageSize))
+    ) = edxService.getCourses(currentUser, page, pageSize)
 
+    @PreAuthorize("hasRole('OPENEDX_USER')")
     @GetMapping("/courses/{courseKey}")
-    fun getCourse(@PathVariable courseKey: String) = ResponseEntity.ok(edxService.getCourse(courseKey))
+    fun getCourse(@AuthenticationPrincipal currentUser: JwtUserDetails, @PathVariable courseKey: String) =
+        edxService.getCourse(currentUser, courseKey)
 
+    @PreAuthorize("hasRole('OPENEDX_USER')")
     @GetMapping("/courses/{courseKey}/metadata")
-    fun getCourseMetadata(@PathVariable courseKey: String) = ResponseEntity.ok(edxService.getCourseMetadata(courseKey))
+    fun getCourseMetadata(@AuthenticationPrincipal currentUser: JwtUserDetails, @PathVariable courseKey: String) =
+        edxService.getCourseMetadata(currentUser, courseKey)
 
+    @PreAuthorize("hasRole('OPENEDX_USER')")
     @GetMapping("/courses/{courseKey}/outline")
-    fun getCourseOutline(@PathVariable courseKey: String) = ResponseEntity.ok(edxService.getCourseOutline(courseKey))
+    fun getCourseOutline(@AuthenticationPrincipal currentUser: JwtUserDetails, @PathVariable courseKey: String) =
+        edxService.getCourseOutline(currentUser, courseKey)
 
+    @PreAuthorize("hasRole('OPENEDX_USER')")
     @PostMapping("/courses/{courseId}/enroll")
     fun enroll(
-        @AuthenticationPrincipal currentUser: User?,
+        @AuthenticationPrincipal currentUser: JwtUserDetails,
         @PathVariable courseId: String,
     ) {
-        val user = userService.convertSpringUserToUser(currentUser!!)
         edxService.enroll(
+            currentUser,
             EdxEnrollmentRequest(
                 courseId = courseId,
                 courseDetails = null,
                 mode = "audit",
-                user = user.username,
+                user = currentUser.username,
             ),
         )
     }
 
+    @PreAuthorize("hasRole('OPENEDX_USER')")
     @PostMapping("/lessons/{courseKey}/{blockId}/complete")
     fun completeLesson(
-        @AuthenticationPrincipal currentUser: User?,
+        @AuthenticationPrincipal currentUser: JwtUserDetails,
         @PathVariable courseKey: String,
         @PathVariable blockId: String,
     ): LessonCompleteResponse {
-        val user = userService.convertSpringUserToUser(currentUser!!)
-
         edxService.trackCompletion(
+            currentUser,
             EdxCompletionBatchRequest(
-                username = user.username!!,
+                username = currentUser.username,
                 courseKey = courseKey,
                 blocks = mapOf(blockId to 1.0),
             ),
         )
 
         val awardedAchievements = achievementService.checkAndAwardAchievements(
-            user.id!!,
+            currentUser.id,
             AchievementContext(
                 type = "lesson_complete",
                 courseKey = courseKey,
@@ -83,7 +87,7 @@ class StudentController(
             ),
         )
 
-        val newBalance = userBalanceService.getCurrentUserBalance(currentUser)
+        val newBalance = userBalanceService.getCurrentUserBalance(currentUser.id)
 
         return LessonCompleteResponse(
             awardedAchievements = awardedAchievements.map {
@@ -98,33 +102,31 @@ class StudentController(
         )
     }
 
+    @PreAuthorize("hasRole('OPENEDX_USER')")
     @GetMapping("/balance")
-    fun getBalance(@AuthenticationPrincipal currentUser: User?) =
-        userBalanceService.getCurrentUserBalance(currentUser)
+    fun getBalance(@AuthenticationPrincipal currentUser: JwtUserDetails) =
+        userBalanceService.getCurrentUserBalance(currentUser.id)
 
+    @PreAuthorize("hasRole('OPENEDX_USER')")
     @GetMapping("/achievements")
-    fun getAchievements(@AuthenticationPrincipal currentUser: User?): List<UserAchievementWithDetailsDto> {
-        val user = userService.convertSpringUserToUser(currentUser!!)
-        return achievementService.getUserAchievements(user.id!!)
-    }
+    fun getAchievements(@AuthenticationPrincipal currentUser: JwtUserDetails): List<UserAchievementWithDetailsDto> =
+        achievementService.getUserAchievements(currentUser.id)
 
+    @PreAuthorize("hasRole('OPENEDX_USER')")
     @GetMapping("/rewards")
-    fun getAvailableRewards() = ResponseEntity.ok(rewardService.getAvailableRewards())
+    fun getAvailableRewards() = rewardService.getAvailableRewards()
 
+    @PreAuthorize("hasRole('OPENEDX_USER')")
     @GetMapping("/rewards/my")
-    fun getMyRewards(@AuthenticationPrincipal currentUser: User?): List<soaringLizards.blps.dto.rewards.UserRewardDto> {
-        val user = userService.convertSpringUserToUser(currentUser!!)
-        return rewardService.getUserRewards(user.id!!)
-    }
+    fun getMyRewards(@AuthenticationPrincipal currentUser: JwtUserDetails) =
+        rewardService.getUserRewards(currentUser.id)
 
+    @PreAuthorize("hasRole('OPENEDX_USER')")
     @PostMapping("/rewards/{rewardId}/redeem")
     fun redeemReward(
-        @AuthenticationPrincipal currentUser: User?,
+        @AuthenticationPrincipal currentUser: JwtUserDetails,
         @PathVariable rewardId: UUID,
-    ): soaringLizards.blps.dto.rewards.UserRewardDto {
-        val user = userService.convertSpringUserToUser(currentUser!!)
-        return rewardService.redeemReward(user.id!!, rewardId)
-    }
+    ) = rewardService.redeemReward(currentUser.id, rewardId)
 }
 
 data class LessonCompleteResponse(

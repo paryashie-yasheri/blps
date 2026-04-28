@@ -11,6 +11,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
 import org.springframework.web.client.RestClientResponseException
+import soaringLizards.blps.exception.LmsException
 import org.springframework.http.converter.HttpMessageNotReadableException
 import soaringLizards.blps.exception.ResourceAlreadyExistsException
 import soaringLizards.blps.exception.ResourceNotFoundException
@@ -117,9 +118,21 @@ class GlobalExceptionHandler {
             hashMapOf(
                 "timestamp" to LocalDateTime.now(),
                 "status" to ex.statusCode.value(),
-                "error" to (ex.statusText.ifBlank { "Downstream API Error" }),
-                "message" to "Open edX request failed",
+                "message" to (ex.statusText.ifBlank { "Downstream API Error" }),
                 "details" to ex.responseBodyAsString,
+            ),
+        )
+
+
+    @ExceptionHandler(LmsException::class)
+    fun handleLmsResponse(ex: LmsException) =
+        ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+            hashMapOf(
+                "timestamp" to LocalDateTime.now(),
+                "status" to HttpStatus.BAD_REQUEST.value(),
+                "error" to (ex.errors["error"] ?: "lms_error"),
+                "message" to (ex.errors["message"] ?: "Open edX request failed"),
+                "details" to (ex.errors["details"] ?: ""),
             ),
         )
 

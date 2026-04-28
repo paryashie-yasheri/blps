@@ -5,40 +5,56 @@ import io.jsonwebtoken.SignatureAlgorithm
 import io.jsonwebtoken.security.Keys
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
+import soaringLizards.blps.dto.edx.EdxAuthenticatedSession
+import soaringLizards.blps.dto.user.Email
+import soaringLizards.blps.dto.user.UserResponse
+import soaringLizards.blps.exception.BusinessLogicException
 import java.security.Key
+import java.time.Instant
 import java.util.*
 
 @Service
 class JwtTokenService(
-    @Value("\${app.jwt.staff.secret}")
+    @Value($$"${app.jwt.staff.secret}")
     private val staffJwtSecret: String,
 
-    @Value("\${app.jwt.staff.issuer:blps-internal}")
+    @Value($$"${app.jwt.staff.issuer:blps-internal}")
     private val staffJwtIssuer: String,
 
-    @Value("\${app.jwt.staff.expiration-minutes:60}")
-    private val staffJwtExpirationMinutes: Long,
+    @Value($$"${app.jwt.staff.expiration-minutes:60}")
+    val staffJwtExpirationMinutes: Long,
 ) {
 
     private val key: Key by lazy {
         Keys.hmacShaKeyFor(staffJwtSecret.toByteArray())
     }
 
-    fun generateStaffToken(username: String, roles: Set<String>): String {
+    fun generateToken(
+        inHouseId: UUID,
+        username: String,
+        email: Email,
+        roles: Set<String>,
+        edxSession: EdxAuthenticatedSession? = null,
+    ): String {
         val now = Date()
-        val expiration = Date(now.time + staffJwtExpirationMinutes * 60 * 1000)
+
+        val expiration = edxSession?.expiresAt ?: Instant.now().plusSeconds(staffJwtExpirationMinutes * 60)
 
         return Jwts.builder()
             .setSubject(username)
             .setIssuer(staffJwtIssuer)
             .setIssuedAt(now)
-            .setExpiration(expiration)
+            .setExpiration(Date.from(expiration))
+            .claim("user-id", inHouseId)
             .claim("roles", roles)
+            .claim("email", email.value)
+            .claim("edxCookieHeader", edxSession?.cookieHeader)
+            .claim("edxCsrfToken", edxSession?.csrfToken)
             .signWith(key, SignatureAlgorithm.HS256)
             .compact()
     }
 
-    fun validateStaffToken(token: String): Boolean {
+    fun validateToken(token: String): Boolean {
         return try {
             Jwts.parserBuilder()
                 .setSigningKey(key)
@@ -51,14 +67,27 @@ class JwtTokenService(
         }
     }
 
-    fun extractUsernameFromToken(token: String): String? {
+    fun extractUserResponseFromToken(token: String): UserResponse? {
         return try {
             val claims = Jwts.parserBuilder()
                 .setSigningKey(key)
                 .build()
                 .parseClaimsJws(token)
                 .body
-            claims.subject
+
+            val username = claims.subject
+            val email = claims.get("email", String::class.java)
+            val role = claims.get("roles", List::class.java)
+                ?.filterIsInstance<String>()
+                ?.first()
+                ?: throw BusinessLogicException("bad roles in token")
+
+            UserResponse(
+                username,
+                Email(email),
+                role,
+            )
+
         } catch (e: Exception) {
             null
         }
@@ -72,7 +101,7 @@ class JwtTokenService(
                 .parseClaimsJws(token)
                 .body
             val roles = claims.get("roles", List::class.java)
-            (roles as? List<*>)?.filterIsInstance<String>()?.toSet() ?: emptySet()
+            roles?.filterIsInstance<String>()?.toSet() ?: emptySet()
         } catch (e: Exception) {
             emptySet()
         }
