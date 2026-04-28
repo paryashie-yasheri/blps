@@ -8,12 +8,16 @@ import soaringLizards.blps.dto.edx.*
 class EdxCoursesClient(
     val edxApiClientFactory: EdxApiClientFactory,
 ) {
+
+    fun getRestClient(edxAuthenticatedSession: EdxAuthenticatedSession) =
+        edxApiClientFactory.createForUser(edxAuthenticatedSession)
+
     fun listCourses(
-        edxAuthenticatedSession: EdxAuthenticatedSession,
+        session: EdxAuthenticatedSession,
         page: Int? = null,
         pageSize: Int? = null,
     ) =
-        edxApiClientFactory.createForUser(edxAuthenticatedSession).get()
+        getRestClient(session).get()
             .uri { builder ->
                 builder.path("/courses/v1/courses/")
                 if (page != null)
@@ -27,9 +31,8 @@ class EdxCoursesClient(
             .body(EdxCoursesResponse::class.java)!!
 
 
-    fun getCourse(edxAuthenticatedSession: EdxAuthenticatedSession, courseKey: String) =
-        edxApiClientFactory
-            .createForUser(edxAuthenticatedSession)
+    fun getCourse(session: EdxAuthenticatedSession, courseKey: String) =
+        getRestClient(session)
             .get()
             .uri("/courses/v1/courses/{courseKey}", courseKey)
             .accept(MediaType.APPLICATION_JSON)
@@ -37,11 +40,10 @@ class EdxCoursesClient(
             .body(EdxCourse::class.java)!!
 
     fun getCourseMetadata(
-        edxAuthenticatedSession: EdxAuthenticatedSession,
+        session: EdxAuthenticatedSession,
         courseKey: String,
     ) =
-        edxApiClientFactory
-            .createForUser(edxAuthenticatedSession)
+        getRestClient(session)
             .get()
             .uri("/course_home/v1/course_metadata/{courseKey}", courseKey)
             .accept(MediaType.APPLICATION_JSON)
@@ -49,11 +51,10 @@ class EdxCoursesClient(
             .body(EdxCourseMetadataResponse::class.java)!!
 
     fun getCourseOutline(
-        edxAuthenticatedSession: EdxAuthenticatedSession,
+        session: EdxAuthenticatedSession,
         courseKey: String,
     ) =
-        edxApiClientFactory
-            .createForUser(edxAuthenticatedSession)
+        getRestClient(session)
             .get()
             .uri("/course_home/v1/outline/{courseKey}", courseKey)
             .accept(MediaType.APPLICATION_JSON)

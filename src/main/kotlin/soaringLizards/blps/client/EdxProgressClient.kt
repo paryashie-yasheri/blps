@@ -8,15 +8,18 @@ import soaringLizards.blps.dto.edx.*
 class EdxProgressClient(
     val edxApiClientFactory: EdxApiClientFactory,
 ) {
+    fun getRestClient(edxAuthenticatedSession: EdxAuthenticatedSession) =
+        edxApiClientFactory.createForUser(edxAuthenticatedSession)
+
     fun getProgress(session: EdxAuthenticatedSession, courseKey: String): EdxCourseProgressResponse =
-        edxApiClientFactory.createForUser(session).get()
+        getRestClient(session).get()
             .uri("/course_home/v1/progress/{courseKey}", courseKey)
             .accept(MediaType.APPLICATION_JSON)
             .retrieve()
             .body(EdxCourseProgressResponse::class.java)!!
 
     fun getProgress(session: EdxAuthenticatedSession, courseKey: String, studentId: String): EdxCourseProgressResponse =
-        edxApiClientFactory.createForUser(session).get()
+        getRestClient(session).get()
             .uri("/course_home/v1/progress/{courseKey}/{studentId}", courseKey, studentId)
             .accept(MediaType.APPLICATION_JSON)
             .retrieve()
@@ -26,7 +29,7 @@ class EdxProgressClient(
         session: EdxAuthenticatedSession,
         request: EdxCompletionBatchRequest,
     ): EdxCompletionBatchResponse? =
-        edxApiClientFactory.createForUser(session).post()
+        getRestClient(session).post()
             .uri("/completion/v1/completion-batch")
             .contentType(MediaType.APPLICATION_JSON)
             .accept(MediaType.APPLICATION_JSON)
@@ -40,7 +43,7 @@ class EdxProgressClient(
         courseKey: String,
         subsectionId: String,
     ): EdxSubsectionCompletionResponse =
-        edxApiClientFactory.createForUser(session).get()
+        getRestClient(session).get()
             .uri(
                 "/completion/v1/subsection-completion/{username}/{courseKey}/{subsectionId}",
                 username,
