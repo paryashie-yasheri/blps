@@ -10,8 +10,6 @@ import soaringLizards.blps.config.EdxSessionAuthManager
 import soaringLizards.blps.controller.AuthController
 import soaringLizards.blps.dto.user.*
 import soaringLizards.blps.dto.userBalances.UserBalanceDto
-import soaringLizards.blps.exception.BusinessLogicException
-import soaringLizards.blps.exception.LmsException
 import soaringLizards.blps.exception.UserAlreadyExistAuthenticationException
 import soaringLizards.blps.exception.UserNotFoundException
 import soaringLizards.blps.jooq.generated.tables.records.UsersRecord
@@ -106,16 +104,9 @@ class UserService(
     fun loginOpenedxUser(@RequestBody request: LoginRequestDto): LoginResponseDto {
         logger.info("Login attempt for user: ${request.username}")
 
-        val lmsResult = try {
-            edxSessionAuthManager.authenticateUser(request.username, request.password)
-        } catch (e: LmsException) {
-            throw e
-        } catch (e: Exception) {
-            logger.error("LMS authentication error: ${e.message}")
-            throw BusinessLogicException("LMS_UNAVAILABLE, message: ${e.message}")
-        }
+        val session = edxSessionAuthManager.authenticateUser(request.username, request.password)
 
-        val email = edxSessionAuthManager.getUserEmail(lmsResult, request.username)
+        val email = edxSessionAuthManager.getUserEmail(session, request.username)
             ?: "placeholder_${request.username}@mail.com"
 
         val user = authenticateOrCreateOpenedxUser(
@@ -128,13 +119,13 @@ class UserService(
             user.username!!,
             Email(user.email!!),
             setOf("OPENEDX_USER"),
-            lmsResult,
+            session,
         )
 
         return LoginResponseDto(
             accessToken = token,
             tokenType = "Bearer",
-            expiresIn = lmsResult.expiresAt.epochSecond - Instant.now().epochSecond,
+            expiresIn = session.expiresAt.epochSecond - Instant.now().epochSecond,
             username = user.username!!,
             role = "OPENEDX_USER",
         )
