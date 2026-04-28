@@ -59,4 +59,9 @@ echo -e "\n\n=== Get My Rewards ==="
 curl -s -X GET "${BASE_URL}/api/student/rewards/my" \
   -H "Authorization: Bearer ${TOKEN}"
 
+echo -e "\n\n=== Should fail ==="
+curl -s -X GET "${BASE_URL}/api/student/achievements"
+printf "\n"
+curl -s -X GET "${BASE_URL}/api/edx/courses"
+
 echo -e "\n\n=== Workflow Complete ==="
