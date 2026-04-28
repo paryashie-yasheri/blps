@@ -21,6 +21,7 @@ data class UserAchievementWithDetailsDto(
     val achievementDescription: String?,
     val pointsAwarded: Int?,
     val icon: String?,
+    val iconUrl: String? = null,
     val earnedAt: String?,
     val isClaimed: Boolean?,
     val referenceId: String?,

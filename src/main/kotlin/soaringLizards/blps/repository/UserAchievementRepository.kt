@@ -4,6 +4,8 @@ import org.jooq.DSLContext
 import org.springframework.stereotype.Repository
 import soaringLizards.blps.dto.userAchievements.UserAchievementDto
 import soaringLizards.blps.dto.userAchievements.UserAchievementWithDetailsDto
+import soaringLizards.blps.entity.UserAchievement
+import soaringLizards.blps.jooq.generated.tables.records.UserAchievementsRecord
 import soaringLizards.blps.jooq.generated.tables.references.ACHIEVEMENT_TYPES
 import soaringLizards.blps.jooq.generated.tables.references.USER_ACHIEVEMENTS
 import java.util.*
@@ -12,10 +14,12 @@ import java.util.*
 class UserAchievementRepository(
     private val dsl: DSLContext,
 ) {
-    fun findById(id: UUID) =
+    fun findById(id: UUID): UserAchievement? =
         dsl.select(USER_ACHIEVEMENTS)
             .where(USER_ACHIEVEMENTS.USER_ACHIEVEMENT_ID.eq(id))
             .fetchOne()
+            ?.into(UserAchievementsRecord::class.java)
+            ?.let { mapToEntity(it) }
 
     fun findByBalanceId(balanceId: UUID): List<UserAchievementWithDetailsDto> {
         return dsl.select(
@@ -55,7 +59,7 @@ class UserAchievementRepository(
         balanceId: UUID,
         achievementTypeId: UUID,
         referenceId: UUID?,
-    ): List<soaringLizards.blps.jooq.generated.tables.records.UserAchievementsRecord> =
+    ): List<UserAchievement> =
         dsl.selectFrom(USER_ACHIEVEMENTS)
             .where(USER_ACHIEVEMENTS.BALANCE_ID.eq(balanceId))
             .and(USER_ACHIEVEMENTS.ACHIEVEMENT_TYPE_ID.eq(achievementTypeId))
@@ -67,6 +71,8 @@ class UserAchievementRepository(
                 }
             }
             .fetch()
+            .into(UserAchievementsRecord::class.java)
+            .map { mapToEntity(it) }
 
     fun insert(achievementDto: UserAchievementDto): Int =
         dsl.insertInto(USER_ACHIEVEMENTS)
@@ -77,4 +83,16 @@ class UserAchievementRepository(
             .set(USER_ACHIEVEMENTS.REFERENCE_TYPE, achievementDto.referenceType)
             .set(USER_ACHIEVEMENTS.IS_CLAIMED, achievementDto.isClaimed)
             .execute()
+
+    private fun mapToEntity(record: UserAchievementsRecord): UserAchievement {
+        return UserAchievement(
+            userAchievementId = record.userAchievementId,
+            balanceId = record.balanceId,
+            achievementTypeId = record.achievementTypeId,
+            earnedAt = record.earnedAt,
+            referenceId = record.referenceId,
+            referenceType = record.referenceType,
+            isClaimed = record.isClaimed,
+        )
+    }
 }

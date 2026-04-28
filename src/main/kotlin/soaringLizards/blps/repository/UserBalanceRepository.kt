@@ -3,6 +3,8 @@ package soaringLizards.blps.repository
 import org.jooq.DSLContext
 import org.springframework.stereotype.Repository
 import soaringLizards.blps.dto.userBalances.UserBalanceDto
+import soaringLizards.blps.entity.UserBalance
+import soaringLizards.blps.jooq.generated.tables.records.UserBalancesRecord
 import soaringLizards.blps.jooq.generated.tables.references.USER_BALANCES
 import java.util.*
 
@@ -10,15 +12,19 @@ import java.util.*
 class UserBalanceRepository(
     private val dsl: DSLContext,
 ) {
-    fun findById(id: UUID) =
+    fun findById(id: UUID): UserBalance? =
         dsl.selectFrom(USER_BALANCES)
             .where(USER_BALANCES.BALANCE_ID.eq(id))
             .fetchOne()
+            ?.into(UserBalancesRecord::class.java)
+            ?.let { mapToEntity(it) }
 
-    fun findByUserId(id: UUID) =
+    fun findByUserId(id: UUID): UserBalance? =
         dsl.selectFrom(USER_BALANCES)
             .where(USER_BALANCES.USER_ID.eq(id))
             .fetchOne()
+            ?.into(UserBalancesRecord::class.java)
+            ?.let { mapToEntity(it) }
 
     fun insert(balanceDto: UserBalanceDto): Int =
         dsl.insertInto(USER_BALANCES)
@@ -38,7 +44,6 @@ class UserBalanceRepository(
             .where(USER_BALANCES.BALANCE_ID.eq(balanceId))
             .execute()
 
-
     fun delete(id: UUID) =
         dsl.deleteFrom(USER_BALANCES)
             .where(USER_BALANCES.BALANCE_ID.eq(id))
@@ -48,4 +53,15 @@ class UserBalanceRepository(
         dsl.deleteFrom(USER_BALANCES)
             .where(USER_BALANCES.USER_ID.eq(id))
             .execute()
+
+    private fun mapToEntity(record: UserBalancesRecord): UserBalance {
+        return UserBalance(
+            balanceId = record.balanceId,
+            userId = record.userId,
+            currentBalance = record.currentBalance,
+            totalEarned = record.totalEarned,
+            totalSpent = record.totalSpent,
+            version = record.version,
+        )
+    }
 }

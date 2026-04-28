@@ -6,8 +6,10 @@ import org.springframework.transaction.annotation.Transactional
 import soaringLizards.blps.dto.balanceTransactions.BalanceTransactionDto
 import soaringLizards.blps.dto.userAchievements.UserAchievementDto
 import soaringLizards.blps.dto.userAchievements.UserAchievementWithDetailsDto
+import soaringLizards.blps.entity.AchievementCondition
+import soaringLizards.blps.entity.AchievementType
+import soaringLizards.blps.entity.UserBalance
 import soaringLizards.blps.exception.BusinessLogicException
-import soaringLizards.blps.repository.AchievementTypeRepository
 import soaringLizards.blps.repository.UserAchievementRepository
 import soaringLizards.blps.repository.UserBalanceRepository
 import java.time.OffsetDateTime
@@ -32,7 +34,8 @@ class AchievementService(
     private val userAchievementRepository: UserAchievementRepository,
     private val userBalanceRepository: UserBalanceRepository,
     private val transactionService: TransactionService,
-    private val achievementTypeRepository: AchievementTypeRepository,
+    private val achievementTypeService: AchievementTypeService,
+    private val s3Service: S3Service,
 ) {
     @Transactional
     fun checkAndAwardAchievements(
@@ -42,27 +45,28 @@ class AchievementService(
         val balance = userBalanceRepository.findByUserId(userId)
             ?: throw BusinessLogicException("User balance not found")
 
-        val achievementTypes = achievementTypeRepository.findAllActive()
+        val achievementTypes = achievementTypeService.getActiveAchievementTypesForAwarding()
 
         val awardedAchievements = mutableListOf<AwardedAchievement>()
 
         for (type in achievementTypes) {
             if (!matchesConditions(type, context)) continue
 
-            val existing = userAchievementRepository.findByBalanceAndType(
-                balance.balanceId!!,
-                type.achievementTypeId!!,
-                context.blockId?.let { UUID.fromString(it) },
-            )
-
-            if (existing.isNotEmpty() && type.isRepeatable != true) continue
+            if (type.isRepeatable != true) {
+                val existing = userAchievementRepository.findByBalanceAndType(
+                    balance.balanceId!!,
+                    type.achievementTypeId!!,
+                    null,
+                )
+                if (existing.isNotEmpty()) continue
+            }
 
             userAchievementRepository.insert(
                 UserAchievementDto(
                     balanceId = balance.balanceId!!,
                     achievementTypeId = type.achievementTypeId!!,
                     earnedAt = OffsetDateTime.now(),
-                    referenceId = context.blockId?.let { UUID.fromString(it) },
+                    referenceId = null,
                     referenceType = context.type,
                     isClaimed = false,
                 ),
@@ -75,7 +79,7 @@ class AchievementService(
 
             awardedAchievements.add(
                 AwardedAchievement(
-                    achievementTypeId = type.achievementTypeId!!,
+                    achievementTypeId = type.achievementTypeId,
                     code = type.code!!,
                     name = type.name!!,
                     pointsAwarded = type.pointsAwarded ?: 0,
@@ -87,30 +91,34 @@ class AchievementService(
     }
 
     private fun matchesConditions(
-        type: soaringLizards.blps.jooq.generated.tables.records.AchievementTypesRecord,
+        type: AchievementType,
+        context: AchievementContext,
+    ) = if (type.conditions.isEmpty())
+        false
+    else type.conditions.all { condition -> matchesCondition(condition, context) }
+
+    private fun matchesCondition(
+        condition: AchievementCondition,
         context: AchievementContext,
     ): Boolean {
-        val conditions = type.conditions?.data() ?: return false
-        val conditionsMap = try {
-            val json = conditions.replace("{", "").replace("}", "")
-            json.split(",")
-                .filter { it.contains(":") }
-                .associate {
-                    val parts = it.split(":")
-                    parts[0].trim().removeSurrounding("\"") to parts[1].trim().removeSurrounding("\"")
-                }
-        } catch (e: Exception) {
+        if (condition.eventType != context.type) {
             return false
         }
 
-        val typeCondition = conditionsMap["type"]
-        if (typeCondition != null && typeCondition != context.type) {
+        if (condition.coursePattern != null && !matchGlob(condition.coursePattern, context.courseKey)) {
             return false
         }
 
-        val coursePattern = conditionsMap["course_key_pattern"]
-        if (coursePattern != null) {
-            if (!matchGlob(coursePattern, context.courseKey)) {
+        if (condition.blockPattern != null) {
+            val blockId = context.blockId ?: return false
+            if (!matchGlob(condition.blockPattern, blockId)) {
+                return false
+            }
+        }
+
+        if (condition.minCompletion != null) {
+            val completion = context.completion ?: return false
+            if (completion < condition.minCompletion) {
                 return false
             }
         }
@@ -119,13 +127,19 @@ class AchievementService(
     }
 
     private fun matchGlob(pattern: String, text: String): Boolean {
-        val regex = pattern
-            .replace(".", "\\.")
-            .replace("*", ".*")
+        val regex = buildString {
+            pattern.forEach { char ->
+                if (char == '*') {
+                    append(".*")
+                } else {
+                    append(Regex.escape(char.toString()))
+                }
+            }
+        }
         return Regex("^$regex$").matches(text)
     }
 
-    private fun addBalancePoints(balance: soaringLizards.blps.jooq.generated.tables.records.UserBalancesRecord, points: Int) {
+    private fun addBalancePoints(balance: UserBalance, points: Int) {
         val newBalance = balance.currentBalance!! + points
         val newTotalEarned = balance.totalEarned!! + points
 
@@ -138,10 +152,10 @@ class AchievementService(
         )
 
         val transaction = BalanceTransactionDto(
-            balanceId = balance.balanceId!!,
+            balanceId = balance.balanceId,
             transactionType = "ACHIEVEMENT_REWARD",
             amount = points,
-            balanceBefore = balance.currentBalance!!,
+            balanceBefore = balance.currentBalance,
             balanceAfter = newBalance,
             userAchievementId = null,
             achievementTypeId = null,
@@ -155,5 +169,10 @@ class AchievementService(
         val balance = userBalanceRepository.findByUserId(userId)
             ?: throw AccessDeniedException("Balance not found")
         return userAchievementRepository.findByBalanceId(balance.balanceId!!)
+            .map { achievement ->
+                achievement.copy(
+                    iconUrl = achievement.icon?.let { s3Service.get(it) },
+                )
+            }
     }
 }
