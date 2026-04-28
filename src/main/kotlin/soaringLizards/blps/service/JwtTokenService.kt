@@ -16,10 +16,10 @@ import java.util.*
 @Service
 class JwtTokenService(
     @Value($$"${app.jwt.staff.secret}")
-    private val staffJwtSecret: String,
+    val staffJwtSecret: String,
 
     @Value($$"${app.jwt.staff.issuer:blps-internal}")
-    private val staffJwtIssuer: String,
+    val staffJwtIssuer: String,
 
     @Value($$"${app.jwt.staff.expiration-minutes:60}")
     val staffJwtExpirationMinutes: Long,
