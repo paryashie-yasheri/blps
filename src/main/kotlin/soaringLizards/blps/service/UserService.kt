@@ -39,7 +39,7 @@ class UserService(
         if (user.role != "STAFF" && user.role != "ADMIN")
             throw AccessDeniedException("User not authorized to access")
 
-        if (passwordEncoder.matches(password, user.passwordHash))
+        if (!passwordEncoder.matches(password, user.passwordHash))
             throw AccessDeniedException("Wrong password")
 
         return user
@@ -67,12 +67,10 @@ class UserService(
     fun authenticateOrCreateOpenedxUser(username: String, email: Email): UsersRecord {
         val existingUser = userRepository.findByUsername(username)
 
-        return if (existingUser != null) {
-            existingUser
-        } else {
+        return existingUser ?: let {
             val newUser = RegisterDto(
                 username = username,
-                password = "i will be changed", //TODO
+                password = passwordEncoder.encode("${username}-${jwtTokenService.staffJwtSecret}")!!,
                 email = email,
             )
             registerUser(newUser, "OPENEDX_USER")
