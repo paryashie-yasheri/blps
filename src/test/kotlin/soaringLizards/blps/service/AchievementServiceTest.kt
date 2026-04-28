@@ -9,6 +9,7 @@ import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import soaringLizards.blps.entity.AchievementCondition
+import soaringLizards.blps.entity.AchievementEventType
 import soaringLizards.blps.entity.AchievementType
 import soaringLizards.blps.entity.UserAchievement
 import soaringLizards.blps.entity.UserBalance
@@ -64,7 +65,7 @@ class AchievementServiceTest {
                         AchievementCondition(
                             conditionId = UUID.randomUUID(),
                             achievementTypeId = achievementTypeId,
-                            eventType = "lesson_complete",
+                            eventType = AchievementEventType.LESSON_COMPLETE,
                             coursePattern = "course-v1:ITMO+*",
                             blockPattern = "block-v1:*intro*",
                             minCompletion = 1.0,
@@ -83,7 +84,7 @@ class AchievementServiceTest {
                         achievementTypeId = achievementTypeId,
                         earnedAt = OffsetDateTime.now(),
                         referenceId = null,
-                        referenceType = "lesson_complete",
+                        referenceType = AchievementEventType.LESSON_COMPLETE,
                         isClaimed = false,
                     ),
                 ),
@@ -92,7 +93,7 @@ class AchievementServiceTest {
         val firstAward = service.checkAndAwardAchievements(
             userId = userId,
             context = AchievementContext(
-                type = "lesson_complete",
+                eventType = AchievementEventType.LESSON_COMPLETE,
                 courseKey = "course-v1:ITMO+Kotlin",
                 blockId = "block-v1:ITMO+type@vertical+block@intro",
                 completion = 1.0,
@@ -101,7 +102,7 @@ class AchievementServiceTest {
         val secondAward = service.checkAndAwardAchievements(
             userId = userId,
             context = AchievementContext(
-                type = "lesson_complete",
+                eventType = AchievementEventType.LESSON_COMPLETE,
                 courseKey = "course-v1:ITMO+Kotlin",
                 blockId = "block-v1:ITMO+type@vertical+block@intro",
                 completion = 1.0,
@@ -150,7 +151,7 @@ class AchievementServiceTest {
         val awarded = service.checkAndAwardAchievements(
             userId = userId,
             context = AchievementContext(
-                type = "lesson_complete",
+                eventType = AchievementEventType.LESSON_COMPLETE,
                 courseKey = "course-v1:ITMO+Kotlin",
                 blockId = "block-v1:ITMO+type@vertical+block@intro",
                 completion = 1.0,
@@ -161,5 +162,123 @@ class AchievementServiceTest {
         verify(userAchievementRepository, never()).insert(any())
         verify(userBalanceRepository, never()).update(any(), any(), any(), any(), any())
         verify(transactionService, never()).addTransaction(any())
+    }
+
+    @Test
+    fun `course_enrolled matching awards achievement without block context`() {
+        val balanceId = UUID.randomUUID()
+        val achievementTypeId = UUID.randomUUID()
+        val userId = UUID.randomUUID()
+
+        whenever(userBalanceRepository.findByUserId(userId)).thenReturn(
+            UserBalance(
+                balanceId = balanceId,
+                userId = userId,
+                currentBalance = 0,
+                totalEarned = 0,
+                totalSpent = 0,
+                version = 1,
+            ),
+        )
+        whenever(achievementTypeService.getActiveAchievementTypesForAwarding()).thenReturn(
+            listOf(
+                AchievementType(
+                    achievementTypeId = achievementTypeId,
+                    code = "course_joined",
+                    name = "Course Joined",
+                    description = "Enroll into an ITMO course",
+                    pointsAwarded = 5,
+                    iconKey = null,
+                    isRepeatable = false,
+                    isActive = true,
+                    conditions = listOf(
+                        AchievementCondition(
+                            conditionId = UUID.randomUUID(),
+                            achievementTypeId = achievementTypeId,
+                            eventType = AchievementEventType.COURSE_ENROLLED,
+                            coursePattern = "course-v1:ITMO+*",
+                            blockPattern = null,
+                            minCompletion = null,
+                        ),
+                    ),
+                ),
+            ),
+        )
+        whenever(userAchievementRepository.findByBalanceAndType(eq(balanceId), eq(achievementTypeId), eq(null)))
+            .thenReturn(emptyList())
+
+        val awarded = service.checkAndAwardAchievements(
+            userId = userId,
+            context = AchievementContext(
+                eventType = AchievementEventType.COURSE_ENROLLED,
+                courseKey = "course-v1:ITMO+Kotlin",
+                blockId = null,
+                completion = null,
+            ),
+        )
+
+        assertEquals(1, awarded.size)
+        verify(userAchievementRepository).insert(any())
+        verify(userBalanceRepository).update(eq(balanceId), eq(5), eq(5), eq(0), eq(2))
+        verify(transactionService).addTransaction(any())
+    }
+
+    @Test
+    fun `course_progress_updated matching uses course completion threshold`() {
+        val balanceId = UUID.randomUUID()
+        val achievementTypeId = UUID.randomUUID()
+        val userId = UUID.randomUUID()
+
+        whenever(userBalanceRepository.findByUserId(userId)).thenReturn(
+            UserBalance(
+                balanceId = balanceId,
+                userId = userId,
+                currentBalance = 10,
+                totalEarned = 10,
+                totalSpent = 0,
+                version = 1,
+            ),
+        )
+        whenever(achievementTypeService.getActiveAchievementTypesForAwarding()).thenReturn(
+            listOf(
+                AchievementType(
+                    achievementTypeId = achievementTypeId,
+                    code = "half_course",
+                    name = "Half Course",
+                    description = "Reach 50 percent course progress",
+                    pointsAwarded = 20,
+                    iconKey = null,
+                    isRepeatable = false,
+                    isActive = true,
+                    conditions = listOf(
+                        AchievementCondition(
+                            conditionId = UUID.randomUUID(),
+                            achievementTypeId = achievementTypeId,
+                            eventType = AchievementEventType.COURSE_PROGRESS_UPDATED,
+                            coursePattern = "course-v1:ITMO+*",
+                            blockPattern = null,
+                            minCompletion = 0.5,
+                        ),
+                    ),
+                ),
+            ),
+        )
+        whenever(userAchievementRepository.findByBalanceAndType(eq(balanceId), eq(achievementTypeId), eq(null)))
+            .thenReturn(emptyList())
+
+        val awarded = service.checkAndAwardAchievements(
+            userId = userId,
+            context = AchievementContext(
+                eventType = AchievementEventType.COURSE_PROGRESS_UPDATED,
+                courseKey = "course-v1:ITMO+Kotlin",
+                blockId = null,
+                completion = 0.75,
+            ),
+        )
+
+        assertEquals(1, awarded.size)
+        verify(userAchievementRepository).insert(any())
+        verify(userBalanceRepository).update(eq(balanceId), eq(30), eq(30), eq(0), eq(2))
+        verify(transactionService).addTransaction(any())
     }
 }

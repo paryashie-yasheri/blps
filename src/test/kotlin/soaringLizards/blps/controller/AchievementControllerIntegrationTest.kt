@@ -27,10 +27,10 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delet
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
-import soaringLizards.blps.dto.achievementTypes.AchievementEventType
 import soaringLizards.blps.dto.achievementTypes.AchievementConditionRequest
 import soaringLizards.blps.dto.achievementTypes.AchievementTypeUpsertRequest
 import soaringLizards.blps.entity.AchievementCondition
+import soaringLizards.blps.entity.AchievementEventType
 import soaringLizards.blps.entity.AchievementType
 import soaringLizards.blps.integration.IntegrationPostgres
 import soaringLizards.blps.integration.TestcontainersCleanupExtension
@@ -137,7 +137,7 @@ class AchievementControllerIntegrationTest {
                 AchievementCondition(
                     conditionId = null,
                     achievementTypeId = null,
-                    eventType = "lesson_complete",
+                    eventType = AchievementEventType.LESSON_COMPLETE,
                     coursePattern = "course-v1:OLD+*",
                     blockPattern = null,
                     minCompletion = 1.0,
@@ -145,7 +145,7 @@ class AchievementControllerIntegrationTest {
                 AchievementCondition(
                     conditionId = null,
                     achievementTypeId = null,
-                    eventType = "lesson_complete",
+                    eventType = AchievementEventType.LESSON_COMPLETE,
                     coursePattern = "course-v1:OLD+*",
                     blockPattern = "block-v1:*old*",
                     minCompletion = 1.0,
@@ -203,7 +203,7 @@ class AchievementControllerIntegrationTest {
                 AchievementCondition(
                     conditionId = null,
                     achievementTypeId = null,
-                    eventType = "lesson_complete",
+                    eventType = AchievementEventType.LESSON_COMPLETE,
                     coursePattern = "course-v1:DELETE+*",
                     blockPattern = null,
                     minCompletion = 1.0,
@@ -249,6 +249,40 @@ class AchievementControllerIntegrationTest {
     }
 
     @Test
+    fun `POST multipart accepts supported event types`() {
+        listOf(
+            AchievementEventType.COURSE_ENROLLED,
+            AchievementEventType.SUBSECTION_COMPLETE,
+            AchievementEventType.COURSE_PROGRESS_UPDATED,
+            AchievementEventType.COURSE_COMPLETE,
+        ).forEach { eventType ->
+            val request = AchievementTypeUpsertRequest(
+                code = "event_${eventType.value}",
+                name = "Event ${eventType.value}",
+                description = "Awarded for ${eventType.value}",
+                pointsAwarded = 15,
+                isRepeatable = false,
+                isActive = true,
+                conditions = listOf(
+                    AchievementConditionRequest(
+                        eventType = eventType,
+                        coursePattern = "course-v1:ITMO+*",
+                    ),
+                ),
+            )
+
+            mockMvc.perform(
+                multipart("/api/achievements")
+                    .file(jsonPart(request))
+                    .with(user("staff").roles("STAFF")),
+            )
+                .andExpect(status().isCreated)
+                .andExpect(jsonPath("$.code").value("event_${eventType.value}"))
+                .andExpect(jsonPath("$.conditions[0].eventType").value(eventType.value))
+        }
+    }
+
+    @Test
     fun `POST multipart returns bad request for unsupported event type`() {
         mockMvc.perform(
             multipart("/api/achievements")
@@ -264,7 +298,7 @@ class AchievementControllerIntegrationTest {
                           "isActive": true,
                           "conditions": [
                             {
-                              "eventType": "course_complete",
+                              "eventType": "quiz_complete",
                               "coursePattern": "course-v1:ITMO+*",
                               "minCompletion": 1.0
                             }

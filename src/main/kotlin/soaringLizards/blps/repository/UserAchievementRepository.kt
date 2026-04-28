@@ -4,6 +4,7 @@ import org.jooq.DSLContext
 import org.springframework.stereotype.Repository
 import soaringLizards.blps.dto.userAchievements.UserAchievementDto
 import soaringLizards.blps.dto.userAchievements.UserAchievementWithDetailsDto
+import soaringLizards.blps.entity.AchievementEventType
 import soaringLizards.blps.entity.UserAchievement
 import soaringLizards.blps.entity.toEntity
 import soaringLizards.blps.jooq.generated.tables.records.UserAchievementsRecord
@@ -51,7 +52,7 @@ class UserAchievementRepository(
                     earnedAt = record.get(USER_ACHIEVEMENTS.EARNED_AT)?.toString(),
                     isClaimed = record.get(USER_ACHIEVEMENTS.IS_CLAIMED),
                     referenceId = record.get(USER_ACHIEVEMENTS.REFERENCE_ID)?.toString(),
-                    referenceType = record.get(USER_ACHIEVEMENTS.REFERENCE_TYPE),
+                    referenceType = AchievementEventType.fromValueOrNull(record.get(USER_ACHIEVEMENTS.REFERENCE_TYPE)),
                 )
             }
     }
@@ -81,7 +82,7 @@ class UserAchievementRepository(
             .set(USER_ACHIEVEMENTS.ACHIEVEMENT_TYPE_ID, achievementDto.achievementTypeId)
             .set(USER_ACHIEVEMENTS.EARNED_AT, achievementDto.earnedAt)
             .set(USER_ACHIEVEMENTS.REFERENCE_ID, achievementDto.referenceId)
-            .set(USER_ACHIEVEMENTS.REFERENCE_TYPE, achievementDto.referenceType)
+            .set(USER_ACHIEVEMENTS.REFERENCE_TYPE, achievementDto.referenceType?.value)
             .set(USER_ACHIEVEMENTS.IS_CLAIMED, achievementDto.isClaimed)
             .execute()
 

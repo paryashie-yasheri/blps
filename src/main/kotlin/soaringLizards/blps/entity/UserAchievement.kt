@@ -10,7 +10,7 @@ data class UserAchievement(
     val achievementTypeId: UUID?,
     val earnedAt: OffsetDateTime?,
     val referenceId: UUID?,
-    val referenceType: String?,
+    val referenceType: AchievementEventType?,
     val isClaimed: Boolean?,
 )
 
@@ -21,6 +21,6 @@ fun UserAchievementsRecord.toEntity() =
         achievementTypeId = this.achievementTypeId,
         earnedAt = this.earnedAt,
         referenceId = this.referenceId,
-        referenceType = this.referenceType,
+        referenceType = AchievementEventType.fromValueOrNull(this.referenceType),
         isClaimed = this.isClaimed,
     )

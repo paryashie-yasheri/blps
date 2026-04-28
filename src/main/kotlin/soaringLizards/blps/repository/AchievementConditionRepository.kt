@@ -7,6 +7,7 @@ import org.jooq.impl.DSL
 import org.jooq.impl.SQLDataType
 import org.springframework.stereotype.Repository
 import soaringLizards.blps.entity.AchievementCondition
+import soaringLizards.blps.entity.AchievementEventType
 import java.time.OffsetDateTime
 import java.util.UUID
 
@@ -36,7 +37,7 @@ class AchievementConditionRepository(
                     AchievementCondition(
                         conditionId = it.get(CONDITION_ID),
                         achievementTypeId = it.get(ACHIEVEMENT_TYPE_ID),
-                        eventType = it.get(EVENT_TYPE),
+                        eventType = AchievementEventType.fromValue(it.get(EVENT_TYPE)!!),
                         coursePattern = it.get(COURSE_PATTERN),
                         blockPattern = it.get(BLOCK_PATTERN),
                         minCompletion = it.get(MIN_COMPLETION),
@@ -53,7 +54,7 @@ class AchievementConditionRepository(
         conditions.forEach { condition ->
             dsl.insertInto(ACHIEVEMENT_CONDITIONS)
                 .set(ACHIEVEMENT_TYPE_ID, achievementTypeId)
-                .set(EVENT_TYPE, condition.eventType)
+                .set(EVENT_TYPE, condition.eventType.value)
                 .set(COURSE_PATTERN, condition.coursePattern)
                 .set(BLOCK_PATTERN, condition.blockPattern)
                 .set(MIN_COMPLETION, condition.minCompletion)

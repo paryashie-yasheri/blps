@@ -7,6 +7,7 @@ import soaringLizards.blps.dto.balanceTransactions.BalanceTransactionDto
 import soaringLizards.blps.dto.userAchievements.UserAchievementDto
 import soaringLizards.blps.dto.userAchievements.UserAchievementWithDetailsDto
 import soaringLizards.blps.entity.AchievementCondition
+import soaringLizards.blps.entity.AchievementEventType
 import soaringLizards.blps.entity.AchievementType
 import soaringLizards.blps.entity.UserBalance
 import soaringLizards.blps.exception.BusinessLogicException
@@ -16,7 +17,7 @@ import java.time.OffsetDateTime
 import java.util.*
 
 data class AchievementContext(
-    val type: String,
+    val eventType: AchievementEventType,
     val courseKey: String,
     val blockId: String?,
     val completion: Double?,
@@ -67,7 +68,7 @@ class AchievementService(
                     achievementTypeId = type.achievementTypeId!!,
                     earnedAt = OffsetDateTime.now(),
                     referenceId = null,
-                    referenceType = context.type,
+                    referenceType = context.eventType,
                     isClaimed = false,
                 ),
             )
@@ -101,13 +102,9 @@ class AchievementService(
         condition: AchievementCondition,
         context: AchievementContext,
     ): Boolean {
-        if (condition.eventType != context.type) {
-            return false
-        }
-
-        if (condition.coursePattern != null && !matchGlob(condition.coursePattern, context.courseKey)) {
-            return false
-        }
+        if (condition.eventType != context.eventType ||
+            condition.coursePattern != null && !matchGlob(condition.coursePattern, context.courseKey)
+        ) return false
 
         if (condition.blockPattern != null) {
             val blockId = context.blockId ?: return false

@@ -11,6 +11,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
 import org.springframework.web.client.RestClientResponseException
+import soaringLizards.blps.exception.BusinessLogicException
 import soaringLizards.blps.exception.LmsException
 import org.springframework.http.converter.HttpMessageNotReadableException
 import soaringLizards.blps.exception.ResourceAlreadyExistsException
@@ -97,6 +98,17 @@ class GlobalExceptionHandler {
                 "error" to "Bad Request",
                 "message" to "Request body is invalid",
                 "details" to (ex.mostSpecificCause.message ?: ex.message ?: ""),
+            ),
+        )
+
+    @ExceptionHandler(BusinessLogicException::class)
+    fun handleBusinessLogic(ex: BusinessLogicException) =
+        ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+            hashMapOf(
+                "timestamp" to LocalDateTime.now(),
+                "status" to HttpStatus.BAD_REQUEST.value(),
+                "error" to "Bad Request",
+                "message" to (ex.message ?: ""),
             ),
         )
 

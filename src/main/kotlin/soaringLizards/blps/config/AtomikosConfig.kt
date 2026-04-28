@@ -18,6 +18,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import javax.sql.DataSource
 
+// TODO: переписать
 @ConfigurationProperties(prefix = "app.datasource.xa")
 data class XaDataSourceProperties(
     var host: String = "localhost",

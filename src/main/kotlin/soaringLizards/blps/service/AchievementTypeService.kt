@@ -3,7 +3,6 @@ package soaringLizards.blps.service
 import org.springframework.stereotype.Service
 import org.springframework.transaction.support.TransactionTemplate
 import org.springframework.web.multipart.MultipartFile
-import soaringLizards.blps.dto.achievementTypes.AchievementEventType
 import soaringLizards.blps.dto.achievementTypes.AchievementConditionRequest
 import soaringLizards.blps.dto.achievementTypes.AchievementConditionResponse
 import soaringLizards.blps.dto.achievementTypes.AchievementTypeResponse
@@ -116,6 +115,9 @@ class AchievementTypeService(
     private fun validateRequest(request: AchievementTypeUpsertRequest) {
         if (request.conditions.isEmpty())
             throw BusinessLogicException("Achievement conditions must not be empty")
+
+        if (request.conditions.map { it.eventType }.distinct().size > 1)
+            throw BusinessLogicException("All achievement conditions must use the same event type")
     }
 
     private fun createAchievementTypeInTransaction(
@@ -174,7 +176,7 @@ class AchievementTypeService(
             conditions = conditions.map { condition ->
                 AchievementConditionResponse(
                     conditionId = condition.conditionId.toString(),
-                    eventType = condition.eventType.toAchievementEventType(),
+                    eventType = condition.eventType,
                     coursePattern = condition.coursePattern,
                     blockPattern = condition.blockPattern,
                     minCompletion = condition.minCompletion,
@@ -199,13 +201,9 @@ class AchievementTypeService(
         AchievementCondition(
             conditionId = null,
             achievementTypeId = achievementTypeId,
-            eventType = eventType.value,
+            eventType = eventType,
             coursePattern = coursePattern,
             blockPattern = blockPattern,
             minCompletion = minCompletion,
         )
-
-    private fun String?.toAchievementEventType(): AchievementEventType =
-        this?.let(AchievementEventType::fromValue)
-            ?: throw IllegalStateException("Achievement condition event type must not be null")
 }
