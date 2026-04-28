@@ -16,10 +16,9 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
 import org.springframework.security.oauth2.jwt.JwtDecoder
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder
-import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter
-import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter
 import org.springframework.security.web.SecurityFilterChain
 import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint
+import soaringLizards.blps.config.userDetails.JwtToAbstractAuthenticationTokenConverter
 import soaringLizards.blps.repository.UserRepository
 import javax.crypto.spec.SecretKeySpec
 
@@ -50,7 +49,7 @@ class SecurityConfig(
             .oauth2ResourceServer { oauth2 ->
                 oauth2.jwt { jwt ->
                     jwt.decoder(staffJwtDecoder())
-                    jwt.jwtAuthenticationConverter(staffJwtAuthenticationConverter())
+                    jwt.jwtAuthenticationConverter(JwtToAbstractAuthenticationTokenConverter())
                 }
             }
             .exceptionHandling { exceptions: ExceptionHandlingConfigurer<HttpSecurity?>? ->
@@ -88,7 +87,9 @@ class SecurityConfig(
             .httpBasic(withDefaults())
             .oauth2ResourceServer { oauth2 ->
                 oauth2.jwt { jwt ->
-                    jwt.decoder(staffJwtDecoder())  // Use staff secret for all JWT
+                    jwt.decoder(staffJwtDecoder())
+                    jwt.jwtAuthenticationConverter(JwtToAbstractAuthenticationTokenConverter())
+
                 }
             }
             .csrf { it.disable() }
@@ -100,19 +101,6 @@ class SecurityConfig(
         return NimbusJwtDecoder.withSecretKey(secretKey).build()
     }
 
-    @Bean
-    fun staffJwtAuthenticationConverter(): JwtAuthenticationConverter {
-        val converter = JwtAuthenticationConverter()
-        converter.setJwtGrantedAuthoritiesConverter(staffJwtGrantedAuthoritiesConverter())
-        return converter
-    }
-
-    @Bean
-    fun staffJwtGrantedAuthoritiesConverter(): JwtGrantedAuthoritiesConverter {
-        val converter = JwtGrantedAuthoritiesConverter()
-        converter.setAuthorityPrefix("ROLE_")
-        return converter
-    }
 
     @Bean
     fun userDetailsService() =

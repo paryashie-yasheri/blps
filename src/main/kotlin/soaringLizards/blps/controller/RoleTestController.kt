@@ -16,9 +16,9 @@ class RoleTestController {
     }
 
     @GetMapping("/user")
-    @PreAuthorize("hasRole('USER')")
+    @PreAuthorize("hasRole('OPENEDX_USER')")
     fun userEndpoint(): ResponseEntity<String> {
-        return ResponseEntity.ok("User endpoint - requires USER role")
+        return ResponseEntity.ok("User endpoint - requires OPENEDX_USER role")
     }
 
     @GetMapping("/staff")
@@ -34,9 +34,9 @@ class RoleTestController {
     }
 
     @GetMapping("/user-or-staff")
-    @PreAuthorize("hasAnyRole('USER', 'STAFF')")
+    @PreAuthorize("hasAnyRole('OPENEDX_USER', 'STAFF')")
     fun userOrStaffEndpoint(): ResponseEntity<String> {
-        return ResponseEntity.ok("User or Staff endpoint - requires USER or STAFF role")
+        return ResponseEntity.ok("User or Staff endpoint - requires OPENEDX_USER or STAFF role")
     }
 
     @GetMapping("/staff-or-admin")

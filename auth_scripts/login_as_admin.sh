@@ -2,7 +2,11 @@
 
 source ../.env
 
-curl -v -c cookies.txt -X POST "${SPRING_HOST}/login" \
-  -H "Content-Type: application/x-www-form-urlencoded" \
-  -d "username=${ADMIN_USERNAME}" \
-  -d "password=${ADMIN_PASSWORD}"
+response=$(curl -s --json "{\"username\":\"${ADMIN_USERNAME}\",\"password\":\"${ADMIN_PASSWORD}\"}" \
+  "${SPRING_HOST}/api/auth/staff/login")
+
+echo "${response}" | jq .
+
+token=$(echo "$response" | jq -r '.accessToken')
+
+echo "${token}"

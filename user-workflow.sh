@@ -1,49 +1,70 @@
 #!/usr/bin/env bash
 set -e
 
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-BASE_URL="${BASE_URL:-http://localhost:1234}"
-COOKIES_FILE="${SCRIPT_DIR}/cookies.txt"
-
-USERNAME="testuser_$(date +%s)"
-PASSWORD="secret123"
-EMAIL="${USERNAME}@test.com"
+source .env
+BASE_URL="${SPRING_HOST}"
+#USERNAME="testuser_$(date +%s)"
+#PASSWORD="secret123"
+USERNAME="huji_5"
+PASSWORD="pass1234"
 
 echo "=== User Workflow ==="
-echo "Registering user: $USERNAME"
+echo "Logging in via OpenEdx: $USERNAME"
 
-curl -s -X POST "${BASE_URL}/api/auth/register" \
+LOGIN_RESPONSE=$(curl -s -X POST "${BASE_URL}/api/auth/openedx_user/login" \
   -H "Content-Type: application/json" \
-  -d "{\"username\":\"${USERNAME}\",\"password\":\"${PASSWORD}\",\"email\":\"${EMAIL}\"}"
+  -d "{\"username\":\"${USERNAME}\",\"password\":\"${PASSWORD}\"}")
 
-echo -e "\n\n=== Logging in ==="
-curl -s -c "${COOKIES_FILE}" -X POST "${BASE_URL}/login" \
-  -H "Content-Type: application/x-www-form-urlencoded" \
-  -d "username=${USERNAME}&password=${PASSWORD}"
+echo "Login response: $LOGIN_RESPONSE"
+
+TOKEN=$(echo "$LOGIN_RESPONSE" | grep -o '"accessToken":"[^"]*' | sed 's/"accessToken":"//')
+echo "Token: $TOKEN"
 
 echo -e "\n\n=== Get Balance ==="
-curl -s -b "${COOKIES_FILE}" -X GET "${BASE_URL}/api/student/balance"
+curl -s -X GET "${BASE_URL}/api/student/balance" \
+  -H "Authorization: Bearer ${TOKEN}"
 
 echo -e "\n\n=== Get Courses ==="
-curl -s -b "${COOKIES_FILE}" -X GET "${BASE_URL}/api/student/courses"
+curl -s -X GET "${BASE_URL}/api/student/courses" \
+  -H "Authorization: Bearer ${TOKEN}"
 
 echo -e "\n\n=== Get Achievements ==="
-curl -s -b "${COOKIES_FILE}" -X GET "${BASE_URL}/api/student/achievements"
+curl -s -X GET "${BASE_URL}/api/student/achievements" \
+  -H "Authorization: Bearer ${TOKEN}"
 
 echo -e "\n\n=== Get Available Rewards ==="
-curl -s -b "${COOKIES_FILE}" -X GET "${BASE_URL}/api/student/rewards"
+curl -s -X GET "${BASE_URL}/api/student/rewards" \
+  -H "Authorization: Bearer ${TOKEN}"
 
-echo -e "\n\n=== Complete Lesson (simulated) ==="
-curl -s -b "${COOKIES_FILE}" -X POST "${BASE_URL}/api/student/lessons/course-v1:Test+Course/block-v1:Test+type@sequential+block1/complete"
+echo -e "\n\n=== Complete Lesson ==="
+echo "(Skipping - need valid block key from course)"
+echo "{}"
+
+echo -e "\n\n=== Redeem Reward ==="
+REWARD_ID=$(curl -s -X GET "${BASE_URL}/api/student/rewards" \
+  -H "Authorization: Bearer ${TOKEN}" | grep -o '"rewardId":"[^"]*' | head -1 | sed 's/"rewardId":"//')
+echo "Using reward: $REWARD_ID"
+curl -s -X POST "${BASE_URL}/api/student/rewards/${REWARD_ID}/redeem" \
+  -H "Authorization: Bearer ${TOKEN}"
 
 echo -e "\n\n=== Get Balance After Lesson ==="
-curl -s -b "${COOKIES_FILE}" -X GET "${BASE_URL}/api/student/balance"
+curl -s -X GET "${BASE_URL}/api/student/balance" \
+  -H "Authorization: Bearer ${TOKEN}"
 
 echo -e "\n\n=== Get Achievements After Lesson ==="
-curl -s -b "${COOKIES_FILE}" -X GET "${BASE_URL}/api/student/achievements"
+curl -s -X GET "${BASE_URL}/api/student/achievements" \
+  -H "Authorization: Bearer ${TOKEN}"
 
 echo -e "\n\n=== Get My Rewards ==="
-curl -s -b "${COOKIES_FILE}" -X GET "${BASE_URL}/api/student/rewards/my"
+curl -s -X GET "${BASE_URL}/api/student/rewards/my" \
+  -H "Authorization: Bearer ${TOKEN}"
+
+echo -e "\n\n=== Should fail ==="
+curl -s -X GET "${BASE_URL}/api/student/achievements"
+printf "\n"
+curl -s -X GET "${BASE_URL}/api/edx/courses"
+printf "\n"
+curl -s -X GET "${BASE_URL}/api/auth/me"
+
 
 echo -e "\n\n=== Workflow Complete ==="
-echo "Cookies saved to: ${COOKIES_FILE}"

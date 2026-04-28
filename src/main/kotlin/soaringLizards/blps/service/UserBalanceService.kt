@@ -1,9 +1,9 @@
 package soaringLizards.blps.service
 
 import org.springframework.security.access.AccessDeniedException
-import org.springframework.security.core.userdetails.User
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import soaringLizards.blps.config.userDetails.JwtUserDetails
 import soaringLizards.blps.dto.balanceTransactions.*
 import soaringLizards.blps.dto.userBalances.UserBalanceDto
 import soaringLizards.blps.exception.BusinessLogicException
@@ -21,26 +21,21 @@ class UserBalanceService(
 ) {
 
 
-    fun getCurrentUserBalance(currentUser: User?): BalanceResponse {
-        currentUser ?: throw AccessDeniedException("Not logged in")
-
-        val user = userService.convertSpringUserToUser(currentUser)
-
-        val balance = userBalanceRepository.findByUserId(user.id!!)
+    fun getCurrentUserBalance(userId: UUID): BalanceResponse {
+        val balance = userBalanceRepository.findByUserId(userId)
             ?: throw AccessDeniedException("Not created balance")
 
         return balance.toBalanceResponse()
     }
 
     @Transactional
-    fun donatePoints(currentUser: User?, request: DonateRequest): TransactionsResponse {
+    fun donatePoints(currentUser: JwtUserDetails?, request: DonateRequest): TransactionsResponse {
         currentUser ?: throw AccessDeniedException("Not logged in")
 
         if (request.amount <= 0)
             throw BusinessLogicException("Cant donate zero or negative amount")
 
-        val user = userService.convertSpringUserToUser(currentUser)
-        val balance = userBalanceRepository.findByUserId(user.id!!)
+        val balance = userBalanceRepository.findByUserId(currentUser.id)
             ?: throw AccessDeniedException("Not created balance")
 
         if (request.amount > balance.currentBalance!!)
@@ -48,7 +43,7 @@ class UserBalanceService(
 
         val balanceDiff = -request.amount
         val newTransaction = createTransactionOnUser(balance, balanceDiff).toTransactionResponse()
-        
+
         val newCurrentBalance = balance.currentBalance!! + balanceDiff
         val newTotalSpent = balance.totalSpent!! + request.amount
 

@@ -10,14 +10,14 @@ spring:
     url: jdbc:h2:mem:testdb
     driver-class-name: org.h2.Driver
     username: sa
-    password: 
+    password:
   jpa:
     hibernate:
       ddl-auto: create-drop
     show-sql: true
   liquibase:
     enabled: false
-    
+
   security:
     admin-credentials:
       username: admin
@@ -56,3 +56,9 @@ management:
   metrics:
     tags:
       application: ${spring.application.name}
+
+edx:
+  api:
+    base-url: "http://local.openedx.io/api"
+    username: ${admin}
+    password: ${admin}

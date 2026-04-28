@@ -2,7 +2,7 @@ package soaringLizards.blps.service
 
 import org.springframework.stereotype.Service
 import org.springframework.web.multipart.MultipartFile
-import soaringLizards.blps.config.S3Properties
+import soaringLizards.blps.config.properties.S3Properties
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider
 import software.amazon.awssdk.core.sync.RequestBody
