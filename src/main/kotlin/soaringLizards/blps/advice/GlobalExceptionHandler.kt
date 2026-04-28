@@ -105,8 +105,7 @@ class GlobalExceptionHandler {
             hashMapOf(
                 "timestamp" to LocalDateTime.now(),
                 "status" to ex.statusCode.value(),
-                "error" to (ex.statusText.ifBlank { "Downstream API Error" }),
-                "message" to "Open edX request failed",
+                "message" to (ex.statusText.ifBlank { "Downstream API Error" }),
                 "details" to ex.responseBodyAsString,
             ),
         )

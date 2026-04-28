@@ -63,5 +63,8 @@ echo -e "\n\n=== Should fail ==="
 curl -s -X GET "${BASE_URL}/api/student/achievements"
 printf "\n"
 curl -s -X GET "${BASE_URL}/api/edx/courses"
+printf "\n"
+curl -s -X GET "${BASE_URL}/api/auth/me"
+
 
 echo -e "\n\n=== Workflow Complete ==="

@@ -1,9 +1,10 @@
 package soaringLizards.blps.controller
 
-import org.springframework.security.access.AccessDeniedException
+import org.springframework.http.HttpStatus
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.web.bind.annotation.*
+import org.springframework.web.client.HttpClientErrorException
 import soaringLizards.blps.config.userDetails.JwtUserDetails
 import soaringLizards.blps.dto.user.LoginRequestDto
 import soaringLizards.blps.dto.user.RegisterDto
@@ -18,7 +19,7 @@ class AuthController(
 ) {
     @GetMapping("/me")
     fun getMe(@AuthenticationPrincipal principal: JwtUserDetails?) =
-        principal?.toUserResponse() ?: throw AccessDeniedException("Not logged in")
+        principal?.toUserResponse() ?: throw HttpClientErrorException(HttpStatus.UNAUTHORIZED, "Unauthorized")
 
     @PostMapping("/register-admin")
     @PreAuthorize("hasRole('ADMIN')")
