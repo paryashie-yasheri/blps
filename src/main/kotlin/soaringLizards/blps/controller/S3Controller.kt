@@ -18,15 +18,17 @@ import soaringLizards.blps.service.S3Service
 class S3Controller(
     private val s3Service: S3Service,
 ) {
-    @GetMapping("/{key}")
-    fun get(@PathVariable("key") key: String) = s3Service.get(key)
+    @GetMapping("/{*key}")
+    fun get(@PathVariable("key") key: String) = s3Service.get(normalizeKey(key))
 
     @PostMapping(consumes = ["multipart/form-data"])
     @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
     fun upload(@RequestParam file: MultipartFile) = s3Service.upload(file)
 
-    @DeleteMapping("/{key}")
+    @DeleteMapping("/{*key}")
     @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
-    fun delete(@PathVariable("key") key: String) = s3Service.delete(key)
+    fun delete(@PathVariable("key") key: String) = s3Service.delete(normalizeKey(key))
+
+    private fun normalizeKey(key: String) = key.trimStart('/')
 
 }

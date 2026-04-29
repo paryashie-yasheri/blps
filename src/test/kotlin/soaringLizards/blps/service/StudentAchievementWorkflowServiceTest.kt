@@ -119,6 +119,47 @@ class StudentAchievementWorkflowServiceTest {
         assertEquals(110, response.currentBalance)
     }
 
+    @Test
+    fun `percent value 1 is treated as one percent and does not trigger course_complete`() {
+        val user = testUser()
+        val courseKey = "course-v1:ITMO+Kotlin"
+        val blockId = "block-v1:ITMO+type@sequential+block@intro"
+
+        whenever(edxService.trackCompletion(eq(user), any())).thenReturn(EdxCompletionBatchResponse())
+        whenever(edxService.getSubsectionCompletion(user, courseKey, blockId))
+            .thenReturn(EdxSubsectionCompletionResponse(completion = 0.0))
+        whenever(edxService.getProgress(user, courseKey)).thenReturn(
+            EdxCourseProgressResponse(
+                completionSummary = mapOf(
+                    "percent" to 1,
+                ),
+                userHasPassingGrade = false,
+            ),
+        )
+        whenever(achievementService.checkAndAwardAchievements(eq(user.id), any())).thenReturn(emptyList())
+        whenever(userBalanceService.getCurrentUserBalance(user.id)).thenReturn(
+            BalanceResponse(
+                balance = 100,
+                currentBalance = 100,
+                totalEarned = 100,
+                totalSpent = 0,
+            ),
+        )
+
+        service.completeLesson(user, courseKey, blockId)
+
+        val contextCaptor = argumentCaptor<AchievementContext>()
+        verify(achievementService, times(2)).checkAndAwardAchievements(eq(user.id), contextCaptor.capture())
+        assertEquals(
+            listOf(
+                AchievementEventType.LESSON_COMPLETE,
+                AchievementEventType.COURSE_PROGRESS_UPDATED,
+            ),
+            contextCaptor.allValues.map { it.eventType },
+        )
+        assertEquals(0.01, contextCaptor.allValues.single { it.eventType == AchievementEventType.COURSE_PROGRESS_UPDATED }.completion)
+    }
+
     private fun testUser() =
         JwtUserDetails(
             id = UUID.randomUUID(),

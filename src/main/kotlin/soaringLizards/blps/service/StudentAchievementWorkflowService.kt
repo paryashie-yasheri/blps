@@ -158,24 +158,18 @@ class StudentAchievementWorkflowService(
 private fun EdxCourseProgressResponse.courseCompletion(): Double? {
     val summary = completionSummary.orEmpty()
 
-    return summary.numberValue(
-        "completion",
-        "completion_percent",
-        "percent_complete",
-        "percent",
-        "progress",
-    )?.toRatio()
+    return summary.primaryCompletionRatio()
         ?: summary.completionRatioFromCounts()
-        ?: finalGrades?.toRatio()
+        ?: finalGrades?.let(::normalizeGenericRatio)
 }
 
 private fun EdxCourseProgressResponse.isCourseComplete(courseCompletion: Double?) =
     userHasPassingGrade == true || courseCompletion?.let { it >= COMPLETE_THRESHOLD } == true
 
 private fun Map<String, Any?>.completionRatioFromCounts(): Double? {
-    val completed = numberValue("complete_count", "completed_count")
-    val incomplete = numberValue("incomplete_count")
-    val total = numberValue("total_count", "total")
+    val completed = firstNumericValue("complete_count", "completed_count")
+    val incomplete = firstNumericValue("incomplete_count")
+    val total = firstNumericValue("total_count", "total")
 
     if (completed != null && incomplete != null && completed + incomplete > 0.0)
         return completed / (completed + incomplete)
@@ -186,15 +180,51 @@ private fun Map<String, Any?>.completionRatioFromCounts(): Double? {
     return null
 }
 
-private fun Map<String, Any?>.numberValue(vararg keys: String): Double? =
-    keys.firstNotNullOfOrNull { key -> this[key].toDoubleOrNull() }
+private val PERCENT_KEYS = setOf("completion_percent", "percent_complete", "percent")
+private val PRIMARY_COMPLETION_KEYS =
+    listOf("completion", "completion_percent", "percent_complete", "percent", "progress")
 
-private fun Any?.toDoubleOrNull(): Double? =
-    when (this) {
-        is Number -> toDouble()
-        is String -> toDoubleOrNull()
-        else -> null
+private fun Map<String, Any?>.primaryCompletionRatio(): Double? =
+    PRIMARY_COMPLETION_KEYS.firstNotNullOfOrNull { key ->
+        parseRatioValue(this[key], key in PERCENT_KEYS)
     }
 
-private fun Double.toRatio() =
-    if (this > COMPLETE_THRESHOLD) this / 100.0 else this
+private fun Map<String, Any?>.firstNumericValue(vararg keys: String): Double? =
+    keys.firstNotNullOfOrNull { key ->
+        toNumericValue(this[key])
+    }
+
+private fun parseRatioValue(raw: Any?, percentField: Boolean): Double? {
+    val numericValue = toNumericValue(raw) ?: return null
+
+    return if (percentField) {
+        normalizePercentRatio(raw, numericValue)
+    } else {
+        normalizeGenericRatio(numericValue)
+    }
+}
+
+private fun normalizePercentRatio(raw: Any?, value: Double): Double =
+    when {
+        value > COMPLETE_THRESHOLD -> value / 100.0
+        value == COMPLETE_THRESHOLD && isWholeNumber(raw) -> 0.01
+        else -> value
+    }
+
+private fun normalizeGenericRatio(value: Double): Double =
+    if (value > COMPLETE_THRESHOLD) value / 100.0 else value
+
+private fun isWholeNumber(raw: Any?): Boolean =
+    when (raw) {
+        is Byte, is Short, is Int, is Long -> true
+        is Float, is Double -> raw.toDouble() % 1.0 == 0.0
+        is String -> raw.matches(Regex("^-?\\d+$"))
+        else -> false
+    }
+
+private fun toNumericValue(raw: Any?): Double? =
+    when (raw) {
+        is Number -> raw.toDouble()
+        is String -> raw.toDoubleOrNull()
+        else -> null
+    }
