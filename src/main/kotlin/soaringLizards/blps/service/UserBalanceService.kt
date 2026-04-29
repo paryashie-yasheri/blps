@@ -3,8 +3,11 @@ package soaringLizards.blps.service
 import org.springframework.security.access.AccessDeniedException
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import jakarta.transaction.TransactionManager
+import org.slf4j.LoggerFactory
 import soaringLizards.blps.config.userDetails.JwtUserDetails
 import soaringLizards.blps.dto.balanceTransactions.*
+import soaringLizards.blps.dto.ledger.LedgerEventDto
 import soaringLizards.blps.dto.userBalances.UserBalanceDto
 import soaringLizards.blps.entity.UserBalance
 import soaringLizards.blps.exception.BusinessLogicException
@@ -16,9 +19,11 @@ import java.util.*
 @Service
 class UserBalanceService(
     private val userBalanceRepository: UserBalanceRepository,
-    private val userService: UserService,
     private val transactionService: TransactionService,
+    private val ledgerEventService: LedgerEventService,
+    private val transactionManager: TransactionManager,
 ) {
+    private val logger = LoggerFactory.getLogger(javaClass)
 
 
     fun getCurrentUserBalance(userId: UUID): BalanceResponse {
@@ -31,31 +36,58 @@ class UserBalanceService(
     @Transactional
     fun donatePoints(currentUser: JwtUserDetails?, request: DonateRequest): TransactionsResponse {
         currentUser ?: throw AccessDeniedException("Not logged in")
+        val operationId = UUID.randomUUID()
+        val xid = transactionManager.transaction?.toString()
+        logger.info("donate_points_started operationId={} xid={} userId={} amount={}", operationId, xid, currentUser.id, request.amount)
+        try {
+            if (request.amount <= 0)
+                throw BusinessLogicException("Cant donate zero or negative amount")
 
-        if (request.amount <= 0)
-            throw BusinessLogicException("Cant donate zero or negative amount")
+            val balance = userBalanceRepository.findByUserId(currentUser.id)
+                ?: throw AccessDeniedException("Not created balance")
 
-        val balance = userBalanceRepository.findByUserId(currentUser.id)
-            ?: throw AccessDeniedException("Not created balance")
+            if (request.amount > balance.currentBalance!!)
+                throw BusinessLogicException("Unsufficient balance")
 
-        if (request.amount > balance.currentBalance!!)
-            throw BusinessLogicException("Unsufficient balance")
+            val balanceDiff = -request.amount
+            val newTransaction = createTransactionOnUser(balance, balanceDiff).toTransactionResponse()
 
-        val balanceDiff = -request.amount
-        val newTransaction = createTransactionOnUser(balance, balanceDiff).toTransactionResponse()
+            val newCurrentBalance = balance.currentBalance + balanceDiff
+            val newTotalSpent = balance.totalSpent!! + request.amount
 
-        val newCurrentBalance = balance.currentBalance!! + balanceDiff
-        val newTotalSpent = balance.totalSpent!! + request.amount
+            userBalanceRepository.update(
+                balance.balanceId!!,
+                newCurrentBalance,
+                balance.totalEarned!!,
+                newTotalSpent,
+                balance.version!! + 1,
+            )
+            ledgerEventService.append(
+                LedgerEventDto(
+                    operationId = operationId,
+                    eventType = "DONATION",
+                    occurredAt = OffsetDateTime.now(),
+                    userId = currentUser.id,
+                    balanceId = balance.balanceId,
+                    amount = balanceDiff,
+                    balanceBefore = balance.currentBalance,
+                    balanceAfter = newCurrentBalance,
+                    description = "Voluntary donation for testing purposes",
+                ),
+            )
 
-        userBalanceRepository.update(
-            balance.balanceId!!,
-            newCurrentBalance,
-            balance.totalEarned!!,
-            newTotalSpent,
-            balance.version!! + 1,
-        )
-
-        return newTransaction
+            return newTransaction
+        } catch (ex: Exception) {
+            logger.error(
+                "donate_points_failed operationId={} xid={} userId={} amount={}",
+                operationId,
+                xid,
+                currentUser.id,
+                request.amount,
+                ex,
+            )
+            throw ex
+        }
     }
 
     fun createTransactionOnUser(userBalance: UserBalance, balanceDiff: Int): BalanceTransactionsRecord {

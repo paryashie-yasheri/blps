@@ -8,6 +8,7 @@ import jakarta.transaction.UserTransaction
 import org.postgresql.xa.PGXADataSource
 import org.springframework.boot.context.properties.ConfigurationProperties
 import org.springframework.boot.context.properties.EnableConfigurationProperties
+import org.springframework.boot.context.properties.NestedConfigurationProperty
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.context.annotation.DependsOn
@@ -18,9 +19,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import javax.sql.DataSource
 
-// TODO: переписать
-@ConfigurationProperties(prefix = "app.datasource.xa")
-data class XaDataSourceProperties(
+data class XaSingleDataSourceProperties(
     var host: String = "localhost",
     var port: Int = 5432,
     var database: String = "studs",
@@ -36,11 +35,24 @@ data class XaDataSourceProperties(
     var testQuery: String = "SELECT 1",
 )
 
+@ConfigurationProperties(prefix = "app.datasource.xa")
+data class XaDataSourceProperties(
+    @NestedConfigurationProperty
+    var main: XaSingleDataSourceProperties = XaSingleDataSourceProperties(uniqueResourceName = "main-postgres-xa"),
+    @NestedConfigurationProperty
+    var journal: XaSingleDataSourceProperties = XaSingleDataSourceProperties(
+        database = "journal",
+        uniqueResourceName = "journal-postgres-xa",
+    ),
+)
+
 @ConfigurationProperties(prefix = "app.atomikos")
 data class AtomikosRuntimeProperties(
     var logBaseDir: String = System.getProperty("java.io.tmpdir") + "/blps-atomikos",
     var tmUniqueName: String = "blps-tm",
     var transactionTimeoutSeconds: Int = 30,
+    var maxTimeoutSeconds: Int = 60,
+    var checkpointInterval: Long = 500,
 )
 
 @Configuration
@@ -61,6 +73,11 @@ class AtomikosConfig(
         System.setProperty("com.atomikos.icatch.output_dir", logDir.toString())
         System.setProperty("com.atomikos.icatch.log_base_dir", logDir.toString())
         System.setProperty("com.atomikos.icatch.tm_unique_name", atomikosRuntimeProperties.tmUniqueName)
+        System.setProperty("com.atomikos.icatch.default_jta_timeout", atomikosRuntimeProperties.transactionTimeoutSeconds.toString())
+        System.setProperty("com.atomikos.icatch.max_timeout", atomikosRuntimeProperties.maxTimeoutSeconds.toString())
+        System.setProperty("com.atomikos.icatch.checkpoint_interval", atomikosRuntimeProperties.checkpointInterval.toString())
+        System.setProperty("com.atomikos.icatch.threaded_2pc", "true")
+        System.setProperty("com.atomikos.icatch.enable_logging", "true")
         return Any()
     }
 
@@ -89,25 +106,33 @@ class AtomikosConfig(
     @Bean(initMethod = "init", destroyMethod = "close")
     @Primary
     @DependsOn("atomikosPropertyInitializer", "atomikosTransactionManager", "atomikosUserTransaction")
-    fun dataSource(): DataSource {
+    fun mainDataSource(): DataSource =
+        createAtomikosDataSource(xaDataSourceProperties.main)
+
+    @Bean(initMethod = "init", destroyMethod = "close")
+    @DependsOn("atomikosPropertyInitializer", "atomikosTransactionManager", "atomikosUserTransaction")
+    fun journalDataSource(): DataSource =
+        createAtomikosDataSource(xaDataSourceProperties.journal)
+
+    private fun createAtomikosDataSource(properties: XaSingleDataSourceProperties): DataSource {
         val xaDataSource = PGXADataSource().apply {
-            serverNames = arrayOf(xaDataSourceProperties.host)
-            portNumbers = intArrayOf(xaDataSourceProperties.port)
-            databaseName = xaDataSourceProperties.database
-            user = xaDataSourceProperties.username
-            password = xaDataSourceProperties.password
-            currentSchema = xaDataSourceProperties.schema
+            serverNames = arrayOf(properties.host)
+            portNumbers = intArrayOf(properties.port)
+            databaseName = properties.database
+            user = properties.username
+            password = properties.password
+            currentSchema = properties.schema
         }
 
         return AtomikosDataSourceBean().apply {
-            uniqueResourceName = xaDataSourceProperties.uniqueResourceName
+            uniqueResourceName = properties.uniqueResourceName
             this.xaDataSource = xaDataSource
-            minPoolSize = xaDataSourceProperties.minPoolSize
-            maxPoolSize = xaDataSourceProperties.maxPoolSize
-            borrowConnectionTimeout = xaDataSourceProperties.borrowConnectionTimeoutSeconds
-            maintenanceInterval = xaDataSourceProperties.maintenanceIntervalSeconds
-            maxIdleTime = xaDataSourceProperties.maxIdleTimeSeconds
-            testQuery = xaDataSourceProperties.testQuery
+            minPoolSize = properties.minPoolSize
+            maxPoolSize = properties.maxPoolSize
+            borrowConnectionTimeout = properties.borrowConnectionTimeoutSeconds
+            maintenanceInterval = properties.maintenanceIntervalSeconds
+            maxIdleTime = properties.maxIdleTimeSeconds
+            testQuery = properties.testQuery
         }
     }
 }
