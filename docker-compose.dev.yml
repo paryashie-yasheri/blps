@@ -1,6 +1,7 @@
 services:
   pg:
     image: postgres:16.6
+    command: postgres -c max_prepared_transactions=${POSTGRES_MAX_PREPARED_TRANSACTIONS:-100}
     networks:
       - app-network
     shm_size: 128mb
@@ -15,6 +16,27 @@ services:
       PGDATA: /var/lib/postgresql/data/pgdata
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+
+    env_file:
+      - .env
+
+  pg-rewards:
+    image: postgres:16.6
+    command: postgres -c max_prepared_transactions=${REWARDS_POSTGRES_MAX_PREPARED_TRANSACTIONS:-100}
+    networks:
+      - app-network
+    shm_size: 128mb
+    ports:
+      - 5434:5432
+    volumes:
+      - pg-rewards-data:/var/lib/postgresql/data:Z
+    environment:
+      DB_CONNECTION: pgsql
+      POSTGRES_HOST: ${REWARDS_POSTGRES_HOST}
+      POSTGRES_DB: ${REWARDS_POSTGRES_DB}
+      PGDATA: /var/lib/postgresql/data/pgdata
+      POSTGRES_USER: ${REWARDS_POSTGRES_USER}
+      POSTGRES_PASSWORD: ${REWARDS_POSTGRES_PASSWORD}
 
     env_file:
       - .env
@@ -69,6 +91,8 @@ services:
       - "${SPRING_PORT}:${SPRING_PORT}"
     depends_on:
       - pg
+      - pg-rewards
+      - pg-journal
     networks:
       - app-network
     env_file:
@@ -76,6 +100,8 @@ services:
 
 volumes:
   pg-data:
+  pg-rewards-data:
+  pg-journal-data:
 
 networks:
   app-network:

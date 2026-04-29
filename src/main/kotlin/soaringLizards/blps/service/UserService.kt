@@ -27,6 +27,7 @@ class UserService(
     private val jwtTokenService: JwtTokenService,
     private val edxSessionAuthManager: EdxSessionAuthManager,
     private val keycloakService: KeycloakService,
+    private val transactionTemplate: org.springframework.transaction.support.TransactionTemplate,
 ) {
     fun getUserByUsername(username: String): UserResponse? {
         val user = userRepository.findByUsername(username)
@@ -119,7 +120,6 @@ class UserService(
         return newUser
     }
 
-    @Transactional
     fun loginOpenedxUser(@RequestBody request: LoginRequestDto): LoginResponseDto {
         logger.info("Login attempt for user: ${request.username}")
 
@@ -128,31 +128,27 @@ class UserService(
         val email = edxSessionAuthManager.getUserEmail(session, request.username)
             ?: "placeholder_${request.username}@mail.com"
 
-        val user = authenticateOrCreateOpenedxUser(
-            request.username,
-            Email(email),
-        )
-
-        keycloakService.createEdxUser(
-            username = request.username,
-            email = email,
-            edxSession = session,
-        )
-
-        val token = jwtTokenService.generateToken(
-            user.id!!,
-            user.username!!,
-            Email(user.email!!),
-            setOf("OPENEDX_USER"),
-            session,
-        )
-
-        return LoginResponseDto(
-            accessToken = token,
-            tokenType = "Bearer",
-            expiresIn = session.expiresAt.epochSecond - Instant.now().epochSecond,
-            username = user.username!!,
-            role = "OPENEDX_USER",
-        )
+        return transactionTemplate.execute {
+            val user = authenticateOrCreateOpenedxUser(request.username, Email(email))
+            keycloakService.createEdxUser(
+                username = request.username,
+                email = email,
+                edxSession = session,
+            )
+            val token = jwtTokenService.generateToken(
+                user.id!!,
+                user.username!!,
+                Email(user.email!!),
+                setOf("OPENEDX_USER"),
+                session,
+            )
+            LoginResponseDto(
+                accessToken = token,
+                tokenType = "Bearer",
+                expiresIn = session.expiresAt.epochSecond - Instant.now().epochSecond,
+                username = user.username!!,
+                role = "OPENEDX_USER",
+            )
+        }!!
     }
 }

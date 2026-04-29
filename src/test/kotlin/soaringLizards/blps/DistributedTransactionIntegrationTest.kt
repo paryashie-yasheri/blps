@@ -49,6 +49,10 @@ class DistributedTransactionIntegrationTest {
     @Qualifier("journalDslContext")
     private lateinit var journalDsl: DSLContext
 
+    @Autowired
+    @Qualifier("rewardsDslContext")
+    private lateinit var rewardsDsl: DSLContext
+
     private val ledgerEvents = table(name("ledger_events"))
 
     companion object {
@@ -65,8 +69,8 @@ class DistributedTransactionIntegrationTest {
         journalDsl.execute("DROP FUNCTION IF EXISTS fail_ledger_insert()")
         journalDsl.execute("TRUNCATE TABLE ledger_events")
         mainDsl.deleteFrom(BALANCE_TRANSACTIONS).execute()
-        mainDsl.deleteFrom(USER_REWARDS).execute()
-        mainDsl.deleteFrom(REWARDS).execute()
+        rewardsDsl.deleteFrom(USER_REWARDS).execute()
+        rewardsDsl.deleteFrom(REWARDS).execute()
         mainDsl.deleteFrom(USER_BALANCES).execute()
         mainDsl.deleteFrom(USERS).execute()
     }
@@ -84,7 +88,7 @@ class DistributedTransactionIntegrationTest {
             .fetchOne()!!
         assertThat(updatedBalance.currentBalance).isEqualTo(50)
         assertThat(updatedBalance.totalSpent).isEqualTo(70)
-        assertThat(mainDsl.fetchCount(USER_REWARDS)).isEqualTo(1)
+        assertThat(rewardsDsl.fetchCount(USER_REWARDS)).isEqualTo(1)
         assertThat(mainDsl.fetchCount(BALANCE_TRANSACTIONS)).isEqualTo(1)
         assertThat(journalDsl.fetchCount(ledgerEvents)).isEqualTo(1)
     }
@@ -120,14 +124,14 @@ class DistributedTransactionIntegrationTest {
         val balance = mainDsl.selectFrom(USER_BALANCES)
             .where(USER_BALANCES.BALANCE_ID.eq(balanceId))
             .fetchOne()!!
-        val reward = mainDsl.selectFrom(REWARDS)
+        val reward = rewardsDsl.selectFrom(REWARDS)
             .where(REWARDS.REWARD_ID.eq(rewardId))
             .fetchOne()!!
 
         assertThat(balance.currentBalance).isEqualTo(150)
         assertThat(balance.totalSpent).isEqualTo(0)
         assertThat(reward.quantity).isEqualTo(2)
-        assertThat(mainDsl.fetchCount(USER_REWARDS)).isZero()
+        assertThat(rewardsDsl.fetchCount(USER_REWARDS)).isZero()
         assertThat(mainDsl.fetchCount(BALANCE_TRANSACTIONS)).isZero()
         assertThat(journalDsl.fetchCount(ledgerEvents)).isZero()
     }
@@ -226,7 +230,7 @@ class DistributedTransactionIntegrationTest {
             .fetchOne(USER_BALANCES.BALANCE_ID)!!
 
     private fun insertReward(pointsCost: Int, quantity: Int): UUID =
-        mainDsl.insertInto(REWARDS)
+        rewardsDsl.insertInto(REWARDS)
             .set(REWARDS.NAME, "reward-${UUID.randomUUID()}")
             .set(REWARDS.DESCRIPTION, "reward")
             .set(REWARDS.POINTS_COST, pointsCost)

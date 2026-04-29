@@ -78,7 +78,7 @@ class AchievementControllerIntegrationTest {
         dsl.execute(
             """
             TRUNCATE TABLE user_achievements, balance_transactions, achievement_conditions, achievement_types,
-            user_rewards, rewards, user_balances, users CASCADE
+            user_balances, users CASCADE
             """.trimIndent(),
         )
         reset(s3Service)
@@ -190,7 +190,7 @@ class AchievementControllerIntegrationTest {
 
         val updated = achievementTypeRepository.findById(existing.achievementTypeId!!)!!
         assertEquals("achievements/new-icon.png", updated.iconKey)
-        assertEquals(1, countConditions(existing.achievementTypeId!!))
+        assertEquals(1, countConditions(existing.achievementTypeId))
         verify(s3Service).delete("achievements/old-icon.png")
     }
 
@@ -218,7 +218,7 @@ class AchievementControllerIntegrationTest {
             .andExpect(status().isNoContent)
 
         assertNull(achievementTypeRepository.findById(existing.achievementTypeId!!))
-        assertEquals(0, countConditions(existing.achievementTypeId!!))
+        assertEquals(0, countConditions(existing.achievementTypeId))
         verify(s3Service).delete("achievements/delete-me.png")
     }
 

@@ -1,5 +1,7 @@
 databaseChangeLog:
-  - includeAll:
-      path: changelog
+  - include:
+      file: main/db.main.changelog-master.yaml
       relativeToChangelogFile: true
-      recursive: true
+  - include:
+      file: rewards/db.rewards.changelog-master.yaml
+      relativeToChangelogFile: true
