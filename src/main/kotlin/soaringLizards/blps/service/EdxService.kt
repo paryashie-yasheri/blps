@@ -6,6 +6,7 @@ import soaringLizards.blps.client.EdxEnrollmentClient
 import soaringLizards.blps.client.EdxProgressClient
 import soaringLizards.blps.config.userDetails.JwtUserDetails
 import soaringLizards.blps.dto.edx.EdxCompletionBatchRequest
+import soaringLizards.blps.dto.edx.EdxEnrollmentCourseDetails
 import soaringLizards.blps.dto.edx.EdxEnrollmentRequest
 import soaringLizards.blps.dto.edx.EdxEnrollmentResponse
 
@@ -36,7 +37,12 @@ class EdxService(
             "courseId or courseDetails.courseId is required"
         }
 
-        return edxEnrollmentClient.enrollCurrentUser(userDetails.edxSession!!, request)
+        val normalizedRequest = if (request.courseDetails?.courseId == null && request.courseId != null)
+            request.copy(courseDetails = EdxEnrollmentCourseDetails(courseId = request.courseId))
+        else
+            request
+
+        return edxEnrollmentClient.enrollCurrentUser(userDetails.edxSession!!, normalizedRequest)
     }
 
     fun getMyEnrollment(userDetails: JwtUserDetails, courseId: String) =

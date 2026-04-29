@@ -40,9 +40,6 @@ class EdxSessionAuthManager(
             .build()
     }
 
-    private fun isValid(session: EdxAuthenticatedSession): Boolean =
-        session.expiresAt.isAfter(Instant.now().plusSeconds(60)) ?: true
-
     private fun mergeCookies(cookies: MutableMap<String, String>, setCookieHeaders: List<String>) {
         setCookieHeaders.forEach { header ->
             val cookiePair = header.substringBefore(';')
@@ -101,15 +98,20 @@ class EdxSessionAuthManager(
         val cookies = linkedMapOf<String, String>()
 
         logger.info("Step 1: Getting LMS login session...")
-        val initResponse = authClient.get()
+        val initFailed = authClient.get()
             .uri("/user/v1/account/login_session/")
             .exchange { _, response ->
                 logger.info("LMS init response status: ${response.statusCode}")
                 mergeCookies(cookies, response.headers[HttpHeaders.SET_COOKIE].orEmpty())
-                response.statusCode.isError
+                val failed = response.statusCode.isError
+                if (failed) {
+                    val body = response.body.readAllBytes().toString(StandardCharsets.UTF_8)
+                    logger.warn("LMS init response body: $body")
+                }
+                failed
             }
 
-        if (initResponse) {
+        if (initFailed) {
             logger.warn("LMS init returned error")
             throw LmsException(mapOf("error" to "LMS_INIT_FAILED", "message" to "LMS initialization failed"))
         }
