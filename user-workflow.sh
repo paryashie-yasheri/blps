@@ -3,10 +3,8 @@ set -e
 
 source .env
 BASE_URL="${SPRING_HOST}"
-#USERNAME="testuser_$(date +%s)"
-#PASSWORD="secret123"
-USERNAME="huji_5"
-PASSWORD="pass1234"
+USERNAME="${EDX_API_TEST_USERNAME}"
+PASSWORD="${EDX_API_TEST_PASSWORD}"
 
 echo "=== User Workflow ==="
 echo "Logging in via OpenEdx: $USERNAME"

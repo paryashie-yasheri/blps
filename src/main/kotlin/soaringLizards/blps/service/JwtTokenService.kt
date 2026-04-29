@@ -16,10 +16,10 @@ import java.util.*
 @Service
 class JwtTokenService(
     @Value($$"${app.jwt.staff.secret}")
-    private val staffJwtSecret: String,
+    val staffJwtSecret: String,
 
     @Value($$"${app.jwt.staff.issuer:blps-internal}")
-    private val staffJwtIssuer: String,
+    val staffJwtIssuer: String,
 
     @Value($$"${app.jwt.staff.expiration-minutes:60}")
     val staffJwtExpirationMinutes: Long,
@@ -38,7 +38,9 @@ class JwtTokenService(
     ): String {
         val now = Date()
 
-        val expiration = edxSession?.expiresAt ?: Instant.now().plusSeconds(staffJwtExpirationMinutes * 60)
+        val expiresInSeconds = staffJwtExpirationMinutes * 60
+
+        val expiration = edxSession?.expiresAt ?: Instant.now().plusSeconds(expiresInSeconds)
 
         return Jwts.builder()
             .setSubject(username)
