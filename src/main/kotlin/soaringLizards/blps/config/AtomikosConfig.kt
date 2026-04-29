@@ -170,7 +170,6 @@ class AtomikosConfig(
         if (trimmed.length >= 2) {
             val first = trimmed.first()
             val last = trimmed.last()
-            // .env часто содержит значения в кавычках, а мы ожидаем чистый SQL.
             if ((first == '"' && last == '"') || (first == '\'' && last == '\'')) {
                 return trimmed.substring(1, trimmed.length - 1).trim()
             }
