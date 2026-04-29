@@ -26,6 +26,7 @@ class UserService(
     private val userBalanceRepository: UserBalanceRepository,
     private val jwtTokenService: JwtTokenService,
     private val edxSessionAuthManager: EdxSessionAuthManager,
+    private val keycloakService: KeycloakService,
 ) {
     fun getUserByUsername(username: String): UserResponse? {
         val user = userRepository.findByUsername(username)
@@ -48,17 +49,13 @@ class UserService(
     fun loginStaff(request: LoginRequestDto): LoginResponseDto {
         val user = authenticateStaff(request.username, request.password)
 
-        val token = jwtTokenService.generateToken(
-            user.id!!,
-            user.username!!,
-            Email(user.email!!),
-            setOf(user.role!!),
-        )
+        // Generate token using Keycloak OAuth2 flow
+        val keycloakResponse = keycloakService.getStaffToken(user.username!!, request.password)
 
         return LoginResponseDto(
-            accessToken = token,
-            tokenType = "Bearer",
-            expiresIn = jwtTokenService.staffJwtExpirationMinutes * 60,
+            accessToken = keycloakResponse.access_token,
+            tokenType = keycloakResponse.token_type,
+            expiresIn = keycloakResponse.expires_in.toLong(),
             username = user.username!!,
             role = user.role!!,
         )
@@ -68,9 +65,13 @@ class UserService(
         val existingUser = userRepository.findByUsername(username)
 
         return existingUser ?: let {
+            // Delegate deterministic password generation to KeycloakService
+            // to ensure a single, production-ready double-hashing implementation
+            val deterministicPassword = keycloakService.generateDeterministicPassword(username)
+
             val newUser = RegisterDto(
                 username = username,
-                password = passwordEncoder.encode("${username}-${jwtTokenService.staffJwtSecret}")!!,
+                password = deterministicPassword,
                 email = email,
             )
             registerUser(newUser, "OPENEDX_USER")
@@ -94,9 +95,25 @@ class UserService(
 
         userBalanceRepository.insert(UserBalanceDto.createDefault(newUser.id!!))
 
+        // Sync to Keycloak based on role
+        if (role == "OPENEDX_USER") {
+            keycloakService.createEdxUser(
+                username = newUser.username!!,
+                email = newUser.email!!,
+                edxSession = null,
+            )
+        } else {
+            keycloakService.createStaffUser(
+                username = newUser.username!!,
+                email = newUser.email!!,
+                userId = newUser.id!!.toString(),
+                role = role,
+                password = request.password,
+            )
+        }
+
         return newUser
     }
-
 
     @Transactional
     fun loginOpenedxUser(@RequestBody request: LoginRequestDto): LoginResponseDto {
@@ -110,6 +127,12 @@ class UserService(
         val user = authenticateOrCreateOpenedxUser(
             request.username,
             Email(email),
+        )
+
+        keycloakService.createEdxUser(
+            username = request.username,
+            email = email,
+            edxSession = session,
         )
 
         val token = jwtTokenService.generateToken(

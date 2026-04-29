@@ -18,6 +18,27 @@ services:
 
     env_file:
       - .env
+  keycloak:
+    image: quay.io/keycloak/keycloak:24.0.4
+    container_name: keycloak
+    ports:
+      - "8081:8080"
+    volumes:
+      - ./keycloak/import:/opt/keycloak/data/import
+    environment:
+      - KEYCLOAK_IMPORT=/opt/keycloak/data/import/realm-config.json
+      - KEYCLOAK_ADMIN=${KEYCLOAK_ADMIN_USERNAME}
+      - KEYCLOAK_ADMIN_PASSWORD=${KEYCLOAK_ADMIN_PASSWORD}
+      - KC_LOG_LEVEL=INFO
+      - KC_LOG_LEVEL_ORG_KEYCLOAK=DEBUG
+    command: [
+      "start-dev",
+      "--import-realm"
+    ]
+    depends_on:
+      - pg
+    networks:
+      - app-network
 
   spring:
     image: blps/backend:jib-dev
@@ -25,6 +46,7 @@ services:
       - "${SPRING_PORT}:${SPRING_PORT}"
     depends_on:
       - pg
+      - keycloak
     networks:
       - app-network
     env_file:

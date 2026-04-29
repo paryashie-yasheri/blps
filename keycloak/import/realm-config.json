@@ -1,0 +1,163 @@
+[
+  {
+    "id": "blps-staff",
+    "realm": "blps-staff",
+    "enabled": true,
+    "sslRequired": "external",
+    "registrationAllowed": false,
+    "loginTheme": "keycloak",
+    "accountTheme": "keycloak",
+    "adminTheme": "keycloak",
+    "rememberMe": false,
+    "verifyEmail": false,
+    "loginWithEmailAllowed": true,
+    "duplicateEmailsAllowed": false,
+    "resetPasswordAllowed": false,
+    "users": [
+      {
+        "username": "admin",
+        "enabled": true,
+        "emailVerified": true,
+        "email": "admin@example.com",
+        "credentials": [
+          {
+            "type": "password",
+            "value": "admin",
+            "temporary": false
+          }
+        ],
+        "realmRoles": [
+          "ADMIN"
+        ],
+        "clientRoles": {
+          "realm-management": [
+            "manage-users",
+            "manage-clients",
+            "view-users",
+            "view-clients"
+          ]
+        }
+      }
+    ],
+    "clients": [
+      {
+        "clientId": "blps-staff-client",
+        "name": "BLPS Staff Client",
+        "enabled": true,
+        "clientAuthenticatorType": "client-secret",
+        "secret": "staff-client-secret",
+        "redirectUris": [
+          "http://localhost:8080/**"
+        ],
+        "webOrigins": [
+          "*"
+        ],
+        "standardFlowEnabled": true,
+        "directAccessGrantsEnabled": true,
+        "serviceAccountsEnabled": false,
+        "publicClient": false,
+        "consentRequired": false,
+        "fullScopeAllowed": false,
+        "protocolMappers": [
+          {
+            "name": "email",
+            "protocol": "openid-connect",
+            "protocolMapper": "oidc-usermodel-property-mapper",
+            "consentRequired": false,
+            "config": {
+              "userinfo.token.claim": "true",
+              "user.attribute": "email",
+              "id.token.claim": "true",
+              "access.token.claim": "true",
+              "claim.name": "email",
+              "jsonType.label": "String"
+            }
+          }
+        ]
+      }
+    ],
+    "roles": {}
+  },
+  {
+    "id": "blps-openedx",
+    "realm": "blps-openedx",
+    "enabled": true,
+    "sslRequired": "external",
+    "registrationAllowed": false,
+    "loginTheme": "keycloak",
+    "accountTheme": "keycloak",
+    "adminTheme": "keycloak",
+    "rememberMe": false,
+    "verifyEmail": false,
+    "loginWithEmailAllowed": true,
+    "duplicateEmailsAllowed": false,
+    "resetPasswordAllowed": false,
+    "users": [],
+    "clients": [
+      {
+        "clientId": "blps-openedx-client",
+        "name": "BLPS OpenEdX Client",
+        "enabled": true,
+        "clientAuthenticatorType": "client-secret",
+        "secret": "edx-client-secret",
+        "redirectUris": [
+          "http://localhost:8080/**"
+        ],
+        "webOrigins": [
+          "*"
+        ],
+        "standardFlowEnabled": true,
+        "directAccessGrantsEnabled": true,
+        "serviceAccountsEnabled": false,
+        "publicClient": false,
+        "consentRequired": false,
+        "fullScopeAllowed": false,
+        "protocolMappers": [
+          {
+            "name": "email",
+            "protocol": "openid-connect",
+            "protocolMapper": "oidc-usermodel-property-mapper",
+            "consentRequired": false,
+            "config": {
+              "userinfo.token.claim": "true",
+              "user.attribute": "email",
+              "id.token.claim": "true",
+              "access.token.claim": "true",
+              "claim.name": "email",
+              "jsonType.label": "String"
+            }
+          },
+          {
+            "name": "edxCookieHeader",
+            "protocol": "openid-connect",
+            "protocolMapper": "oidc-usermodel-attribute-mapper",
+            "consentRequired": false,
+            "config": {
+              "userinfo.token.claim": "true",
+              "user.attribute": "edxCookieHeader",
+              "id.token.claim": "true",
+              "access.token.claim": "true",
+              "claim.name": "edxCookieHeader",
+              "jsonType.label": "String"
+            }
+          },
+          {
+            "name": "edxCsrfToken",
+            "protocol": "openid-connect",
+            "protocolMapper": "oidc-usermodel-attribute-mapper",
+            "consentRequired": false,
+            "config": {
+              "userinfo.token.claim": "true",
+              "user.attribute": "edxCsrfToken",
+              "id.token.claim": "true",
+              "access.token.claim": "true",
+              "claim.name": "edxCsrfToken",
+              "jsonType.label": "String"
+            }
+          }
+        ]
+      }
+    ],
+    "roles": {}
+  }
+]

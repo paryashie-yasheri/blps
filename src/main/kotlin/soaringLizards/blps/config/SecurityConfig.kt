@@ -14,13 +14,10 @@ import org.springframework.security.core.userdetails.User
 import org.springframework.security.core.userdetails.UserDetailsService
 import org.springframework.security.core.userdetails.UsernameNotFoundException
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
-import org.springframework.security.oauth2.jwt.JwtDecoder
-import org.springframework.security.oauth2.jwt.NimbusJwtDecoder
 import org.springframework.security.web.SecurityFilterChain
 import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint
 import soaringLizards.blps.config.userDetails.JwtToAbstractAuthenticationTokenConverter
 import soaringLizards.blps.repository.UserRepository
-import javax.crypto.spec.SecretKeySpec
 
 @Configuration
 @EnableWebSecurity
@@ -28,6 +25,7 @@ import javax.crypto.spec.SecretKeySpec
 class SecurityConfig(
     private val userRepository: UserRepository,
     @Value("\${app.jwt.staff.secret}") private val staffJwtSecret: String,
+    private val keycloakJwtDecoder: KeycloakJwtDecoder,
 ) {
 
     companion object {
@@ -48,7 +46,7 @@ class SecurityConfig(
             }
             .oauth2ResourceServer { oauth2 ->
                 oauth2.jwt { jwt ->
-                    jwt.decoder(staffJwtDecoder())
+                    jwt.decoder(keycloakJwtDecoder)
                     jwt.jwtAuthenticationConverter(JwtToAbstractAuthenticationTokenConverter())
                 }
             }
@@ -87,7 +85,7 @@ class SecurityConfig(
             .httpBasic(withDefaults())
             .oauth2ResourceServer { oauth2 ->
                 oauth2.jwt { jwt ->
-                    jwt.decoder(staffJwtDecoder())
+                    jwt.decoder(keycloakJwtDecoder)
                     jwt.jwtAuthenticationConverter(JwtToAbstractAuthenticationTokenConverter())
 
                 }
@@ -95,11 +93,11 @@ class SecurityConfig(
             .csrf { it.disable() }
             .build()!!
 
-    @Bean
-    fun staffJwtDecoder(): JwtDecoder {
-        val secretKey = SecretKeySpec(staffJwtSecret.toByteArray(), "HmacSHA256")
-        return NimbusJwtDecoder.withSecretKey(secretKey).build()
-    }
+//    @Bean
+//    fun staffJwtDecoder(): JwtDecoder {
+//        val secretKey = SecretKeySpec(staffJwtSecret.toByteArray(), "HmacSHA256")
+//        return NimbusJwtDecoder.withSecretKey(secretKey).build()
+//    }
 
 
     @Bean

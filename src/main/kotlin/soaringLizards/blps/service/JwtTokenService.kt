@@ -43,11 +43,11 @@ class JwtTokenService(
         val expiration = edxSession?.expiresAt ?: Instant.now().plusSeconds(expiresInSeconds)
 
         return Jwts.builder()
-            .setSubject(username)
+            .setSubject(inHouseId.toString())
             .setIssuer(staffJwtIssuer)
             .setIssuedAt(now)
             .setExpiration(Date.from(expiration))
-            .claim("user-id", inHouseId)
+            .claim("preferred_username", username)
             .claim("roles", roles)
             .claim("email", email.value)
             .claim("edxCookieHeader", edxSession?.cookieHeader)

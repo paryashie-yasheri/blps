@@ -28,6 +28,11 @@ spring:
         client-name: ${SPRING_SECURITY_OAUTH2_AUTHORIZATION_SERVER_CLIENT_NAME:blps-client}
         client-id: ${SPRING_SECURITY_OAUTH2_AUTHORIZATION_SERVER_CLIENT_ID:blps-client}
         client-secret: ${SPRING_SECURITY_OAUTH2_AUTHORIZATION_SERVER_CLIENT_SECRET:blps-secret}
+      resourceserver:
+        opaquetoken:
+          jwk-set-uri: ${KEYCLOAK_SERVER_URL:http://localhost:8081}/realms/master/protocol/openid-connect/certs
+          client-id: ${KEYCLOAK_STAFF_CLIENT_ID}
+          client-secret: ${KEYCLOAK_STAFF_CLIENT_SECRET}
   env:
     config:
       port: ${server.port}
@@ -58,6 +63,17 @@ app:
       secret: ${APP_JWT_STAFF_SECRET:${JWT_SECRET:}}
       issuer: ${APP_JWT_STAFF_ISSUER:blps-internal}
       expiration-minutes: ${APP_JWT_STAFF_EXPIRATION_MINUTES:60}
+
+keycloak:
+  server-url: ${KEYCLOAK_SERVER_URL:http://localhost:8081}
+  admin:
+    username: ${KEYCLOAK_ADMIN_USERNAME}
+    password: ${KEYCLOAK_ADMIN_PASSWORD}
+    client-id: ${KEYCLOAK_ADMIN_CLIENT_ID}
+  master:
+    realm: ${KEYCLOAK_MASTER_REALM}
+    client-id: ${KEYCLOAK_MASTER_CLIENT_ID}
+    client-secret: ${KEYCLOAK_MASTER_CLIENT_SECRET}
 
 auth:
   jwt:
