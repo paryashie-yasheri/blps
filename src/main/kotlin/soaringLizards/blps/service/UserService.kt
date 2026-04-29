@@ -49,13 +49,17 @@ class UserService(
     fun loginStaff(request: LoginRequestDto): LoginResponseDto {
         val user = authenticateStaff(request.username, request.password)
 
-        // Generate token using Keycloak OAuth2 flow
-        val keycloakResponse = keycloakService.getStaffToken(user.username!!, request.password)
+        val token = jwtTokenService.generateToken(
+            user.id!!,
+            user.username!!,
+            Email(user.email!!),
+            setOf(user.role!!),
+        )
 
         return LoginResponseDto(
-            accessToken = keycloakResponse.access_token,
-            tokenType = keycloakResponse.token_type,
-            expiresIn = keycloakResponse.expires_in.toLong(),
+            accessToken = token,
+            tokenType = "Bearer",
+            expiresIn = 3600,
             username = user.username!!,
             role = user.role!!,
         )
