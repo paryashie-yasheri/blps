@@ -61,7 +61,7 @@ class KeycloakJwtDecoder(
         val claimsMap = mutableMapOf<String, Any>()
         body.subject?.let { claimsMap["sub"] = it }
         body.issuer?.let { claimsMap["iss"] = it }
-        body.get("user-id")?.let { claimsMap["user-id"] = it }
+        body.get("preferred_username")?.let { claimsMap["preferred_username"] = it }
         body.get("roles")?.let { claimsMap["roles"] = it }
         body.get("email")?.let { claimsMap["email"] = it }
         body.get("edxCookieHeader")?.let { claimsMap["edxCookieHeader"] = it }
