@@ -21,6 +21,8 @@ class JooqConfig(
     private val mainDataSource: DataSource,
     @Qualifier("journalDataSource")
     private val journalDataSource: DataSource,
+    @Qualifier("rewardsDataSource")
+    private val rewardsDataSource: DataSource,
     private val txManager: PlatformTransactionManager,
 ) {
 
@@ -32,6 +34,10 @@ class JooqConfig(
     @Bean
     fun journalDslContext(): DSLContext =
         createDslContext(journalDataSource)
+
+    @Bean
+    fun rewardsDslContext(): DSLContext =
+        createDslContext(rewardsDataSource)
 
     private fun createDslContext(dataSource: DataSource): DSLContext {
         val txAware = TransactionAwareDataSourceProxy(dataSource)

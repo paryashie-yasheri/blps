@@ -1,6 +1,7 @@
 package soaringLizards.blps.repository
 
 import org.jooq.DSLContext
+import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.stereotype.Repository
 import soaringLizards.blps.dto.rewards.UserRewardWithBalanceDto
 import soaringLizards.blps.jooq.generated.tables.references.REWARDS
@@ -9,6 +10,7 @@ import java.util.*
 
 @Repository
 class UserRewardRepository(
+    @Qualifier("rewardsDslContext")
     private val dsl: DSLContext,
 ) {
     fun findByBalanceId(balanceId: UUID): List<UserRewardWithBalanceDto> {

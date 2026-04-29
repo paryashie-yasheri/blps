@@ -9,7 +9,7 @@ spring:
   application:
     name: blps
   liquibase:
-    change-log: classpath:db/db.changelog-master.yaml
+    change-log: classpath:db/main/db.main.changelog-master.yaml
     enabled: true
   jooq:
     sql-dialect: POSTGRES
@@ -64,6 +64,20 @@ app:
         maintenance-interval-seconds: ${JOURNAL_POSTGRES_XA_MAINTENANCE_INTERVAL_SECONDS:60}
         max-idle-time-seconds: ${JOURNAL_POSTGRES_XA_MAX_IDLE_TIME_SECONDS:60}
         test-query: ${JOURNAL_POSTGRES_XA_TEST_QUERY:SELECT 1}
+      rewards:
+        host: ${REWARDS_POSTGRES_HOST:${POSTGRES_HOST:localhost}}
+        port: ${REWARDS_POSTGRES_PORT:${POSTGRES_PORT:5432}}
+        database: ${REWARDS_POSTGRES_DB:studs_rewards}
+        username: ${REWARDS_POSTGRES_USER:${POSTGRES_USER:}}
+        password: ${REWARDS_POSTGRES_PASSWORD:${POSTGRES_PASSWORD:}}
+        schema: ${REWARDS_POSTGRES_SCHEMA:public}
+        unique-resource-name: ${REWARDS_POSTGRES_XA_RESOURCE_NAME:rewards-postgres-xa}
+        min-pool-size: ${REWARDS_POSTGRES_XA_MIN_POOL_SIZE:1}
+        max-pool-size: ${REWARDS_POSTGRES_XA_MAX_POOL_SIZE:8}
+        borrow-connection-timeout-seconds: ${REWARDS_POSTGRES_XA_BORROW_TIMEOUT_SECONDS:30}
+        maintenance-interval-seconds: ${REWARDS_POSTGRES_XA_MAINTENANCE_INTERVAL_SECONDS:60}
+        max-idle-time-seconds: ${REWARDS_POSTGRES_XA_MAX_IDLE_TIME_SECONDS:60}
+        test-query: ${REWARDS_POSTGRES_XA_TEST_QUERY:SELECT 1}
   atomikos:
     log-base-dir: ${ATOMIKOS_LOG_BASE_DIR:${java.io.tmpdir}/blps-atomikos}
     tm-unique-name: ${ATOMIKOS_TM_UNIQUE_NAME:${spring.application.name}-tm}
@@ -76,6 +90,12 @@ app:
       enabled: ${JOURNAL_LIQUIBASE_ENABLED:true}
       default-schema: ${JOURNAL_POSTGRES_SCHEMA:public}
       liquibase-schema: ${JOURNAL_POSTGRES_SCHEMA:public}
+  rewards:
+    liquibase:
+      change-log: classpath:db/rewards/db.rewards.changelog-master.yaml
+      enabled: ${REWARDS_LIQUIBASE_ENABLED:true}
+      default-schema: ${REWARDS_POSTGRES_SCHEMA:public}
+      liquibase-schema: ${REWARDS_POSTGRES_SCHEMA:public}
   jwt:
     staff:
       secret: ${APP_JWT_STAFF_SECRET:${JWT_SECRET:}}

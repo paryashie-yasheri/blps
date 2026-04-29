@@ -18,11 +18,13 @@ class DatabaseAvailabilityConfig {
     fun verifyDatabasesOnStartup(
         @Qualifier("mainDataSource") mainDataSource: DataSource,
         @Qualifier("journalDataSource") journalDataSource: DataSource,
+        @Qualifier("rewardsDataSource") rewardsDataSource: DataSource,
     ): ApplicationRunner {
         return ApplicationRunner {
             checkDatabase("main", mainDataSource)
             checkDatabase("journal", journalDataSource)
-            logger.info("startup_db_check_ok main=true journal=true")
+            checkDatabase("rewards", rewardsDataSource)
+            logger.info("startup_db_check_ok main=true journal=true rewards=true")
         }
     }
 
@@ -31,6 +33,12 @@ class DatabaseAvailabilityConfig {
         @Qualifier("journalDataSource") journalDataSource: DataSource,
     ): HealthIndicator =
         DataSourceHealthIndicator(journalDataSource, "SELECT 1")
+
+    @Bean
+    fun rewardsDataSourceHealthIndicator(
+        @Qualifier("rewardsDataSource") rewardsDataSource: DataSource,
+    ): HealthIndicator =
+        DataSourceHealthIndicator(rewardsDataSource, "SELECT 1")
 
     private fun checkDatabase(name: String, dataSource: DataSource) {
         try {
