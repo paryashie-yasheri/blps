@@ -39,6 +39,11 @@ fun getOrCreateTestContainerManager(env: Map<String, String>): TestContainerMana
     return testContainerManagerInstance!!
 }
 
+fun stopTestContainerManager() {
+    testContainerManagerInstance?.stop()
+    testContainerManagerInstance = null
+}
+
 class TestContainerManager(
     private val config: TestContainerConfig = TestContainerConfig(),
 ) {
@@ -326,7 +331,7 @@ val generateJooq = tasks.register<JavaExec>("generateJooq") {
     }
 
     doLast {
-        testContainerManagerInstance?.stop()
+        stopTestContainerManager()
     }
 }
 
@@ -344,7 +349,7 @@ tasks.register<JavaExec>("generateJooqFromExistingDb") {
     }
 
     doLast {
-        testContainerManagerInstance?.stop()
+        stopTestContainerManager()
     }
 }
 
@@ -369,3 +374,17 @@ val codegen by tasks.register<DefaultTask>("codegen") {
         generateJooq,
     )
 }
+
+// fixme: попытался починить что у меня переодически после кодгена не останавливаются контейнеры, но эти штуки депрекейтед
+gradle.taskGraph.addTaskExecutionListener(
+    object : TaskExecutionListener {
+        override fun beforeExecute(task: Task) = Unit
+
+        override fun afterExecute(task: Task, state: TaskState) {
+            if (state.failure != null) {
+                println("Task ${task.path} failed, stopping Testcontainers...")
+                stopTestContainerManager()
+            }
+        }
+    },
+)

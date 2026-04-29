@@ -1,5 +1,6 @@
 package soaringLizards.blps.dto.balanceTransactions
 
+import soaringLizards.blps.entity.UserBalance
 import soaringLizards.blps.jooq.generated.tables.records.BalanceTransactionsRecord
 import soaringLizards.blps.jooq.generated.tables.records.UserBalancesRecord
 import java.time.OffsetDateTime
@@ -14,6 +15,13 @@ class BalanceResponse(
 fun UserBalancesRecord.toBalanceResponse() = BalanceResponse(
     balance = currentBalance!!,
     currentBalance = currentBalance!!,
+    totalEarned = totalEarned!!,
+    totalSpent = totalSpent!!,
+)
+
+fun UserBalance.toBalanceResponse() = BalanceResponse(
+    balance = currentBalance!!,
+    currentBalance = currentBalance,
     totalEarned = totalEarned!!,
     totalSpent = totalSpent!!,
 )

@@ -1,5 +1,6 @@
 package soaringLizards.blps.dto.userAchievements
 
+import soaringLizards.blps.entity.AchievementEventType
 import java.util.*
 
 data class UserAchievementDto(
@@ -8,7 +9,7 @@ data class UserAchievementDto(
     val achievementTypeId: UUID,
     val earnedAt: java.time.OffsetDateTime? = null,
     val referenceId: UUID? = null,
-    val referenceType: String? = null,
+    val referenceType: AchievementEventType? = null,
     val isClaimed: Boolean = false,
     val metadata: String? = null,
 )
@@ -20,9 +21,10 @@ data class UserAchievementWithDetailsDto(
     val achievementName: String?,
     val achievementDescription: String?,
     val pointsAwarded: Int?,
-    val icon: String?,
+    val iconKey: String?,
+    val iconUrl: String? = null,
     val earnedAt: String?,
     val isClaimed: Boolean?,
     val referenceId: String?,
-    val referenceType: String?,
+    val referenceType: AchievementEventType?,
 )
