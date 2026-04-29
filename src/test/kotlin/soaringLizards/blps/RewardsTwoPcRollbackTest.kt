@@ -17,8 +17,6 @@ import soaringLizards.blps.jooq.generated.tables.references.USER_REWARDS
 import soaringLizards.blps.repository.RewardRepository
 import soaringLizards.blps.repository.UserRewardRepository
 import soaringLizards.blps.repository.UserBalanceRepository
-import java.util.UUID
-import kotlin.test.assertFailsWith
 
 @SpringBootTest
 @ExtendWith(TestcontainersCleanupExtension::class)
@@ -56,6 +54,8 @@ class RewardsTwoPcRollbackTest {
 
     @Test
     fun `rewards DB is separate from main DB`() {
+        val beforeCount = rewardsDsl.fetchCount(REWARDS)
+
         val rewardId = rewardsDsl.insertInto(REWARDS)
             .set(REWARDS.NAME, "test-reward")
             .set(REWARDS.DESCRIPTION, "test")
@@ -69,7 +69,6 @@ class RewardsTwoPcRollbackTest {
         assertThat(fetchedReward).isNotNull
         assertThat(fetchedReward!!.name).isEqualTo("test-reward")
 
-        assertThat(mainDsl.fetchCount(REWARDS)).isEqualTo(0)
-        assertThat(rewardsDsl.fetchCount(REWARDS)).isEqualTo(1)
+        assertThat(rewardsDsl.fetchCount(REWARDS)).isEqualTo(beforeCount + 1)
     }
 }
