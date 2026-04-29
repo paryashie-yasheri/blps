@@ -11,6 +11,8 @@ spring:
   liquibase:
     change-log: classpath:db/main/db.main.changelog-master.yaml
     enabled: true
+    default-schema: ${POSTGRES_SCHEMA:public}
+    liquibase-schema: ${POSTGRES_SCHEMA:public}
   jooq:
     sql-dialect: POSTGRES
   servlet:
