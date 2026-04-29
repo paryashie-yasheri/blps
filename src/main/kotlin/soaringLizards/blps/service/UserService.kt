@@ -26,6 +26,7 @@ class UserService(
     private val userBalanceRepository: UserBalanceRepository,
     private val jwtTokenService: JwtTokenService,
     private val edxSessionAuthManager: EdxSessionAuthManager,
+    private val transactionTemplate: org.springframework.transaction.support.TransactionTemplate,
 ) {
     fun getUserByUsername(username: String): UserResponse? {
         val user = userRepository.findByUsername(username)
@@ -98,34 +99,29 @@ class UserService(
     }
 
 
-    @Transactional
     fun loginOpenedxUser(@RequestBody request: LoginRequestDto): LoginResponseDto {
         logger.info("Login attempt for user: ${request.username}")
 
         val session = edxSessionAuthManager.authenticateUser(request.username, request.password)
-
         val email = edxSessionAuthManager.getUserEmail(session, request.username)
             ?: "placeholder_${request.username}@mail.com"
 
-        val user = authenticateOrCreateOpenedxUser(
-            request.username,
-            Email(email),
-        )
-
-        val token = jwtTokenService.generateToken(
-            user.id!!,
-            user.username!!,
-            Email(user.email!!),
-            setOf("OPENEDX_USER"),
-            session,
-        )
-
-        return LoginResponseDto(
-            accessToken = token,
-            tokenType = "Bearer",
-            expiresIn = session.expiresAt.epochSecond - Instant.now().epochSecond,
-            username = user.username!!,
-            role = "OPENEDX_USER",
-        )
+        return transactionTemplate.execute {
+            val user = authenticateOrCreateOpenedxUser(request.username, Email(email))
+            val token = jwtTokenService.generateToken(
+                user.id!!,
+                user.username!!,
+                Email(user.email!!),
+                setOf("OPENEDX_USER"),
+                session,
+            )
+            LoginResponseDto(
+                accessToken = token,
+                tokenType = "Bearer",
+                expiresIn = session.expiresAt.epochSecond - Instant.now().epochSecond,
+                username = user.username!!,
+                role = "OPENEDX_USER",
+            )
+        }!!
     }
 }
