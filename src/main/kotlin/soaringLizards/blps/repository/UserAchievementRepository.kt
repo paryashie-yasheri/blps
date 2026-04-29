@@ -4,6 +4,10 @@ import org.jooq.DSLContext
 import org.springframework.stereotype.Repository
 import soaringLizards.blps.dto.userAchievements.UserAchievementDto
 import soaringLizards.blps.dto.userAchievements.UserAchievementWithDetailsDto
+import soaringLizards.blps.entity.AchievementEventType
+import soaringLizards.blps.entity.UserAchievement
+import soaringLizards.blps.entity.toEntity
+import soaringLizards.blps.jooq.generated.tables.records.UserAchievementsRecord
 import soaringLizards.blps.jooq.generated.tables.references.ACHIEVEMENT_TYPES
 import soaringLizards.blps.jooq.generated.tables.references.USER_ACHIEVEMENTS
 import java.util.*
@@ -12,10 +16,12 @@ import java.util.*
 class UserAchievementRepository(
     private val dsl: DSLContext,
 ) {
-    fun findById(id: UUID) =
+    fun findById(id: UUID): UserAchievement? =
         dsl.select(USER_ACHIEVEMENTS)
             .where(USER_ACHIEVEMENTS.USER_ACHIEVEMENT_ID.eq(id))
             .fetchOne()
+            ?.into(UserAchievementsRecord::class.java)
+            ?.toEntity()
 
     fun findByBalanceId(balanceId: UUID): List<UserAchievementWithDetailsDto> {
         return dsl.select(
@@ -42,11 +48,11 @@ class UserAchievementRepository(
                     achievementName = record.get(ACHIEVEMENT_TYPES.NAME),
                     achievementDescription = record.get(ACHIEVEMENT_TYPES.DESCRIPTION),
                     pointsAwarded = record.get(ACHIEVEMENT_TYPES.POINTS_AWARDED),
-                    icon = record.get(ACHIEVEMENT_TYPES.ICON),
+                    iconKey = record.get(ACHIEVEMENT_TYPES.ICON),
                     earnedAt = record.get(USER_ACHIEVEMENTS.EARNED_AT)?.toString(),
                     isClaimed = record.get(USER_ACHIEVEMENTS.IS_CLAIMED),
                     referenceId = record.get(USER_ACHIEVEMENTS.REFERENCE_ID)?.toString(),
-                    referenceType = record.get(USER_ACHIEVEMENTS.REFERENCE_TYPE),
+                    referenceType = AchievementEventType.fromValueOrNull(record.get(USER_ACHIEVEMENTS.REFERENCE_TYPE)),
                 )
             }
     }
@@ -55,7 +61,7 @@ class UserAchievementRepository(
         balanceId: UUID,
         achievementTypeId: UUID,
         referenceId: UUID?,
-    ): List<soaringLizards.blps.jooq.generated.tables.records.UserAchievementsRecord> =
+    ): List<UserAchievement> =
         dsl.selectFrom(USER_ACHIEVEMENTS)
             .where(USER_ACHIEVEMENTS.BALANCE_ID.eq(balanceId))
             .and(USER_ACHIEVEMENTS.ACHIEVEMENT_TYPE_ID.eq(achievementTypeId))
@@ -67,6 +73,8 @@ class UserAchievementRepository(
                 }
             }
             .fetch()
+            .into(UserAchievementsRecord::class.java)
+            .map { it.toEntity() }
 
     fun insert(achievementDto: UserAchievementDto): Int =
         dsl.insertInto(USER_ACHIEVEMENTS)
@@ -74,7 +82,8 @@ class UserAchievementRepository(
             .set(USER_ACHIEVEMENTS.ACHIEVEMENT_TYPE_ID, achievementDto.achievementTypeId)
             .set(USER_ACHIEVEMENTS.EARNED_AT, achievementDto.earnedAt)
             .set(USER_ACHIEVEMENTS.REFERENCE_ID, achievementDto.referenceId)
-            .set(USER_ACHIEVEMENTS.REFERENCE_TYPE, achievementDto.referenceType)
+            .set(USER_ACHIEVEMENTS.REFERENCE_TYPE, achievementDto.referenceType?.value)
             .set(USER_ACHIEVEMENTS.IS_CLAIMED, achievementDto.isClaimed)
             .execute()
+
 }

@@ -1,6 +1,7 @@
 services:
   pg:
     image: postgres:16.6
+    command: postgres -c max_prepared_transactions=${POSTGRES_MAX_PREPARED_TRANSACTIONS:-100}
     networks:
       - app-network
     shm_size: 128mb
@@ -15,6 +16,27 @@ services:
       PGDATA: /var/lib/postgresql/data/pgdata
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+
+    env_file:
+      - .env
+
+  pg-journal:
+    image: postgres:16.6
+    command: postgres -c max_prepared_transactions=${JOURNAL_POSTGRES_MAX_PREPARED_TRANSACTIONS:-100}
+    networks:
+      - app-network
+    shm_size: 128mb
+    ports:
+      - 5433:5432
+    volumes:
+      - pg-journal-data:/var/lib/postgresql/data:Z
+    environment:
+      DB_CONNECTION: pgsql
+      POSTGRES_HOST: ${JOURNAL_POSTGRES_HOST}
+      POSTGRES_DB: ${JOURNAL_POSTGRES_DB}
+      PGDATA: /var/lib/postgresql/data/pgdata
+      POSTGRES_USER: ${JOURNAL_POSTGRES_USER}
+      POSTGRES_PASSWORD: ${JOURNAL_POSTGRES_PASSWORD}
 
     env_file:
       - .env
@@ -38,6 +60,8 @@ services:
       - pg
     networks:
       - app-network
+    env_file:
+      - .env
 
   spring:
     build:
@@ -47,7 +71,6 @@ services:
       - "${SPRING_PORT}:${SPRING_PORT}"
     depends_on:
       - pg
-      - keycloak
     networks:
       - app-network
     env_file:

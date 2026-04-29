@@ -5,10 +5,14 @@ import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.web.bind.annotation.*
 import soaringLizards.blps.config.userDetails.JwtUserDetails
-import soaringLizards.blps.dto.edx.EdxCompletionBatchRequest
-import soaringLizards.blps.dto.edx.EdxEnrollmentRequest
+import soaringLizards.blps.dto.student.CourseEnrollResponse
+import soaringLizards.blps.dto.student.LessonCompleteResponse
 import soaringLizards.blps.dto.userAchievements.UserAchievementWithDetailsDto
-import soaringLizards.blps.service.*
+import soaringLizards.blps.service.AchievementService
+import soaringLizards.blps.service.EdxService
+import soaringLizards.blps.service.RewardService
+import soaringLizards.blps.service.StudentAchievementWorkflowService
+import soaringLizards.blps.service.UserBalanceService
 import java.util.*
 
 @Tag(name = "Студент - управление курсами, достижениями и наградами")
@@ -16,10 +20,10 @@ import java.util.*
 @RequestMapping("/api/student")
 class StudentController(
     private val edxService: EdxService,
+    private val studentAchievementWorkflowService: StudentAchievementWorkflowService,
     private val userBalanceService: UserBalanceService,
     private val achievementService: AchievementService,
     private val rewardService: RewardService,
-    private val userService: UserService,
 ) {
     @PreAuthorize("hasRole('OPENEDX_USER')")
     @GetMapping("/courses")
@@ -49,17 +53,8 @@ class StudentController(
     fun enroll(
         @AuthenticationPrincipal currentUser: JwtUserDetails,
         @PathVariable courseId: String,
-    ) {
-        edxService.enroll(
-            currentUser,
-            EdxEnrollmentRequest(
-                courseId = courseId,
-                courseDetails = null,
-                mode = "audit",
-                user = currentUser.username,
-            ),
-        )
-    }
+    ): CourseEnrollResponse =
+        studentAchievementWorkflowService.enroll(currentUser, courseId)
 
     @PreAuthorize("hasRole('OPENEDX_USER')")
     @PostMapping("/lessons/{courseKey}/{blockId}/complete")
@@ -67,40 +62,8 @@ class StudentController(
         @AuthenticationPrincipal currentUser: JwtUserDetails,
         @PathVariable courseKey: String,
         @PathVariable blockId: String,
-    ): LessonCompleteResponse {
-        edxService.trackCompletion(
-            currentUser,
-            EdxCompletionBatchRequest(
-                username = currentUser.username,
-                courseKey = courseKey,
-                blocks = mapOf(blockId to 1.0),
-            ),
-        )
-
-        val awardedAchievements = achievementService.checkAndAwardAchievements(
-            currentUser.id,
-            AchievementContext(
-                type = "lesson_complete",
-                courseKey = courseKey,
-                blockId = blockId,
-                completion = 1.0,
-            ),
-        )
-
-        val newBalance = userBalanceService.getCurrentUserBalance(currentUser.id)
-
-        return LessonCompleteResponse(
-            awardedAchievements = awardedAchievements.map {
-                AwardedAchievementDto(
-                    achievementTypeId = it.achievementTypeId.toString(),
-                    code = it.code,
-                    name = it.name,
-                    pointsAwarded = it.pointsAwarded,
-                )
-            },
-            currentBalance = newBalance.balance,
-        )
-    }
+    ): LessonCompleteResponse =
+        studentAchievementWorkflowService.completeLesson(currentUser, courseKey, blockId)
 
     @PreAuthorize("hasRole('OPENEDX_USER')")
     @GetMapping("/balance")
@@ -128,15 +91,3 @@ class StudentController(
         @PathVariable rewardId: UUID,
     ) = rewardService.redeemReward(currentUser.id, rewardId)
 }
-
-data class LessonCompleteResponse(
-    val awardedAchievements: List<AwardedAchievementDto>,
-    val currentBalance: Int,
-)
-
-data class AwardedAchievementDto(
-    val achievementTypeId: String,
-    val code: String,
-    val name: String,
-    val pointsAwarded: Int,
-)

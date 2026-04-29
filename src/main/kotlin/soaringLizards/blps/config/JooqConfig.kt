@@ -3,31 +3,44 @@ package soaringLizards.blps.config
 import org.jooq.DSLContext
 import org.jooq.SQLDialect
 import org.jooq.conf.Settings
-import org.jooq.impl.*
+import org.jooq.impl.DSL
+import org.jooq.impl.DataSourceConnectionProvider
+import org.jooq.impl.DefaultConfiguration
+import org.springframework.beans.factory.annotation.Qualifier
+import org.springframework.boot.jooq.autoconfigure.SpringTransactionProvider
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import org.springframework.context.annotation.Primary
 import org.springframework.jdbc.datasource.TransactionAwareDataSourceProxy
 import org.springframework.transaction.PlatformTransactionManager
-import org.springframework.boot.jooq.autoconfigure.SpringTransactionProvider
 import javax.sql.DataSource
 
 @Configuration
 class JooqConfig(
-    private val dataSource: DataSource,
+    @Qualifier("mainDataSource")
+    private val mainDataSource: DataSource,
+    @Qualifier("journalDataSource")
+    private val journalDataSource: DataSource,
     private val txManager: PlatformTransactionManager,
 ) {
 
     @Bean
-    fun dslContext(): DSLContext {
+    @Primary
+    fun dslContext(): DSLContext =
+        createDslContext(mainDataSource)
+
+    @Bean
+    fun journalDslContext(): DSLContext =
+        createDslContext(journalDataSource)
+
+    private fun createDslContext(dataSource: DataSource): DSLContext {
         val txAware = TransactionAwareDataSourceProxy(dataSource)
         val connectionProvider = DataSourceConnectionProvider(txAware)
 
         val configuration = DefaultConfiguration().apply {
             setSQLDialect(SQLDialect.POSTGRES)
             setConnectionProvider(connectionProvider)
-            setTransactionProvider(
-                SpringTransactionProvider(txManager),
-            )
+            setTransactionProvider(SpringTransactionProvider(txManager))
             setSettings(
                 Settings()
                     .withRenderSchema(false)
@@ -36,6 +49,6 @@ class JooqConfig(
                     .withReturnAllOnUpdatableRecord(true),
             )
         }
-        return DefaultDSLContext(configuration)
+        return DSL.using(configuration)
     }
 }

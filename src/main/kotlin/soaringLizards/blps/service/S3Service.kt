@@ -18,8 +18,8 @@ import software.amazon.awssdk.services.s3.presigner.S3Presigner
 import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest
 import java.net.URI
 import java.time.Duration
+import java.util.UUID
 
-// TODO: прикрутить какую нибудь имаджрепу чтобы в ней хранилось соответствие урла картинки и к какому достижению оно относится
 @Service
 class S3Service(
     val s3Properties: S3Properties,
@@ -84,7 +84,6 @@ class S3Service(
             .build()
     }
 
-    // todo: добавить try/catch чтобы при ошибке урл не возвращался
     fun get(key: String) = s3Presigner
         .presignGetObject(
             GetObjectPresignRequest
@@ -102,14 +101,19 @@ class S3Service(
         .url()
         .toString()
 
-    // fixme: добавить проверку названия на расширение картинки чтобы нормальное было (типа пнг или типа того)
-    fun upload(file: MultipartFile) =
-        s3Client.putObject(
-            createPutObjectRequest(file),
-            RequestBody.fromInputStream(file.inputStream, file.size),
-        )
+    fun upload(file: MultipartFile): String {
+        val key = buildObjectKey("uploads", file.originalFilename)
+        upload(key, file)
+        return key
+    }
 
-    fun delete(key: String) =
+    fun uploadAchievementIcon(file: MultipartFile): String {
+        val key = buildObjectKey("achievements", file.originalFilename)
+        upload(key, file)
+        return key
+    }
+
+    fun delete(key: String) {
         s3Client
             .deleteObject(
                 DeleteObjectRequest
@@ -117,13 +121,31 @@ class S3Service(
                     .bucket(s3Properties.bucket)
                     .key(key)
                     .build(),
-            ).deleteMarker()
+            )
+    }
 
-    private fun createPutObjectRequest(file: MultipartFile) =
+    private fun upload(key: String, file: MultipartFile) =
+        s3Client.putObject(
+            createPutObjectRequest(key, file),
+            RequestBody.fromInputStream(file.inputStream, file.size),
+        )
+
+    private fun buildObjectKey(prefix: String, originalFilename: String?): String {
+        val sanitizedFilename = originalFilename
+            ?.substringAfterLast('/')
+            ?.substringAfterLast('\\')
+            ?.replace(Regex("[^A-Za-z0-9._-]"), "_")
+            ?.takeIf { it.isNotBlank() }
+            ?: "file.bin"
+
+        return "$prefix/${UUID.randomUUID()}-$sanitizedFilename"
+    }
+
+    private fun createPutObjectRequest(key: String, file: MultipartFile) =
         PutObjectRequest
             .builder()
             .bucket(s3Properties.bucket)
-            .key(file.name)
+            .key(key)
+            .contentType(file.contentType)
             .build()!!
-
 }
