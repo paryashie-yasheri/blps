@@ -24,6 +24,13 @@ class LiquibaseConfig {
         }
 
     @Bean
+    @ConfigurationProperties("app.rewards.liquibase")
+    fun rewardsLiquibaseProperties(): LiquibaseProperties =
+        LiquibaseProperties().apply {
+            changeLog = "classpath:db/rewards/db.rewards.changelog-master.yaml"
+        }
+
+    @Bean
     fun mainLiquibase(
         @Qualifier("mainDataSource") mainDataSource: DataSource,
         @Qualifier("mainLiquibaseProperties") properties: LiquibaseProperties,
@@ -36,6 +43,13 @@ class LiquibaseConfig {
         @Qualifier("journalLiquibaseProperties") properties: LiquibaseProperties,
     ): SpringLiquibase =
         createLiquibase(journalDataSource, properties)
+
+    @Bean
+    fun rewardsLiquibase(
+        @Qualifier("rewardsDataSource") rewardsDataSource: DataSource,
+        @Qualifier("rewardsLiquibaseProperties") properties: LiquibaseProperties,
+    ): SpringLiquibase =
+        createLiquibase(rewardsDataSource, properties)
 
     private fun createLiquibase(
         dataSource: DataSource,

@@ -10,6 +10,7 @@ object IntegrationPostgres {
     private val lock = Any()
     private var mainContainer: PostgreSQLContainer<Nothing>? = null
     private var journalContainer: PostgreSQLContainer<Nothing>? = null
+    private var rewardsContainer: PostgreSQLContainer<Nothing>? = null
 
     private fun startContainer(dbPrefix: String): PostgreSQLContainer<Nothing> =
         PostgreSQLContainer<Nothing>("postgres:15-alpine").apply {
@@ -32,19 +33,26 @@ object IntegrationPostgres {
         if (journalContainer?.isRunning != true) {
             journalContainer = startContainer("journal")
         }
+
+        if (rewardsContainer?.isRunning != true) {
+            rewardsContainer = startContainer("rewards")
+        }
     }
 
     fun stop() = synchronized(lock) {
         runCatching { mainContainer?.stop() }
         runCatching { journalContainer?.stop() }
+        runCatching { rewardsContainer?.stop() }
         mainContainer = null
         journalContainer = null
+        rewardsContainer = null
     }
 
     fun registerProperties(registry: DynamicPropertyRegistry) {
         ensureStarted()
         val main = checkNotNull(mainContainer)
         val journal = checkNotNull(journalContainer)
+        val rewards = checkNotNull(rewardsContainer)
         val atomikosId = UUID.randomUUID().toString().replace("-", "").take(12)
 
         registry.add("app.datasource.xa.main.host", main::getHost)
@@ -67,6 +75,16 @@ object IntegrationPostgres {
         registry.add("app.datasource.xa.journal.max-pool-size") { 3 }
         registry.add("app.datasource.xa.journal.min-pool-size") { 1 }
 
+        registry.add("app.datasource.xa.rewards.host", rewards::getHost)
+        registry.add("app.datasource.xa.rewards.port") { rewards.firstMappedPort }
+        registry.add("app.datasource.xa.rewards.database", rewards::getDatabaseName)
+        registry.add("app.datasource.xa.rewards.username", rewards::getUsername)
+        registry.add("app.datasource.xa.rewards.password", rewards::getPassword)
+        registry.add("app.datasource.xa.rewards.schema") { SCHEMA }
+        registry.add("app.datasource.xa.rewards.unique-resource-name") { "test-rewards-xa-$atomikosId" }
+        registry.add("app.datasource.xa.rewards.max-pool-size") { 3 }
+        registry.add("app.datasource.xa.rewards.min-pool-size") { 1 }
+
         registry.add("app.atomikos.log-base-dir") {
             "${System.getProperty("java.io.tmpdir")}/blps-atomikos-tests/$atomikosId"
         }
@@ -77,6 +95,9 @@ object IntegrationPostgres {
         registry.add("app.journal.liquibase.enabled") { true }
         registry.add("app.journal.liquibase.default-schema") { SCHEMA }
         registry.add("app.journal.liquibase.liquibase-schema") { SCHEMA }
+        registry.add("app.rewards.liquibase.enabled") { true }
+        registry.add("app.rewards.liquibase.default-schema") { SCHEMA }
+        registry.add("app.rewards.liquibase.liquibase-schema") { SCHEMA }
         registry.add("auth.jwt.secret") { "test-integration-secret-key-0123456789" }
     }
 }

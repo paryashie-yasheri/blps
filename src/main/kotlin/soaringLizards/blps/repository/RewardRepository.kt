@@ -1,6 +1,7 @@
 package soaringLizards.blps.repository
 
 import org.jooq.DSLContext
+import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.stereotype.Repository
 import soaringLizards.blps.dto.rewards.RewardCreateRequest
 import soaringLizards.blps.dto.rewards.RewardUpdateRequest
@@ -9,6 +10,7 @@ import java.util.*
 
 @Repository
 class RewardRepository(
+    @Qualifier("rewardsDslContext")
     private val dsl: DSLContext,
 ) {
     fun findById(id: UUID) =

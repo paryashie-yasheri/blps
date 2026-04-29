@@ -1,6 +1,6 @@
 --liquibase formatted sql
 --changeset blps:2026.04.27--1-seed-rewards
---rollback DELETE FROM rewards WHERE name IN ('Tung Tung Tung Sahur', '67', 'Meme Lord', 'Existential Crisis Pack', 'Bug Collector', 'Coffee Machine Harmony');
+--rollback DELETE FROM rewards WHERE name IN ('Tung Tung Tung Sahur', '67', 'Meme Lord Crown', 'Existential Crisis Pack', 'Bug Collector Badge', 'Coffee Machine Harmony');
 insert into rewards (name, description, points_cost, icon_key, is_active, quantity) values
 ('Tung Tung Tung Sahur', 'A mysterious drum that echoes through the void. Beats on its own.', 100, '/icons/tung_tung.png', true, null),
 ('67', 'Not a reward, it IS the reward. The answer to everything.', 67, '/icons/67.png', true, 1),

@@ -26,6 +26,10 @@ class ApplicationTests {
     private lateinit var journalDataSource: DataSource
 
     @Autowired
+    @Qualifier("rewardsDataSource")
+    private lateinit var rewardsDataSource: DataSource
+
+    @Autowired
     private lateinit var transactionManager: JtaTransactionManager
 
 
@@ -41,6 +45,7 @@ class ApplicationTests {
     fun contextLoads() {
         assertThat(dataSource).isInstanceOf(AtomikosDataSourceBean::class.java)
         assertThat(journalDataSource).isInstanceOf(AtomikosDataSourceBean::class.java)
+        assertThat(rewardsDataSource).isInstanceOf(AtomikosDataSourceBean::class.java)
         assertThat(transactionManager).isInstanceOf(JtaTransactionManager::class.java)
     }
 }

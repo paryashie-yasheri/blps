@@ -46,6 +46,11 @@ data class XaDataSourceProperties(
         database = "journal",
         uniqueResourceName = "journal-postgres-xa",
     ),
+    @NestedConfigurationProperty
+    var rewards: XaSingleDataSourceProperties = XaSingleDataSourceProperties(
+        database = "rewards",
+        uniqueResourceName = "rewards-postgres-xa",
+    ),
 )
 
 @ConfigurationProperties(prefix = "app.atomikos")
@@ -122,6 +127,11 @@ class AtomikosConfig(
     @DependsOn("atomikosPropertyInitializer", "atomikosTransactionManager", "atomikosUserTransaction")
     fun journalDataSource(): DataSource =
         createAtomikosDataSource("journal", xaDataSourceProperties.journal)
+
+    @Bean(initMethod = "init", destroyMethod = "close")
+    @DependsOn("atomikosPropertyInitializer", "atomikosTransactionManager", "atomikosUserTransaction")
+    fun rewardsDataSource(): DataSource =
+        createAtomikosDataSource("rewards", xaDataSourceProperties.rewards)
 
     private fun createAtomikosDataSource(name: String, properties: XaSingleDataSourceProperties): DataSource {
         verifyJdbcConnectivity(name, properties)
