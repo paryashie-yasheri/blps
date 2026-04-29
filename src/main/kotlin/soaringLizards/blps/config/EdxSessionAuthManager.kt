@@ -30,6 +30,12 @@ class EdxSessionAuthManager(
     @Suppress("HttpUrlsUsage")
     @Value($$"${edx.api.base-url:http://local.openedx.io/api}")
     private val baseUrl: String,
+
+    @Value($$"${edx.bypass.enabled:false}")
+    private val bypassEnabled: Boolean,
+
+    @Value($$"${edx.bypass.expires-seconds:3600}")
+    private val bypassExpiresSeconds: Long,
 ) {
     private val objectMapper: ObjectMapper = jacksonObjectMapper()
 
@@ -75,6 +81,15 @@ class EdxSessionAuthManager(
     }
 
     fun authenticateUser(userEmail: String, password: String): EdxAuthenticatedSession {
+        if (bypassEnabled) {
+            logger.warn("LMS bypass is ENABLED: skipping authentication for user={}", userEmail)
+            return EdxAuthenticatedSession(
+                cookieHeader = "",
+                csrfToken = "bypass",
+                expiresAt = Instant.now().plusSeconds(bypassExpiresSeconds),
+            )
+        }
+
         logger.info("Attempting LMS user authentication for: $userEmail")
 
         val cookies = initiateLoginSession()
@@ -206,6 +221,11 @@ class EdxSessionAuthManager(
     }
 
     fun getUserEmail(session: EdxAuthenticatedSession, username: String): String? {
+        if (bypassEnabled) {
+            logger.warn("LMS bypass is ENABLED: skipping email fetch for user={}", username)
+            return null
+        }
+
         logger.info("Fetching email from LMS for user: $username")
 
         return try {

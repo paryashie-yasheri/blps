@@ -15,9 +15,11 @@ import org.springframework.context.annotation.DependsOn
 import org.springframework.context.annotation.Primary
 import org.springframework.transaction.annotation.EnableTransactionManagement
 import org.springframework.transaction.jta.JtaTransactionManager
+import java.sql.DriverManager
 import java.nio.file.Files
 import java.nio.file.Path
 import javax.sql.DataSource
+import org.slf4j.LoggerFactory
 
 data class XaSingleDataSourceProperties(
     var host: String = "localhost",
@@ -65,6 +67,7 @@ class AtomikosConfig(
     private val xaDataSourceProperties: XaDataSourceProperties,
     private val atomikosRuntimeProperties: AtomikosRuntimeProperties,
 ) {
+    private val logger = LoggerFactory.getLogger(javaClass)
 
     @Bean("atomikosPropertyInitializer")
     fun atomikosPropertyInitializer(): Any {
@@ -73,8 +76,14 @@ class AtomikosConfig(
         System.setProperty("com.atomikos.icatch.output_dir", logDir.toString())
         System.setProperty("com.atomikos.icatch.log_base_dir", logDir.toString())
         System.setProperty("com.atomikos.icatch.tm_unique_name", atomikosRuntimeProperties.tmUniqueName)
-        System.setProperty("com.atomikos.icatch.default_jta_timeout", atomikosRuntimeProperties.transactionTimeoutSeconds.toString())
-        System.setProperty("com.atomikos.icatch.max_timeout", atomikosRuntimeProperties.maxTimeoutSeconds.toString())
+        System.setProperty(
+            "com.atomikos.icatch.default_jta_timeout",
+            (atomikosRuntimeProperties.transactionTimeoutSeconds * 1000).toString(),
+        )
+        System.setProperty(
+            "com.atomikos.icatch.max_timeout",
+            (atomikosRuntimeProperties.maxTimeoutSeconds * 1000).toString(),
+        )
         System.setProperty("com.atomikos.icatch.checkpoint_interval", atomikosRuntimeProperties.checkpointInterval.toString())
         System.setProperty("com.atomikos.icatch.threaded_2pc", "true")
         System.setProperty("com.atomikos.icatch.enable_logging", "true")
@@ -107,14 +116,16 @@ class AtomikosConfig(
     @Primary
     @DependsOn("atomikosPropertyInitializer", "atomikosTransactionManager", "atomikosUserTransaction")
     fun mainDataSource(): DataSource =
-        createAtomikosDataSource(xaDataSourceProperties.main)
+        createAtomikosDataSource("main", xaDataSourceProperties.main)
 
     @Bean(initMethod = "init", destroyMethod = "close")
     @DependsOn("atomikosPropertyInitializer", "atomikosTransactionManager", "atomikosUserTransaction")
     fun journalDataSource(): DataSource =
-        createAtomikosDataSource(xaDataSourceProperties.journal)
+        createAtomikosDataSource("journal", xaDataSourceProperties.journal)
 
-    private fun createAtomikosDataSource(properties: XaSingleDataSourceProperties): DataSource {
+    private fun createAtomikosDataSource(name: String, properties: XaSingleDataSourceProperties): DataSource {
+        verifyJdbcConnectivity(name, properties)
+
         val xaDataSource = PGXADataSource().apply {
             serverNames = arrayOf(properties.host)
             portNumbers = intArrayOf(properties.port)
@@ -132,7 +143,38 @@ class AtomikosConfig(
             borrowConnectionTimeout = properties.borrowConnectionTimeoutSeconds
             maintenanceInterval = properties.maintenanceIntervalSeconds
             maxIdleTime = properties.maxIdleTimeSeconds
-            testQuery = properties.testQuery
+            testQuery = normalizeSqlTestQuery(properties.testQuery)
         }
+    }
+
+    private fun verifyJdbcConnectivity(name: String, properties: XaSingleDataSourceProperties) {
+        val jdbcUrl = "jdbc:postgresql://${properties.host}:${properties.port}/${properties.database}"
+        val testQuery = normalizeSqlTestQuery(properties.testQuery)
+
+        try {
+            DriverManager.getConnection(jdbcUrl, properties.username, properties.password).use { connection ->
+                connection.createStatement().use { statement ->
+                    statement.queryTimeout = 3
+                    statement.execute(testQuery)
+                }
+            }
+            logger.info("startup_jdbc_connectivity_ok name={} url={}", name, jdbcUrl)
+        } catch (ex: Exception) {
+            logger.error("startup_jdbc_connectivity_failed name={} url={}", name, jdbcUrl, ex)
+            throw IllegalStateException("Startup check failed: '$name' datasource is unavailable", ex)
+        }
+    }
+
+    private fun normalizeSqlTestQuery(raw: String): String {
+        val trimmed = raw.trim()
+        if (trimmed.length >= 2) {
+            val first = trimmed.first()
+            val last = trimmed.last()
+            // .env часто содержит значения в кавычках, а мы ожидаем чистый SQL.
+            if ((first == '"' && last == '"') || (first == '\'' && last == '\'')) {
+                return trimmed.substring(1, trimmed.length - 1).trim()
+            }
+        }
+        return trimmed
     }
 }
