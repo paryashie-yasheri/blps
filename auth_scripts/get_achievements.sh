@@ -2,12 +2,13 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-source "${SCRIPT_DIR}/../.env"
+source "${SCRIPT_DIR}/common.sh"
 
-BASE_URL="${SPRING_HOST%/}"
 COURSE_KEY="${1:-}"
 USERNAME="${EDX_API_TEST_USERNAME}"
 PASSWORD="${EDX_API_TEST_PASSWORD}"
+
+require_tools curl jq
 
 if [[ -z "${USERNAME}" || -z "${PASSWORD}" ]]; then
   echo "Error: EDX_API_TEST_USERNAME and EDX_API_TEST_PASSWORD must be set in .env" >&2
@@ -15,9 +16,7 @@ if [[ -z "${USERNAME}" || -z "${PASSWORD}" ]]; then
 fi
 
 echo "=== Login as ${USERNAME} ==="
-login_response=$(curl -s -X POST "${BASE_URL}/api/auth/openedx_user/login" \
-  -H "Content-Type: application/json" \
-  -d "{\"username\":\"${USERNAME}\",\"password\":\"${PASSWORD}\"}")
+login_response="$(login_openedx_user "${USERNAME}" "${PASSWORD}")"
 
 token=$(echo "${login_response}" | jq -r '.accessToken // empty')
 if [[ -z "${token}" ]]; then
@@ -28,13 +27,13 @@ echo "Token acquired"
 
 echo ""
 echo "=== Balance ==="
-curl -s -X GET "${BASE_URL}/api/student/balance" \
+json_request GET "${BASE_URL}/api/student/balance" \
   -H "Authorization: Bearer ${token}" | jq .
 
 echo ""
 echo "=== All Achievements ==="
-achievements_json=$(curl -s -X GET "${BASE_URL}/api/student/achievements" \
-  -H "Authorization: Bearer ${token}")
+achievements_json="$(json_request GET "${BASE_URL}/api/student/achievements" \
+  -H "Authorization: Bearer ${token}")"
 
 if [[ -n "${COURSE_KEY}" ]]; then
   echo "Filtering by course: ${COURSE_KEY}"

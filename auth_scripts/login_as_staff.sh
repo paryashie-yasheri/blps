@@ -1,9 +1,9 @@
 #!/bin/bash
-source ../.env
-response=$(curl -s -X POST "${SPRING_HOST}/api/auth/staff/login" \
-  -H "Content-Type: application/json" \
-  -d "{\"username\":\"$1\",\"password\":\"$2\"}")
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+source "${SCRIPT_DIR}/common.sh"
 
-echo "${response}" | jq .
-token=$(echo "${response}" | jq -r '.accessToken')
-echo "${token}" > .token.txt
+require_tools curl jq
+
+response="$(login_staff "${1:?Usage: $0 <username> <password>}" "${2:?Usage: $0 <username> <password>}")"
+save_token "$(echo "${response}" | extract_token)"
+echo "${response}" | jq '{username, role, tokenType, expiresIn}'

@@ -2,20 +2,14 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-source "${SCRIPT_DIR}/../.env"
+source "${SCRIPT_DIR}/common.sh"
 
-BASE_URL="${SPRING_HOST%/}"
 STAFF_TOKEN="${1:?Usage: $0 <staff-jwt-token> <course-key> <block-id> [code-prefix]}"
 COURSE_KEY="${2:?Usage: $0 <staff-jwt-token> <course-key> <block-id> [code-prefix]}"
 BLOCK_ID="${3:?Usage: $0 <staff-jwt-token> <course-key> <block-id> [code-prefix]}"
 CODE_PREFIX="${4:-seed_ach_$(date +%s)}"
 
-for tool in curl jq; do
-  command -v "${tool}" >/dev/null 2>&1 || {
-    echo "Missing required tool: ${tool}" >&2
-    exit 1
-  }
-done
+require_tools curl jq
 
 events=(
   "lesson_complete|${SCRIPT_DIR}/complete_lesson.png|Lesson Complete|25|1.0|${BLOCK_ID}"
@@ -25,7 +19,7 @@ events=(
   "course_enrolled|${SCRIPT_DIR}/course_enrolled.png|Course Enrolled|15|null|"
 )
 
-list_response="$(curl -sS -X GET "${BASE_URL}/api/achievements" \
+list_response="$(json_request GET "${BASE_URL}/api/achievements" \
   -H "Authorization: Bearer ${STAFF_TOKEN}")"
 
 echo "=== Upsert achievements with icons from auth_scripts ==="
@@ -76,14 +70,14 @@ for descriptor in "${events[@]}"; do
   if [[ -n "${existing_id}" && "${existing_id}" != "null" ]]; then
     echo ""
     echo "Updating ${code} (${existing_id})"
-    response="$(curl -sS -X PUT "${BASE_URL}/api/achievements/${existing_id}" \
+    response="$(json_request PUT "${BASE_URL}/api/achievements/${existing_id}" \
       -H "Authorization: Bearer ${STAFF_TOKEN}" \
       -F "request=${request_json};type=application/json" \
       -F "image=@${image_file};type=image/png")"
   else
     echo ""
     echo "Creating ${code}"
-    response="$(curl -sS -X POST "${BASE_URL}/api/achievements" \
+    response="$(json_request POST "${BASE_URL}/api/achievements" \
       -H "Authorization: Bearer ${STAFF_TOKEN}" \
       -F "request=${request_json};type=application/json" \
       -F "image=@${image_file};type=image/png")"
