@@ -5,5 +5,5 @@ response=$(curl -s -X POST "${SPRING_HOST}/api/auth/openedx_user/login" \
   -d "{\"username\":\"$1\",\"password\":\"$2\"}" | jq .)
 
 echo "${response}" | jq .
-token=$(echo "${response}" | jq -r '.accessToken')
+token=$(echo "${response}" | jq -r '.access_token')
 echo "${token}" > .token.txt

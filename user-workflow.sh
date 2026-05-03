@@ -15,7 +15,7 @@ LOGIN_RESPONSE=$(curl -s -X POST "${BASE_URL}/api/auth/openedx_user/login" \
 
 echo "Login response: $LOGIN_RESPONSE"
 
-TOKEN=$(echo "$LOGIN_RESPONSE" | grep -o '"accessToken":"[^"]*' | sed 's/"accessToken":"//')
+TOKEN=$(echo "$LOGIN_RESPONSE" | grep -o '"access_token":"[^"]*' | sed 's/"access_token":"//')
 echo "Token: $TOKEN"
 
 echo -e "\n\n=== Get Balance ==="

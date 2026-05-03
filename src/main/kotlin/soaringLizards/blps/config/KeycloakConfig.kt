@@ -7,20 +7,22 @@ import org.springframework.context.annotation.Configuration
 
 @Configuration
 class KeycloakConfig(
-    @Value("\${keycloak.server-url}") private val serverUrl: String,
-    @Value("\${keycloak.admin.username}") private val adminUsername: String,
-    @Value("\${keycloak.admin.password}") private val adminPassword: String,
-    @Value("\${keycloak.admin.client-id}") private val adminClientId: String,
-) {
+    @Value("\${keycloak.server-url}") val serverUrl: String,
+    @Value("\${keycloak.admin.username}") val adminUsername: String,
+    @Value("\${keycloak.admin.password}") val adminPassword: String,
+    @Value("\${keycloak.admin.client-id}") val adminClientId: String,
+    @Value("\${keycloak.master.realm}") val masterRealm: String,
+
+    ) {
+
 
     @Bean
-    fun keycloakMaster(): Keycloak {
-        return Keycloak.getInstance(
+    fun keycloakMaster(): Keycloak =
+        Keycloak.getInstance(
             serverUrl,
-            "master",
+            masterRealm,
             adminUsername,
             adminPassword,
-            adminClientId,
+            "admin-cli",
         )
-    }
 }

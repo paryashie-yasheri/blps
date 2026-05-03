@@ -23,7 +23,7 @@ if curl -s "${BASE_URL}"/actuator/health > /dev/null 2>&1; then
       "${SPRING_HOST}/api/auth/staff/login")
 
     echo "${response}" | jq .
-    token=$(echo "${response}" | jq -r '.accessToken')
+    token=$(echo "${response}" | jq -r '.access_token')
 
     curl -v -H "Authorization: Bearer ${token}" "${SPRING_HOST}/api/auth/me"
 

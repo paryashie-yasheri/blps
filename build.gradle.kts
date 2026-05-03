@@ -289,14 +289,17 @@ fun createLiquibaseArgs(env: Map<String, String>): List<String> {
 val liquibaseUpdate by tasks.register<JavaExec>("liquibaseUpdate") {
     group = "liquibase"
     description = "Apply database migrations before code generation"
-
+    outputs.upToDateWhen { false }
+    outputs.cacheIf { false }
     classpath = configurations["liquibaseRuntime"]
-    mainClass.set("liquibase.integration.commandline.LiquibaseCommandLine")
+    mainClass.set("liquibase.integration.commandline.Main")
+    doFirst {
 
-    val connectionArgs = createLiquibaseArgs(createEnvMap()).toMutableList()
-    connectionArgs += "update"
+        val connectionArgs = createLiquibaseArgs(createEnvMap()).toMutableList()
+        connectionArgs += "update"
 
-    args = connectionArgs
+        args = connectionArgs
+    }
 }
 
 val liquibaseUpdateTestContainer by tasks.register<JavaExec>("liquibaseUpdateTestContainer") {

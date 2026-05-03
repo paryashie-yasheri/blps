@@ -6,9 +6,10 @@ services:
       - app-network
     shm_size: 128mb
     ports:
-      - 5432:5432
+      - "5432:5432"
     volumes:
       - pg-data:/var/lib/postgresql/data:Z
+      - ./docker-postgres-init-scrips:/docker-entrypoint-initdb.d/:ro
     environment:
       DB_CONNECTION: pgsql
       POSTGRES_HOST: ${POSTGRES_HOST}
@@ -27,7 +28,7 @@ services:
       - app-network
     shm_size: 128mb
     ports:
-      - 5434:5432
+      - "5434:5432"
     volumes:
       - pg-rewards-data:/var/lib/postgresql/data:Z
     environment:
@@ -48,7 +49,7 @@ services:
       - app-network
     shm_size: 128mb
     ports:
-      - 5433:5432
+      - "5433:5432"
     volumes:
       - pg-journal-data:/var/lib/postgresql/data:Z
     environment:
@@ -70,13 +71,15 @@ services:
       - ./keycloak/import:/opt/keycloak/data/import
     environment:
       - KEYCLOAK_IMPORT=/opt/keycloak/data/import/realm-config.json
-      - KEYCLOAK_ADMIN=${KEYCLOAK_ADMIN_USERNAME}
+      - KEYCLOAK_ADMIN=${KEYCLOAK_ADMIN}
       - KEYCLOAK_ADMIN_PASSWORD=${KEYCLOAK_ADMIN_PASSWORD}
       - KC_LOG_LEVEL=INFO
       - KC_LOG_LEVEL_ORG_KEYCLOAK=DEBUG
+      - KC_LOG_LEVEL_ORG_KEYCLOAK=DEBUG
     command: [
       "start-dev",
-      "--import-realm"
+      "--import-realm",
+      "--verbose"
     ]
     depends_on:
       - pg
@@ -85,18 +88,18 @@ services:
     env_file:
       - .env
 
-  spring:
-    image: blps/backend:jib-dev
-    ports:
-      - "${SPRING_PORT}:${SPRING_PORT}"
-    depends_on:
-      - pg
-      - pg-rewards
-      - pg-journal
-    networks:
-      - app-network
-    env_file:
-      - .env
+#  spring:
+#    image: blps/backend:jib-dev
+#    ports:
+#      - "${SPRING_PORT}:${SPRING_PORT}"
+#    depends_on:
+#      - pg
+#      - pg-rewards
+#      - pg-journal
+#    networks:
+#      - app-network
+#    env_file:
+#      - .env
 
 volumes:
   pg-data:

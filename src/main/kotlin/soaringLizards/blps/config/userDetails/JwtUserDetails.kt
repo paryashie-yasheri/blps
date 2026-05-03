@@ -15,7 +15,7 @@ class JwtUserDetails(
     val email: Email,
     val role: String,
     val token: String,
-    private val authorities: Collection<GrantedAuthority> = listOf(SimpleGrantedAuthority("ROLE_$role")),
+    private val authorities: Collection<GrantedAuthority> = listOf(SimpleGrantedAuthority("ROLE_${role.uppercase()}")),
     val edxSession: EdxAuthenticatedSession?,
 ) : UserDetails {
 
@@ -43,7 +43,8 @@ fun Jwt.toJwtUserDetails(): JwtUserDetails {
     val roles =
         getClaimAsStringList("roles") ?: throw BusinessLogicException("Roles claim is missing")
     val role = roles.firstOrNull() ?: "OPENEDX_USER"
-    val authorities = roles.map { SimpleGrantedAuthority("ROLE_$it") }
+
+    val authorities = roles.map { SimpleGrantedAuthority("ROLE_${it.uppercase()}") }
 
 
     val edxSession =

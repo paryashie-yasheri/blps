@@ -1,3 +1,5 @@
+#!/usr/bin/env bash
+
 ./login_as_user.sh "huji_5" "pass1234"
 
 # 3) Донат (это должно записать событие DONATION в ledger_events)

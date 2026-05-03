@@ -12,7 +12,7 @@ admin_response=$(curl -s -X POST "${SPRING_HOST}/api/auth/staff/login" \
 
 echo "$admin_response" | jq .
 
-admin_token=$(echo "$admin_response" | jq -r '.accessToken // empty')
+admin_token=$(echo "$admin_response" | jq -r '.access_token // empty')
 
 if [ -z "$admin_token" ] || [ "$admin_token" == "null" ]; then
   echo "Failed to get admin token"

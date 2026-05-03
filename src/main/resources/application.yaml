@@ -103,16 +103,11 @@ app:
       enabled: ${REWARDS_LIQUIBASE_ENABLED:true}
       default-schema: ${REWARDS_POSTGRES_SCHEMA:public}
       liquibase-schema: ${REWARDS_POSTGRES_SCHEMA:public}
-  jwt:
-    staff:
-      secret: ${APP_JWT_STAFF_SECRET:${JWT_SECRET:}}
-      issuer: ${APP_JWT_STAFF_ISSUER:blps-internal}
-      expiration-minutes: ${APP_JWT_STAFF_EXPIRATION_MINUTES:60}
 
 keycloak:
   server-url: ${KEYCLOAK_SERVER_URL:http://localhost:8081}
   admin:
-    username: ${KEYCLOAK_ADMIN_USERNAME}
+    username: ${KEYCLOAK_ADMIN}
     password: ${KEYCLOAK_ADMIN_PASSWORD}
     client-id: ${KEYCLOAK_ADMIN_CLIENT_ID}
   master:

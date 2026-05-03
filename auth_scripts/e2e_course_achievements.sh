@@ -18,7 +18,7 @@ fi
 CODE_PREFIX="e2e_$(date +%s)"
 
 extract_token() {
-  echo "$1" | jq -r '.accessToken // empty'
+  echo "$1" | jq -r '.access_token // empty'
 }
 
 uri_encode() {

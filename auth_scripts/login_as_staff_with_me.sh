@@ -18,7 +18,7 @@ if echo "$response" | jq -e '.error' > /dev/null 2>&1; then
     -H "Content-Type: application/json" \
     -d "{\"username\":\"admin\",\"password\":\"admin\"}")
   
-  admin_token=$(echo "$admin_response" | jq -r '.accessToken // empty')
+  admin_token=$(echo "$admin_response" | jq -r '.access_token // empty')
   
   if [ -n "$admin_token" ] && [ "$admin_token" != "null" ]; then
     echo "Admin login success, registering staff user..."
@@ -40,7 +40,7 @@ if echo "$response" | jq -e '.error' > /dev/null 2>&1; then
   fi
 fi
 
-token=$(echo "$response" | jq -r '.accessToken // empty')
+token=$(echo "$response" | jq -r '.access_token // empty')
 
 if [ -z "$token" ] || [ "$token" == "null" ]; then
   echo "Failed to get token"

@@ -10,13 +10,13 @@ import soaringLizards.blps.dto.user.LoginRequestDto
 import soaringLizards.blps.dto.user.RegisterDto
 import soaringLizards.blps.dto.user.UserResponse
 import soaringLizards.blps.dto.user.toUserResponse
-import soaringLizards.blps.service.UserService
+import soaringLizards.blps.service.KeycloakService
 
 
 @RestController
 @RequestMapping("/api/auth")
 class AuthController(
-    private val userService: UserService,
+    private val keycloakService: KeycloakService,
 ) {
     @GetMapping("/me")
     fun getMe(@AuthenticationPrincipal authentication: JwtUserDetails?): UserResponse {
@@ -30,18 +30,18 @@ class AuthController(
     @PostMapping("/register-admin")
     @PreAuthorize("hasRole('ADMIN')")
     fun registerAdmin(@RequestBody request: RegisterDto) =
-        userService.registerUser(request, "ADMIN")
+        keycloakService.registerUser(request, "ADMIN")
 
     @PostMapping("/register-staff")
     @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
     fun registerStaff(@RequestBody request: RegisterDto) =
-        userService.registerUser(request, "STAFF")
+        keycloakService.registerUser(request, "STAFF")
 
     @PostMapping("/staff/login")
     fun loginStaff(@RequestBody request: LoginRequestDto) =
-        userService.loginStaff(request)
-
-    @PostMapping("/openedx_user/login")
-    fun loginOpenedxUser(@RequestBody request: LoginRequestDto) =
-        userService.loginOpenedxUser(request)
+        keycloakService.loginStaff(request)
+//
+//    @PostMapping("/openedx_user/login")
+//    fun loginOpenedxUser(@RequestBody request: LoginRequestDto) =
+//        keycloakService.loginOpenedxUser(request)
 }
