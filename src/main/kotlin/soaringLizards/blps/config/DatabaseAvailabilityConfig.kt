@@ -19,14 +19,20 @@ class DatabaseAvailabilityConfig {
         @Qualifier("mainDataSource") mainDataSource: DataSource,
         @Qualifier("journalDataSource") journalDataSource: DataSource,
         @Qualifier("rewardsDataSource") rewardsDataSource: DataSource,
+        xaDataSourceProperties: XaDataSourceProperties,
     ): ApplicationRunner {
         return ApplicationRunner {
-            checkDatabase("main", mainDataSource)
-            checkDatabase("journal", journalDataSource)
-            checkDatabase("rewards", rewardsDataSource)
-            logger.info("startup_db_check_ok main=true journal=true rewards=true")
+            checkDatabase("main", mainDataSource, xaDataSourceProperties.main)
+            checkDatabase("journal", journalDataSource, xaDataSourceProperties.journal)
+            checkDatabase("rewards", rewardsDataSource, xaDataSourceProperties.rewards)
         }
     }
+
+    @Bean
+    fun mainDataSourceHealthIndicator(
+        @Qualifier("mainDataSource") mainDataSource: DataSource,
+    ): HealthIndicator =
+        DataSourceHealthIndicator(mainDataSource, "SELECT 1")
 
     @Bean
     fun journalDataSourceHealthIndicator(
@@ -40,13 +46,24 @@ class DatabaseAvailabilityConfig {
     ): HealthIndicator =
         DataSourceHealthIndicator(rewardsDataSource, "SELECT 1")
 
-    private fun checkDatabase(name: String, dataSource: DataSource) {
+    private fun checkDatabase(name: String, dataSource: DataSource, properties: XaSingleDataSourceProperties) {
+        if (!properties.startupCheckEnabled) {
+            logger.info("startup_db_check_skipped name={} required={}", name, properties.requiredOnStartup)
+            return
+        }
+
         try {
-            JdbcTemplate(dataSource).queryForObject("SELECT 1", Int::class.java)
-            logger.info("startup_db_check_ok name={}", name)
+            JdbcTemplate(dataSource).apply {
+                queryTimeout = properties.startupCheckTimeoutSeconds
+            }.queryForObject(normalizeSqlTestQuery(properties.testQuery), Int::class.java)
+            logger.info("startup_db_check_ok name={} required={}", name, properties.requiredOnStartup)
         } catch (ex: Exception) {
-            logger.error("startup_db_check_failed name={} reason={}", name, ex.message, ex)
-            throw IllegalStateException("Startup check failed: '$name' database is unavailable", ex)
+            if (properties.requiredOnStartup) {
+                logger.error("startup_db_check_failed name={} required=true", name, ex)
+                throw IllegalStateException("Startup check failed: '$name' database is unavailable", ex)
+            }
+            logger.warn("startup_db_check_failed name={} required=false reason={}", name, ex.message)
         }
     }
+
 }

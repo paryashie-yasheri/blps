@@ -1,5 +1,11 @@
 package soaringLizards.blps.advice
 
+import jakarta.transaction.HeuristicMixedException
+import jakarta.transaction.HeuristicRollbackException
+import jakarta.transaction.RollbackException
+import jakarta.transaction.SystemException
+import org.slf4j.LoggerFactory
+import org.springframework.dao.DataAccessException
 import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
@@ -7,6 +13,7 @@ import org.springframework.security.access.AccessDeniedException
 import org.springframework.security.authentication.BadCredentialsException
 import org.springframework.validation.FieldError
 import org.springframework.validation.ObjectError
+import org.springframework.transaction.TransactionException
 import org.springframework.web.bind.MethodArgumentNotValidException
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
@@ -16,11 +23,14 @@ import soaringLizards.blps.exception.LmsException
 import org.springframework.http.converter.HttpMessageNotReadableException
 import soaringLizards.blps.exception.ResourceAlreadyExistsException
 import soaringLizards.blps.exception.ResourceNotFoundException
+import java.sql.SQLException
 import java.time.LocalDateTime
 import java.util.function.Consumer
 
 @RestControllerAdvice
 class GlobalExceptionHandler {
+    private val logger = LoggerFactory.getLogger(javaClass)
+
     @ExceptionHandler(ResourceNotFoundException::class)
     fun handleNotFound(ex: ResourceNotFoundException) =
         ResponseEntity.status(HttpStatus.NOT_FOUND).body(
@@ -113,16 +123,29 @@ class GlobalExceptionHandler {
         )
 
     @ExceptionHandler(DataIntegrityViolationException::class)
-    fun handleDataIntegrityViolation(ex: DataIntegrityViolationException) =
-        ResponseEntity.status(HttpStatus.CONFLICT).body(
-            hashMapOf(
-                "timestamp" to LocalDateTime.now(),
-                "status" to HttpStatus.CONFLICT.value(),
-                "error" to "Conflict",
-                "message" to "Data integrity violation",
-                "details" to (ex.getMostSpecificCause().message ?: ""),
-            ),
+    fun handleDataIntegrityViolation(ex: DataIntegrityViolationException): ResponseEntity<MutableMap<String, Any>> {
+        logger.warn("data_integrity_violation", ex)
+        return errorResponse(HttpStatus.CONFLICT, "Conflict", "Data integrity violation")
+    }
+
+    @ExceptionHandler(
+        DataAccessException::class,
+        org.jooq.exception.DataAccessException::class,
+        SQLException::class,
+        TransactionException::class,
+        SystemException::class,
+        RollbackException::class,
+        HeuristicMixedException::class,
+        HeuristicRollbackException::class,
+    )
+    fun handleDatabaseUnavailable(ex: Exception): ResponseEntity<MutableMap<String, Any>> {
+        logger.error("database_or_transaction_unavailable", ex)
+        return errorResponse(
+            HttpStatus.SERVICE_UNAVAILABLE,
+            "Service Unavailable",
+            "Required database is unavailable",
         )
+    }
 
     @ExceptionHandler(RestClientResponseException::class)
     fun handleRestClientResponse(ex: RestClientResponseException) =
@@ -150,15 +173,25 @@ class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception::class)
     fun handleGenericException(ex: Exception): ResponseEntity<MutableMap<String, Any>> {
-        ex.printStackTrace()
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
-            hashMapOf(
-                "timestamp" to LocalDateTime.now(),
-                "status" to HttpStatus.INTERNAL_SERVER_ERROR.value(),
-                "error" to "Internal Server Error",
-                "message" to "An unexpected error occurred",
-                "details" to (ex.message ?: ""),
-            ),
+        logger.error("unhandled_exception", ex)
+        return errorResponse(
+            HttpStatus.INTERNAL_SERVER_ERROR,
+            "Internal Server Error",
+            "An unexpected error occurred",
         )
     }
+
+    private fun errorResponse(
+        status: HttpStatus,
+        error: String,
+        message: String,
+    ): ResponseEntity<MutableMap<String, Any>> =
+        ResponseEntity.status(status).body(
+            hashMapOf(
+                "timestamp" to LocalDateTime.now(),
+                "status" to status.value(),
+                "error" to error,
+                "message" to message,
+            ),
+        )
 }
