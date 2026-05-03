@@ -12,6 +12,7 @@ class TestcontainersCleanupExtension : BeforeAllCallback {
             .computeIfAbsent(CLEANUP_KEY) { _ ->
                 ExtensionContext.Store.CloseableResource {
                     runCatching { IntegrationPostgres.stop() }
+                    runCatching { DegradedRewardsPostgres.stop() }
                 }
             }
     }

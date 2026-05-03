@@ -57,6 +57,10 @@ management:
     tags:
       application: ${spring.application.name}
 
+logging:
+  level:
+    com.atomikos: ERROR
+
 edx:
   api:
     base-url: "http://local.openedx.io/api"
