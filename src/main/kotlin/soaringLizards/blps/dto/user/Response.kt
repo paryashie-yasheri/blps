@@ -1,6 +1,7 @@
 package soaringLizards.blps.dto.user
 
 import com.fasterxml.jackson.annotation.JsonProperty
+import org.keycloak.representations.AccessTokenResponse
 import soaringLizards.blps.config.userDetails.JwtUserDetails
 import soaringLizards.blps.entity.UsersRecord
 
@@ -60,4 +61,14 @@ fun KeycloakTokenResponse.toLoginResponse(username: String, role: String) =
         refreshToken,
         username = username,
         role = role,
+    )
+
+
+fun AccessTokenResponse.toKeycloakTokenResponse() =
+    KeycloakTokenResponse(
+        accessToken = token,
+        tokenType = tokenType,
+        expiresIn = expiresIn,
+        refreshToken = refreshToken,
+        scope = scope,
     )

@@ -35,7 +35,7 @@ class KeycloakService(
 
     @Transactional
     fun registerUser(request: RegisterDto, role: String, keycloak: Keycloak? = null): UserResponse {
-        createUserAndGetId(request.username, request.email, request.password, role, keycloak)
+        createUserAndGetId(request.username, request.email, role, request.password, keycloak)
         return UserResponse(request.username, request.email, role)
     }
 
@@ -66,24 +66,9 @@ class KeycloakService(
         return response.toLoginResponse(request.username, role)
     }
 
-    fun getStaffToken(username: String, password: String): KeycloakTokenResponse {
-        val formData = LinkedMultiValueMap<String, String>().apply {
-            add("grant_type", "password")
-            add("client_id", clientId)
-            add("client_secret", clientSecret)
-            add("username", username)
-            add("password", password)
-            add("scope", "openid profile email roles")
-        }
-
-        return restClient.post()
-            .uri("/realms/${masterRealm}/protocol/openid-connect/token")
-            .header("Content-Type", "application/x-www-form-urlencoded")
-            .body(formData)
-            .retrieve()
-            .body(KeycloakTokenResponse::class.java)
-            ?: throw IllegalStateException("Failed to get staff token from Keycloak")
-    }
+    fun getStaffToken(username: String, password: String): KeycloakTokenResponse =
+        Keycloak.getInstance(serverUrl, masterRealm, username, password, clientId, clientSecret)
+            .tokenManager().accessToken.toKeycloakTokenResponse()
 
     fun getEdxToken(username: String): KeycloakTokenResponse {
         val formData = LinkedMultiValueMap<String, String>().apply {
@@ -167,6 +152,8 @@ class KeycloakService(
             this.credentials = listOf(credential)
         }
         val createdUser = users.create(user)
+        createdUser.location ?: throw BusinessLogicException("Auth server error")
+
         return UUID.fromString(createdUser.location.toString().split('/').last())
     }
 //

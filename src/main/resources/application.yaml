@@ -30,11 +30,8 @@ spring:
         client-name: ${SPRING_SECURITY_OAUTH2_AUTHORIZATION_SERVER_CLIENT_NAME:blps-client}
         client-id: ${SPRING_SECURITY_OAUTH2_AUTHORIZATION_SERVER_CLIENT_ID:blps-client}
         client-secret: ${SPRING_SECURITY_OAUTH2_AUTHORIZATION_SERVER_CLIENT_SECRET:blps-secret}
-      resourceserver:
-        opaquetoken:
-          jwk-set-uri: ${KEYCLOAK_SERVER_URL:http://localhost:8081}/realms/master/protocol/openid-connect/certs
-          client-id: ${KEYCLOAK_STAFF_CLIENT_ID}
-          client-secret: ${KEYCLOAK_STAFF_CLIENT_SECRET}
+
+
   env:
     config:
       port: ${server.port}

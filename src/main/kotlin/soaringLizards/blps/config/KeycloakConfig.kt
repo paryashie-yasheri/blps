@@ -12,9 +12,7 @@ class KeycloakConfig(
     @Value("\${keycloak.admin.password}") val adminPassword: String,
     @Value("\${keycloak.admin.client-id}") val adminClientId: String,
     @Value("\${keycloak.master.realm}") val masterRealm: String,
-
-    ) {
-
+) {
 
     @Bean
     fun keycloakMaster(): Keycloak =
