@@ -107,7 +107,6 @@ class GlobalExceptionHandler {
                 "status" to HttpStatus.BAD_REQUEST.value(),
                 "error" to "Bad Request",
                 "message" to "Request body is invalid",
-                "details" to (ex.mostSpecificCause.message ?: ex.message ?: ""),
             ),
         )
 
@@ -137,13 +136,14 @@ class GlobalExceptionHandler {
         RollbackException::class,
         HeuristicMixedException::class,
         HeuristicRollbackException::class,
+        RuntimeException::class,
     )
-    fun handleDatabaseUnavailable(ex: Exception): ResponseEntity<MutableMap<String, Any>> {
-        logger.error("database_or_transaction_unavailable", ex)
+    fun handleDatabaseOrRuntimeException(ex: Exception): ResponseEntity<MutableMap<String, Any>> {
+        logger.error("database_or_runtime_error", ex)
         return errorResponse(
-            HttpStatus.SERVICE_UNAVAILABLE,
-            "Service Unavailable",
-            "Required database is unavailable",
+            HttpStatus.INTERNAL_SERVER_ERROR,
+            "Internal Server Error",
+            "An unexpected error occurred",
         )
     }
 
@@ -153,8 +153,8 @@ class GlobalExceptionHandler {
             hashMapOf(
                 "timestamp" to LocalDateTime.now(),
                 "status" to ex.statusCode.value(),
+                "error" to "Downstream API Error",
                 "message" to (ex.statusText.ifBlank { "Downstream API Error" }),
-                "details" to ex.responseBodyAsString,
             ),
         )
 

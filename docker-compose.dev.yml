@@ -6,7 +6,7 @@ services:
       - app-network
     shm_size: 128mb
     ports:
-      - 5432:5432
+      - "5432:5432"
     volumes:
       - pg-data:/var/lib/postgresql/data:Z
     environment:
@@ -27,7 +27,7 @@ services:
       - app-network
     shm_size: 128mb
     ports:
-      - 5434:5432
+      - "5434:5432"
     volumes:
       - pg-rewards-data:/var/lib/postgresql/data:Z
     environment:
@@ -48,7 +48,7 @@ services:
       - app-network
     shm_size: 128mb
     ports:
-      - 5433:5432
+      - "5433:5432"
     volumes:
       - pg-journal-data:/var/lib/postgresql/data:Z
     environment:
