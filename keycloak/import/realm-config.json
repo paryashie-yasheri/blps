@@ -503,6 +503,32 @@
   "webAuthnPolicyPasswordlessExtraOrigins": [],
   "users": [
     {
+      "username": "admin",
+      "email": "admin@admin.com",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "admin",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "admin"
+      ],
+      "clientRoles": {
+        "realm-management": [
+          "realm-admin"
+        ]
+      },
+      "attributes": {
+        "role": [
+          "admin"
+        ]
+      }
+    },
+    {
       "id": "d2e118d3-bed8-41f4-8329-a5bb830d28db",
       "username": "service-account-blps-client",
       "emailVerified": false,
@@ -662,7 +688,7 @@
       "enabled": true,
       "alwaysDisplayInConsole": false,
       "clientAuthenticatorType": "client-secret",
-      "secret": "${KEYCLOAK_MASTER_CLIENT_SECRET}",
+      "secret": "S0ZT343PJFTMT6bANoiQloIvPBckAJ4p",
       "redirectUris": [
         "/*"
       ],

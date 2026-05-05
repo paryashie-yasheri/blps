@@ -55,21 +55,13 @@ class UserRepository(
                 this.credentials = listOf(credential)
             }
 
-            this.attributes = mutableMapOf("role" to listOf(role))
             this.realmRoles = listOf(role)
 
-
-
-            edxSession?.let {
-                this.attributes.putAll(
-                    listOf(
-                        "edxCookieHeader" to listOf(it.cookieHeader),
-                        "edxCsrfToken" to listOf(it.csrfToken),
-                        "edxExpiresAt" to listOf(it.expiresAt.toString()),
-                    ),
-                )
-            }
-
+            this.attributes = mutableMapOf(
+                "role" to listOf(role),
+                "edxCookieHeader" to listOf(edxSession?.cookieHeader ?: "staff"),
+                "edxCsrfToken" to listOf(edxSession?.csrfToken ?: "staff"),
+            )
         }
         val createdUser = users.create(user)
 

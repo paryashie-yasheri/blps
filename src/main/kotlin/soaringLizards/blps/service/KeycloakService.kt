@@ -4,13 +4,12 @@ import jakarta.transaction.Transactional
 import org.keycloak.admin.client.Keycloak
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
-import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
 import org.springframework.transaction.support.TransactionTemplate
 import soaringLizards.blps.config.EdxSessionAuthManager
-import soaringLizards.blps.config.KeycloakConfig
 import soaringLizards.blps.dto.edx.EdxAuthenticatedSession
 import soaringLizards.blps.dto.user.*
+import soaringLizards.blps.dto.userBalances.UserBalanceDto
 import soaringLizards.blps.exception.BusinessLogicException
 import soaringLizards.blps.exception.UserAlreadyExistAuthenticationException
 import soaringLizards.blps.repository.UserRepository
@@ -23,12 +22,11 @@ private val logger = LoggerFactory.getLogger(KeycloakService::class.java)
 @Service
 class KeycloakService(
     private val keycloakMaster: Keycloak,
-    private val keycloakConfig: KeycloakConfig,
 
+    private val userBalanceService: UserBalanceService,
     private val edxSessionAuthManager: EdxSessionAuthManager,
     private val transactionTemplate: TransactionTemplate,
 
-    val passwordEncoder: PasswordEncoder,
     private val userRepository: UserRepository,
 
     @Value("\${keycloak.server-url}") private val serverUrl: String,
@@ -91,14 +89,6 @@ class KeycloakService(
         )
     }
 
-    fun createEdxUserOrGetId(
-        username: String,
-        email: Email,
-        session: EdxAuthenticatedSession,
-    ) =
-        userRepository.userExists(username)
-            ?: createEdxUser(username, email, session)
-
     private fun createStaffUser(
         username: String,
         email: Email,
@@ -136,7 +126,12 @@ class KeycloakService(
             val email = edxSessionAuthManager.getUserEmail(session, request.username)
                 ?: "placeholder_${request.username}@mail.com"
 
-            val user = createEdxUserOrGetId(request.username, Email(email), session)
+            var user = userRepository.userExists(request.username)
+
+            if (user == null) {
+                user = createEdxUser(request.username, Email(email), session)
+                userBalanceService.addUserBalance(UserBalanceDto.createDefault(user))
+            }
 
             Keycloak.getInstance(
                 serverUrl,
