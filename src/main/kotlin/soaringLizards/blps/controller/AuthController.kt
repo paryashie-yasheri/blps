@@ -40,8 +40,8 @@ class AuthController(
     @PostMapping("/staff/login")
     fun loginStaff(@RequestBody request: LoginRequestDto) =
         keycloakService.loginStaff(request)
-//
-//    @PostMapping("/openedx_user/login")
-//    fun loginOpenedxUser(@RequestBody request: LoginRequestDto) =
-//        keycloakService.loginOpenedxUser(request)
+
+    @PostMapping("/openedx_user/login")
+    fun loginOpenedxUser(@RequestBody request: LoginRequestDto) =
+        keycloakService.loginOpenedxUser(request)
 }

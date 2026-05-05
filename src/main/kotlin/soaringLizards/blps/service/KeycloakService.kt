@@ -2,30 +2,34 @@ package soaringLizards.blps.service
 
 import jakarta.transaction.Transactional
 import org.keycloak.admin.client.Keycloak
-import org.keycloak.representations.idm.CredentialRepresentation
-import org.keycloak.representations.idm.UserRepresentation
+import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
-import org.springframework.util.LinkedMultiValueMap
-import org.springframework.web.client.RestClient
+import org.springframework.transaction.support.TransactionTemplate
 import soaringLizards.blps.config.EdxSessionAuthManager
-import soaringLizards.blps.config.KeycloakJwtDecoder
+import soaringLizards.blps.config.KeycloakConfig
 import soaringLizards.blps.dto.edx.EdxAuthenticatedSession
 import soaringLizards.blps.dto.user.*
 import soaringLizards.blps.exception.BusinessLogicException
 import soaringLizards.blps.exception.UserAlreadyExistAuthenticationException
+import soaringLizards.blps.repository.UserRepository
 import java.security.MessageDigest
 import java.util.*
+
+private val logger = LoggerFactory.getLogger(KeycloakService::class.java)
+
 
 @Service
 class KeycloakService(
     private val keycloakMaster: Keycloak,
-    private val passwordEncoder: PasswordEncoder,
-
-    private val jwtDecoder: KeycloakJwtDecoder,
+    private val keycloakConfig: KeycloakConfig,
 
     private val edxSessionAuthManager: EdxSessionAuthManager,
+    private val transactionTemplate: TransactionTemplate,
+
+    val passwordEncoder: PasswordEncoder,
+    private val userRepository: UserRepository,
 
     @Value("\${keycloak.server-url}") private val serverUrl: String,
     @Value("\${keycloak.master.realm}") private val masterRealm: String,
@@ -34,12 +38,10 @@ class KeycloakService(
 ) {
 
     @Transactional
-    fun registerUser(request: RegisterDto, role: String, keycloak: Keycloak? = null): UserResponse {
-        createUserAndGetId(request.username, request.email, role, request.password, keycloak)
+    fun registerUser(request: RegisterDto, role: String): UserResponse {
+        createStaffUserAndGetId(request.username, request.email, role, request.password)
         return UserResponse(request.username, request.email, role)
     }
-
-    private val restClient = RestClient.builder().baseUrl(serverUrl).build()
 
     fun generateDeterministicPassword(username: String): String {
         val raw = "${username}:${clientSecret}"
@@ -48,8 +50,7 @@ class KeycloakService(
             .digest(raw.toByteArray(Charsets.UTF_8))
         val sha256Hex = sha256Digest.joinToString("") { "%02x".format(it) }
 
-        return passwordEncoder.encode(sha256Hex)
-            ?: throw IllegalStateException("Password encoding failed for user: $username")
+        return sha256Hex
     }
 
     fun loginStaff(request: LoginRequestDto): LoginResponseDto {
@@ -70,124 +71,87 @@ class KeycloakService(
         Keycloak.getInstance(serverUrl, masterRealm, username, password, clientId, clientSecret)
             .tokenManager().accessToken.toKeycloakTokenResponse()
 
-    fun getEdxToken(username: String): KeycloakTokenResponse {
-        val formData = LinkedMultiValueMap<String, String>().apply {
-            add("grant_type", "client_credentials")
-            add("client_id", clientId)
-            add("client_secret", clientSecret)
-            add("scope", "openid profile email")
-        }
-
-        return restClient.post()
-            .uri("/realms/${masterRealm}/protocol/openid-connect/token")
-            .header("Content-Type", "application/x-www-form-urlencoded")
-            .body(formData)
-            .retrieve()
-            .body(KeycloakTokenResponse::class.java)
-            ?: throw IllegalStateException("Failed to get edx token from Keycloak")
-    }
-
-    fun createEdxUser(username: String, email: String, edxSession: EdxAuthenticatedSession?) {
-        val realm = keycloakMaster.realm(masterRealm)
-        val users = realm.users()
-
-        val existing = users.search(username)
-        if (existing.isEmpty()) {
-            val user = UserRepresentation().apply {
-                this.username = username
-                this.email = email
-                isEnabled = true
-                isEmailVerified = true
-
-                attributes = mutableMapOf()
-                edxSession?.let {
-                    attributes["edx_csrf_token"] = listOf(it.csrfToken)
-                    attributes["edx_expires_at"] = listOf(it.expiresAt.toString())
-                }
-
-                attributes["roles"] = listOf("OPENEDX_USER")
-
-                this.realmRoles = listOf("OPENEDX_USER")
-
-                val credential = CredentialRepresentation().apply {
-                    type = "password"
-                    value = generateDeterministicPassword(username)
-                    isTemporary = false
-                }
-                this.credentials = listOf(credential)
-            }
-            users.create(user)
-        }
-    }
-
-    fun createUserAndGetId(
+    fun createStaffUserAndGetId(
         username: String,
         email: Email,
         role: String,
         rawPassword: String,
-        keycloak: Keycloak? = null,
     ): UUID {
-        val master = keycloak ?: keycloakMaster
 
-        val realm = master.realm(masterRealm)
-        val users = realm.users()
-        val existing = users.search(username)
-        if (existing.isNotEmpty()) {
+        val id = userRepository.userExists(username)
+
+        if (id != null)
             throw UserAlreadyExistAuthenticationException("User $username already exists")
-        }
-        val user = UserRepresentation().apply {
-            this.username = username
-            this.email = email.value
-            isEnabled = true
-            isEmailVerified = true
 
-            this.attributes = mutableMapOf("role" to listOf(role))
-            this.realmRoles = listOf(role)
-
-            val credential = CredentialRepresentation().apply {
-                type = "password"
-                value = rawPassword
-                isTemporary = false
-            }
-            this.credentials = listOf(credential)
-        }
-        val createdUser = users.create(user)
-        createdUser.location ?: throw BusinessLogicException("Auth server error")
-
-        return UUID.fromString(createdUser.location.toString().split('/').last())
+        return createStaffUser(
+            username,
+            email,
+            role,
+            rawPassword,
+        )
     }
-//
-//    fun loginOpenedxUser(request: LoginRequestDto): LoginResponseDto {
-//        logger.info("Login attempt for user: ${request.username}")
-//
-//        val session = edxSessionAuthManager.authenticateUser(request.username, request.password)
-//
-//        val email = edxSessionAuthManager.getUserEmail(session, request.username)
-//            ?: "placeholder_${request.username}@mail.com"
-//
-//        return transactionTemplate.execute {
-//            val user = authenticateOrCreateOpenedxUser(request.username, Email(email))
-//            keycloakService.createEdxUser(
-//                username = request.username,
-//                email = email,
-//                edxSession = session,
-//            )
-//            val token = jwtTokenService.generateToken(
-//                user.id!!,
-//                user.username!!,
-//                Email(user.email!!),
-//                setOf("OPENEDX_USER"),
-//                session,
-//            )
-//            LoginResponseDto(
-//                accessToken = token,
-//                tokenType = "Bearer",
-//                expiresIn = session.expiresAt.epochSecond - Instant.now().epochSecond,
-//                username = user.username!!,
-//                role = "OPENEDX_USER",
-//            )
-//        }!!
-//    }
+
+    fun createEdxUserOrGetId(
+        username: String,
+        email: Email,
+        session: EdxAuthenticatedSession,
+    ) =
+        userRepository.userExists(username)
+            ?: createEdxUser(username, email, session)
+
+    private fun createStaffUser(
+        username: String,
+        email: Email,
+        role: String,
+        rawPassword: String,
+    ) =
+        userRepository.createUser(
+            username,
+            email,
+            role,
+            rawPassword,
+            null,
+        )
+
+    private fun createEdxUser(
+        username: String,
+        email: Email,
+        session: EdxAuthenticatedSession,
+    ) =
+        userRepository.createUser(
+            username,
+            email,
+            "OPENEDX_USER",
+            generateDeterministicPassword(username),
+            session,
+        )
+
+    @Transactional
+    fun loginOpenedxUser(request: LoginRequestDto): LoginResponseDto {
+        logger.info("Login attempt for user: ${request.username}")
+
+        return transactionTemplate.execute {
+            val session = edxSessionAuthManager.authenticateUser(request.username, request.password)
+
+            val email = edxSessionAuthManager.getUserEmail(session, request.username)
+                ?: "placeholder_${request.username}@mail.com"
+
+            val user = createEdxUserOrGetId(request.username, Email(email), session)
+
+            Keycloak.getInstance(
+                serverUrl,
+                masterRealm,
+                request.username,
+                generateDeterministicPassword(request.username),
+                clientId,
+                clientSecret,
+            ).tokenManager()
+                .accessToken
+                .toKeycloakTokenResponse()
+                .toLoginResponse(request.username, "OPENEDX_USER")
+
+        }
+    }
 
     fun getUserRoles(username: String): List<String> {
         val realm = keycloakMaster.realm(masterRealm)

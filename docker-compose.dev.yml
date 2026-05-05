@@ -69,6 +69,7 @@ services:
       - "8081:8080"
     volumes:
       - ./keycloak/import:/opt/keycloak/data/import
+    entrypoint: ["/opt/keycloak/data/import/entrypoint.sh"]
     environment:
       - KEYCLOAK_IMPORT=/opt/keycloak/data/import/realm-config.json
       - KEYCLOAK_ADMIN=${KEYCLOAK_ADMIN}

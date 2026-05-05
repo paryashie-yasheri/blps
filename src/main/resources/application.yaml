@@ -19,18 +19,6 @@ spring:
     multipart:
       max-file-size: 6MB
       max-request-size: 6MB
-  security:
-    oauth2:
-      authorization-server:
-        issuer-url: ${SPRING_SECURITY_OAUTH2_AUTHORIZATION_SERVER_ISSUER_URL:http://localhost:8080/oauth2}
-        introspection-endpoint: ${SPRING_SECURITY_OAUTH2_AUTHORIZATION_SERVER_INTROSPECTION_ENDPOINT:http://localhost:8080/oauth2/introspect}
-        jwt-secret: ${SPRING_SECURITY_OAUTH2_AUTHORIZATION_SERVER_JWT_SECRET:default-jwt-secret-key}
-        scopes: ${SPRING_SECURITY_OAUTH2_AUTHORIZATION_SERVER_SCOPES:read,write}
-        redirect-uri: ${SPRING_SECURITY_OAUTH2_AUTHORIZATION_SERVER_REDIRECT_URI:http://localhost:8080/login/oauth2/code/custom}
-        client-name: ${SPRING_SECURITY_OAUTH2_AUTHORIZATION_SERVER_CLIENT_NAME:blps-client}
-        client-id: ${SPRING_SECURITY_OAUTH2_AUTHORIZATION_SERVER_CLIENT_ID:blps-client}
-        client-secret: ${SPRING_SECURITY_OAUTH2_AUTHORIZATION_SERVER_CLIENT_SECRET:blps-secret}
-
 
   env:
     config:
