@@ -11,16 +11,16 @@ import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.security.access.AccessDeniedException
 import org.springframework.security.authentication.BadCredentialsException
+import org.springframework.transaction.TransactionException
 import org.springframework.validation.FieldError
 import org.springframework.validation.ObjectError
-import org.springframework.transaction.TransactionException
 import org.springframework.web.bind.MethodArgumentNotValidException
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
 import org.springframework.web.client.RestClientResponseException
+import org.springframework.http.converter.HttpMessageNotReadableException
 import soaringLizards.blps.exception.BusinessLogicException
 import soaringLizards.blps.exception.LmsException
-import org.springframework.http.converter.HttpMessageNotReadableException
 import soaringLizards.blps.exception.ResourceAlreadyExistsException
 import soaringLizards.blps.exception.ResourceNotFoundException
 import java.sql.SQLException
@@ -136,10 +136,20 @@ class GlobalExceptionHandler {
         RollbackException::class,
         HeuristicMixedException::class,
         HeuristicRollbackException::class,
-        RuntimeException::class,
     )
-    fun handleDatabaseOrRuntimeException(ex: Exception): ResponseEntity<MutableMap<String, Any>> {
-        logger.error("database_or_runtime_error", ex)
+    fun handleDatabaseUnavailable(ex: Exception): ResponseEntity<MutableMap<String, Any>> {
+        logger.error("database_unavailable", ex)
+        return databaseUnavailableResponse()
+    }
+
+    @ExceptionHandler(RuntimeException::class)
+    fun handleRuntimeException(ex: RuntimeException): ResponseEntity<MutableMap<String, Any>> {
+        if (ex.isDatabaseUnavailable()) {
+            logger.error("database_unavailable", ex)
+            return databaseUnavailableResponse()
+        }
+
+        logger.error("runtime_error", ex)
         return errorResponse(
             HttpStatus.INTERNAL_SERVER_ERROR,
             "Internal Server Error",
@@ -194,4 +204,44 @@ class GlobalExceptionHandler {
                 "message" to message,
             ),
         )
+
+    private fun databaseUnavailableResponse() =
+        errorResponse(
+            HttpStatus.SERVICE_UNAVAILABLE,
+            "Service Unavailable",
+            "Required database is unavailable",
+        )
+
+    private fun Throwable.isDatabaseUnavailable(): Boolean =
+        generateSequence(this) { it.cause }
+            .any { cause ->
+                cause is DataAccessException ||
+                    cause is org.jooq.exception.DataAccessException ||
+                    cause is SQLException ||
+                    cause is TransactionException ||
+                    cause is SystemException ||
+                    cause is RollbackException ||
+                    cause is HeuristicMixedException ||
+                    cause is HeuristicRollbackException ||
+                    cause.javaClass.name.startsWith("com.atomikos.") ||
+                    cause.javaClass.name.startsWith("org.postgresql.") ||
+                    cause.message.orEmpty().containsDatabaseFailureSignal()
+            }
+
+    private fun String.containsDatabaseFailureSignal(): Boolean {
+        val normalized = lowercase()
+        return listOf(
+            "connection refused",
+            "connection is closed",
+            "could not open jdbc connection",
+            "unable to acquire jdbc connection",
+            "error during recover",
+            "xa resource",
+            "broken pipe",
+            "eofexception",
+            "i/o error",
+            "io error",
+            "ошибка ввода/вывода",
+        ).any(normalized::contains)
+    }
 }

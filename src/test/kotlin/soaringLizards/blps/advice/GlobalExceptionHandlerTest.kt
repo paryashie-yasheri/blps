@@ -31,4 +31,19 @@ class GlobalExceptionHandlerTest {
         assertThat(response.body).containsEntry("message", "An unexpected error occurred")
         assertThat(response.body).doesNotContainKey("details")
     }
+
+    @Test
+    fun `wrapped database failures return service unavailable`() {
+        val response = handler.handleRuntimeException(
+            IllegalStateException(
+                "transaction failed",
+                SQLException("connection refused for jdbc:postgresql://localhost:5434/studs_journal"),
+            ),
+        )
+
+        assertThat(response.statusCode).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE)
+        assertThat(response.body).containsEntry("status", HttpStatus.SERVICE_UNAVAILABLE.value())
+        assertThat(response.body).containsEntry("message", "Required database is unavailable")
+        assertThat(response.body).doesNotContainKey("details")
+    }
 }
