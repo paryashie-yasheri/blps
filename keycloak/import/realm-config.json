@@ -1,6 +1,6 @@
 {
-  "id": "blps-master",
-  "realm": "blps-master",
+  "id": "${KEYCLOAK_MASTER_REALM}",
+  "realm": "${KEYCLOAK_MASTER_REALM}",
   "displayName": "",
   "displayNameHtml": "",
   "notBefore": 0,
@@ -50,7 +50,7 @@
     "realm": [
       {
         "id": "1aef92a3-2197-4b5e-b749-cc0941da8150",
-        "name": "default-roles-blps-master",
+        "name": "default-roles-${KEYCLOAK_MASTER_REALM}",
         "description": "${role_default-roles}",
         "composite": true,
         "composites": {
@@ -66,7 +66,7 @@
           }
         },
         "clientRole": false,
-        "containerId": "blps-master",
+        "containerId": "${KEYCLOAK_MASTER_REALM}",
         "attributes": {}
       },
       {
@@ -75,7 +75,7 @@
         "description": "${role_uma_authorization}",
         "composite": false,
         "clientRole": false,
-        "containerId": "blps-master",
+        "containerId": "${KEYCLOAK_MASTER_REALM}",
         "attributes": {}
       },
       {
@@ -84,7 +84,7 @@
         "description": "Administrator Role",
         "composite": false,
         "clientRole": false,
-        "containerId": "blps-master",
+        "containerId": "${KEYCLOAK_MASTER_REALM}",
         "attributes": {}
       },
       {
@@ -92,7 +92,7 @@
         "name": "admin",
         "composite": false,
         "clientRole": false,
-        "containerId": "blps-master",
+        "containerId": "${KEYCLOAK_MASTER_REALM}",
         "attributes": {}
       },
       {
@@ -101,7 +101,7 @@
         "description": "Staff Role for managing rewards, achievements, etc",
         "composite": false,
         "clientRole": false,
-        "containerId": "blps-master",
+        "containerId": "${KEYCLOAK_MASTER_REALM}",
         "attributes": {}
       },
       {
@@ -110,7 +110,7 @@
         "description": "Role for those who logged in using openedx",
         "composite": false,
         "clientRole": false,
-        "containerId": "blps-master",
+        "containerId": "${KEYCLOAK_MASTER_REALM}",
         "attributes": {}
       },
       {
@@ -119,12 +119,12 @@
         "description": "${role_offline-access}",
         "composite": false,
         "clientRole": false,
-        "containerId": "blps-master",
+        "containerId": "${KEYCLOAK_MASTER_REALM}",
         "attributes": {}
       }
     ],
     "client": {
-      "blps-client": [
+      "${KEYCLOAK_MASTER_CLIENT_ID}": [
         {
           "id": "ba5723b8-9cd8-4042-8dc4-edf7eee131f5",
           "name": "uma_protection",
@@ -453,11 +453,11 @@
   "groups": [],
   "defaultRole": {
     "id": "1aef92a3-2197-4b5e-b749-cc0941da8150",
-    "name": "default-roles-blps-master",
+    "name": "default-roles-${KEYCLOAK_MASTER_REALM}",
     "description": "${role_default-roles}",
     "composite": true,
     "clientRole": false,
-    "containerId": "blps-master"
+    "containerId": "${KEYCLOAK_MASTER_REALM}"
   },
   "requiredCredentials": [
     "password"
@@ -503,14 +503,14 @@
   "webAuthnPolicyPasswordlessExtraOrigins": [],
   "users": [
     {
-      "username": "admin",
-      "email": "admin@admin.com",
+      "username": "${KEYCLOAK_ADMIN}",
+      "email": "${KEYCLOAK_ADMIN_EMAIL}",
       "enabled": true,
       "emailVerified": true,
       "credentials": [
         {
           "type": "password",
-          "value": "admin",
+          "value": "${KEYCLOAK_ADMIN_PASSWORD}",
           "temporary": false
         }
       ],
@@ -530,19 +530,19 @@
     },
     {
       "id": "d2e118d3-bed8-41f4-8329-a5bb830d28db",
-      "username": "service-account-blps-client",
+      "username": "service-account-${KEYCLOAK_MASTER_CLIENT_ID}",
       "emailVerified": false,
       "createdTimestamp": 1777825059535,
       "enabled": true,
       "totp": false,
-      "serviceAccountClientId": "blps-client",
+      "serviceAccountClientId": "${KEYCLOAK_MASTER_CLIENT_ID}",
       "disableableCredentialTypes": [],
       "requiredActions": [],
       "realmRoles": [
-        "default-roles-blps-master"
+        "default-roles-${KEYCLOAK_MASTER_REALM}"
       ],
       "clientRoles": {
-        "blps-client": [
+        "${KEYCLOAK_MASTER_CLIENT_ID}": [
           "uma_protection"
         ]
       },
@@ -575,13 +575,13 @@
       "clientId": "account",
       "name": "${client_account}",
       "rootUrl": "${authBaseUrl}",
-      "baseUrl": "/realms/blps-master/account/",
+      "baseUrl": "/realms/${KEYCLOAK_MASTER_REALM}/account/",
       "surrogateAuthRequired": false,
       "enabled": true,
       "alwaysDisplayInConsole": false,
       "clientAuthenticatorType": "client-secret",
       "redirectUris": [
-        "/realms/blps-master/account/*"
+        "/realms/${KEYCLOAK_MASTER_REALM}/account/*"
       ],
       "webOrigins": [],
       "notBefore": 0,
@@ -608,13 +608,13 @@
       "clientId": "account-console",
       "name": "${client_account-console}",
       "rootUrl": "${authBaseUrl}",
-      "baseUrl": "/realms/blps-master/account/",
+      "baseUrl": "/realms/${KEYCLOAK_MASTER_REALM}/account/",
       "surrogateAuthRequired": false,
       "enabled": true,
       "alwaysDisplayInConsole": false,
       "clientAuthenticatorType": "client-secret",
       "redirectUris": [
-        "/realms/blps-master/account/*"
+        "/realms/${KEYCLOAK_MASTER_REALM}/account/*"
       ],
       "webOrigins": [],
       "notBefore": 0,
@@ -678,7 +678,7 @@
     },
     {
       "id": "80617479-6a22-408b-acbb-b89bc4ce7a9f",
-      "clientId": "blps-client",
+      "clientId": "${KEYCLOAK_MASTER_CLIENT_ID}",
       "name": "blps client",
       "description": "",
       "rootUrl": "",
@@ -717,7 +717,7 @@
         "client.use.lightweight.access.token.enabled": "false",
         "backchannel.logout.session.required": "true",
         "client_credentials.use_refresh_token": "false",
-        "jwks.url": "http://localhost:8081/realms/blps-master/protocol/openid-connect/certs",
+        "jwks.url": "http://localhost:8081/realms/${KEYCLOAK_MASTER_REALM}/protocol/openid-connect/certs",
         "acr.loa.map": "{}",
         "require.pushed.authorization.requests": "false",
         "tls.client.certificate.bound.access.tokens": "false",
@@ -884,13 +884,13 @@
       "clientId": "security-admin-console",
       "name": "${client_security-admin-console}",
       "rootUrl": "${authAdminUrl}",
-      "baseUrl": "/admin/blps-master/console/",
+      "baseUrl": "/admin/${KEYCLOAK_MASTER_REALM}/console/",
       "surrogateAuthRequired": false,
       "enabled": true,
       "alwaysDisplayInConsole": false,
       "clientAuthenticatorType": "client-secret",
       "redirectUris": [
-        "/admin/blps-master/console/*"
+        "/admin/${KEYCLOAK_MASTER_REALM}/console/*"
       ],
       "webOrigins": [
         "+"
