@@ -38,7 +38,13 @@ class UserBalanceService(
         currentUser ?: throw AccessDeniedException("Not logged in")
         val operationId = UUID.randomUUID()
         val xid = transactionManager.transaction?.toString()
-        logger.info("donate_points_started operationId={} xid={} userId={} amount={}", operationId, xid, currentUser.id, request.amount)
+        logger.info(
+            "donate_points_started operationId={} xid={} userId={} amount={}",
+            operationId,
+            xid,
+            currentUser.id,
+            request.amount,
+        )
         try {
             if (request.amount <= 0)
                 throw BusinessLogicException("Cant donate zero or negative amount")

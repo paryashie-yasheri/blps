@@ -160,6 +160,38 @@ class StudentAchievementWorkflowServiceTest {
         assertEquals(0.01, contextCaptor.allValues.single { it.eventType == AchievementEventType.COURSE_PROGRESS_UPDATED }.completion)
     }
 
+    @Test
+    fun `completeLesson awards achievements when completion is already recorded in Open edX`() {
+        val user = testUser()
+        val courseKey = "course-v1:ITMO+Kotlin"
+        val blockId = "block-v1:ITMO+type@sequential+block@intro"
+
+        whenever(edxService.trackCompletion(eq(user), any())).thenThrow(IllegalStateException("forbidden"))
+        whenever(edxService.getSubsectionCompletion(user, courseKey, blockId))
+            .thenReturn(EdxSubsectionCompletionResponse(completion = 1.0))
+        whenever(edxService.getProgress(user, courseKey)).thenReturn(
+            EdxCourseProgressResponse(
+                completionSummary = mapOf("complete_count" to 1, "incomplete_count" to 0),
+                userHasPassingGrade = false,
+            ),
+        )
+        whenever(achievementService.checkAndAwardAchievements(eq(user.id), any())).thenReturn(emptyList())
+        whenever(userBalanceService.getCurrentUserBalance(user.id)).thenReturn(
+            BalanceResponse(
+                balance = 100,
+                currentBalance = 100,
+                totalEarned = 100,
+                totalSpent = 0,
+            ),
+        )
+
+        service.completeLesson(user, courseKey, blockId)
+
+        val contextCaptor = argumentCaptor<AchievementContext>()
+        verify(achievementService, times(4)).checkAndAwardAchievements(eq(user.id), contextCaptor.capture())
+        assertEquals(AchievementEventType.LESSON_COMPLETE, contextCaptor.firstValue.eventType)
+    }
+
     private fun testUser() =
         JwtUserDetails(
             id = UUID.randomUUID(),

@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 
-source ../.env
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+source "${SCRIPT_DIR}/common.sh"
 
-curl -i -X POST "${SPRING_HOST}/api/auth/register" \
-  -H "Content-Type: application/json" \
-  -d '{"username": "john", "password": "secret123", "email": "bigbadjohn@machine.com"}'
+echo "There is no local OPENEDX_USER registration endpoint." >&2
+echo "Use ./login_as_user.sh <openedx-username> <openedx-password>; the service creates the local user after Open edX login." >&2
+exit 1

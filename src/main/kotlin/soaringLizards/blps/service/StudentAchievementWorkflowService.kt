@@ -59,14 +59,7 @@ class StudentAchievementWorkflowService(
         courseKey: String,
         blockId: String,
     ): LessonCompleteResponse {
-        edxService.trackCompletion(
-            currentUser,
-            EdxCompletionBatchRequest(
-                username = currentUser.username,
-                courseKey = courseKey,
-                blocks = mapOf(blockId to 1.0),
-            ),
-        )
+        trackCompletionOrConfirmAlreadyComplete(currentUser, courseKey, blockId)
 
         val awardedAchievements = awardAchievements(
             currentUser.id,
@@ -79,6 +72,35 @@ class StudentAchievementWorkflowService(
             awardedAchievements = awardedAchievements.toAwardedAchievementDtos(),
             currentBalance = newBalance.balance,
         )
+    }
+
+    private fun trackCompletionOrConfirmAlreadyComplete(
+        currentUser: JwtUserDetails,
+        courseKey: String,
+        blockId: String,
+    ) {
+        runCatching {
+            edxService.trackCompletion(
+                currentUser,
+                EdxCompletionBatchRequest(
+                    username = currentUser.username,
+                    courseKey = courseKey,
+                    blocks = mapOf(blockId to 1.0),
+                ),
+            )
+        }.onSuccess {
+            return
+        }.onFailure { trackError ->
+            val existingCompletion = fetchSubsectionCompletion(currentUser, courseKey, blockId)
+            if (existingCompletion != null && existingCompletion >= COMPLETE_THRESHOLD) {
+                logger.info(
+                    "Open edX completion tracking failed, but subsection is already complete: {}",
+                    trackError.message,
+                )
+                return
+            }
+            throw trackError
+        }
     }
 
     private fun awardAchievements(

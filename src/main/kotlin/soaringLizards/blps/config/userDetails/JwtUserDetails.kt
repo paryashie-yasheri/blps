@@ -2,6 +2,8 @@ package soaringLizards.blps.config.userDetails
 
 import org.springframework.security.core.GrantedAuthority
 import org.springframework.security.core.authority.SimpleGrantedAuthority
+import org.springframework.security.oauth2.core.OAuth2AuthenticationException
+import org.springframework.security.oauth2.core.OAuth2Error
 import org.springframework.security.core.userdetails.UserDetails
 import org.springframework.security.oauth2.jwt.Jwt
 import soaringLizards.blps.dto.edx.EdxAuthenticatedSession
@@ -50,9 +52,9 @@ fun Jwt.toJwtUserDetails(): JwtUserDetails {
     val edxSession =
         if (role == "OPENEDX_USER")
             EdxAuthenticatedSession(
-                getClaimAsString("edxCookieHeader"),
-                getClaimAsString("edxCsrfToken"),
-                expiresAt!!,
+                getClaimAsString("edxCookieHeader") ?: throw invalidToken(),
+                getClaimAsString("edxCsrfToken") ?: throw invalidToken(),
+                expiresAt ?: throw invalidToken(),
             )
         else
             null
@@ -68,3 +70,6 @@ fun Jwt.toJwtUserDetails(): JwtUserDetails {
         edxSession = edxSession,
     )
 }
+
+private fun invalidToken(): OAuth2AuthenticationException =
+    OAuth2AuthenticationException(OAuth2Error("invalid_token"))

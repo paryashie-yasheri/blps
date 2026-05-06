@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 
-source ../.env
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+source "${SCRIPT_DIR}/common.sh"
 
-response=$(curl -s --json "{\"username\":\"${ADMIN_USERNAME}\",\"password\":\"${ADMIN_PASSWORD}\"}" \
-  "${SPRING_HOST}/api/auth/staff/login")
+require_tools curl jq
 
-echo "${response}" | jq .
-token=$(echo "${response}" | jq -r '.access_token')
-echo "${token}" > .token.txt
+response="$(login_staff "${ADMIN_USERNAME}" "${ADMIN_PASSWORD}")"
+save_token "$(echo "${response}" | extract_token)"
+echo "${response}" | jq '{username, role, tokenType, expiresIn}'

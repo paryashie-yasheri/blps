@@ -1,10 +1,14 @@
 #!/usr/bin/env bash
 
-source ../.env
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+source "${SCRIPT_DIR}/common.sh"
 
-token=$(cat .token.txt)
+require_tools curl jq
 
-curl -sS -X POST "${SPRING_HOST}/api/user-balance/donate" \
+token="$(load_token)"
+amount="${1:-100}"
+
+json_request POST "${BASE_URL}/api/user-balance/donate" \
   -H "Authorization: Bearer ${token}" \
   -H "Content-Type: application/json" \
-  -d '{"amount": 100}' | jq .
+  -d "{\"amount\": ${amount}}" | jq .

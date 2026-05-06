@@ -2,13 +2,14 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-source "${SCRIPT_DIR}/../.env"
+source "${SCRIPT_DIR}/common.sh"
 
-BASE_URL="${SPRING_HOST%/}"
 STAFF_USERNAME="${ADMIN_USERNAME}"
 STAFF_PASSWORD="${ADMIN_PASSWORD}"
 STUDENT_USERNAME="${EDX_API_TEST_USERNAME}"
 STUDENT_PASSWORD="${EDX_API_TEST_PASSWORD}"
+
+require_tools curl jq docker
 
 if [[ -z "${STUDENT_USERNAME}" || -z "${STUDENT_PASSWORD}" ]]; then
   echo "Error: EDX_API_TEST_USERNAME and EDX_API_TEST_PASSWORD must be set in .env" >&2
@@ -38,9 +39,7 @@ if [[ -z "${COURSE_KEY:-}" || -z "${BLOCK_ID:-}" ]]; then
   echo ">>> Step 0: Resolving course and block from Open edX"
 
   # Student login for discovery
-  student_login="$(curl -sS -X POST "${BASE_URL}/api/auth/openedx_user/login" \
-    -H "Content-Type: application/json" \
-    -d "{\"username\":\"${STUDENT_USERNAME}\",\"password\":\"${STUDENT_PASSWORD}\"}")"
+  student_login="$(login_openedx_user "${STUDENT_USERNAME}" "${STUDENT_PASSWORD}")"
   _student_token="$(extract_token "${student_login}")"
   if [[ -z "${_student_token}" ]]; then
     echo "    Student login failed: ${student_login}" >&2; exit 1
@@ -48,7 +47,7 @@ if [[ -z "${COURSE_KEY:-}" || -z "${BLOCK_ID:-}" ]]; then
 
   if [[ -z "${COURSE_KEY:-}" ]]; then
     # Fetch courses
-    courses_json="$(curl -sS "${BASE_URL}/api/student/courses" \
+    courses_json="$(json_request GET "${BASE_URL}/api/student/courses" \
       -H "Authorization: Bearer ${_student_token}")"
 
     COURSE_KEY="$(echo "${courses_json}" | jq -r '(if type == "object" then .results else . end) | .[0].id // .[0].courseId // .[0].course_id // empty')"
@@ -61,13 +60,28 @@ if [[ -z "${COURSE_KEY:-}" || -z "${BLOCK_ID:-}" ]]; then
   if [[ -z "${BLOCK_ID:-}" ]]; then
     # Fetch outline to get first block
     encoded_course="$(uri_encode "${COURSE_KEY}")"
-    outline_json="$(curl -sS "${BASE_URL}/api/student/courses/${encoded_course}/outline" \
+    outline_json="$(json_request GET "${BASE_URL}/api/student/courses/${encoded_course}/outline" \
       -H "Authorization: Bearer ${_student_token}")"
 
-    # Try to find a usable block id from the outline
+    # Prefer subsection blocks because Open edX subsection-completion API accepts those IDs.
     BLOCK_ID="$(echo "${outline_json}" | jq -r '
-      .. | objects | select(.id? != null and (.type? == "sequential" or .type? == "vertical" or .type? == "problem")) | .id
+      .. | objects | select(.id? != null and (.type? == "sequential")) | .id
     ' 2>/dev/null | head -n1)"
+
+    if [[ -z "${BLOCK_ID}" ]]; then
+      BLOCK_ID="$(echo "${outline_json}" | jq -r '
+        .resume_course.url? // empty
+        | capture("(?<block>block-v1:[^/?#]+)")?
+        | .block // empty
+      ' 2>/dev/null | head -n1)"
+    fi
+
+    # Prefer leaf blocks before coarse course/chapter fallback.
+    if [[ -z "${BLOCK_ID}" ]]; then
+      BLOCK_ID="$(echo "${outline_json}" | jq -r '
+        .. | objects | select(.id? != null and (.type? == "html" or .type? == "video" or .type? == "problem" or .type? == "vertical")) | .id
+      ' 2>/dev/null | head -n1)"
+    fi
 
     if [[ -z "${BLOCK_ID}" ]]; then
       # Fallback: try to extract any block id from outline
@@ -99,9 +113,7 @@ echo "============================================"
 # ── 1. Staff login ──────────────────────────────
 echo ""
 echo ">>> Step 1: Login as staff (${STAFF_USERNAME})"
-staff_login="$(curl -sS -X POST "${BASE_URL}/api/auth/staff/login" \
-  -H "Content-Type: application/json" \
-  -d "{\"username\":\"${STAFF_USERNAME}\",\"password\":\"${STAFF_PASSWORD}\"}")"
+staff_login="$(login_staff "${STAFF_USERNAME}" "${STAFF_PASSWORD}")"
 staff_token="$(extract_token "${staff_login}")"
 if [[ -z "${staff_token}" ]]; then
   echo "Staff login failed: ${staff_login}" >&2; exit 1
@@ -116,9 +128,7 @@ echo ">>> Step 2: Seed achievement types with icons"
 # ── 3. Student login ────────────────────────────
 echo ""
 echo ">>> Step 3: Login as student (${STUDENT_USERNAME})"
-student_login="$(curl -sS -X POST "${BASE_URL}/api/auth/openedx_user/login" \
-  -H "Content-Type: application/json" \
-  -d "{\"username\":\"${STUDENT_USERNAME}\",\"password\":\"${STUDENT_PASSWORD}\"}")"
+student_login="$(login_openedx_user "${STUDENT_USERNAME}" "${STUDENT_PASSWORD}")"
 student_token="$(extract_token "${student_login}")"
 if [[ -z "${student_token}" ]]; then
   echo "Student login failed: ${student_login}" >&2; exit 1
@@ -128,9 +138,9 @@ echo "    Student token acquired"
 # ── 4. Baseline state ───────────────────────────
 echo ""
 echo ">>> Step 4: Baseline state"
-before_balance="$(curl -sS "${BASE_URL}/api/student/balance" \
+before_balance="$(json_request GET "${BASE_URL}/api/student/balance" \
   -H "Authorization: Bearer ${student_token}" | jq -r '.currentBalance // .balance // 0')"
-before_count="$(curl -sS "${BASE_URL}/api/student/achievements" \
+before_count="$(json_request GET "${BASE_URL}/api/student/achievements" \
   -H "Authorization: Bearer ${student_token}" | jq 'length')"
 echo "    balance=${before_balance}, achievements=${before_count}"
 
@@ -138,7 +148,7 @@ echo "    balance=${before_balance}, achievements=${before_count}"
 echo ""
 echo ">>> Step 5: Enroll in course"
 encoded_course="$(uri_encode "${COURSE_KEY}")"
-enroll_resp="$(curl -sS -X POST "${BASE_URL}/api/student/courses/${encoded_course}/enroll" \
+enroll_resp="$(json_request POST "${BASE_URL}/api/student/courses/${encoded_course}/enroll" \
   -H "Authorization: Bearer ${student_token}")"
 echo "${enroll_resp}" | jq .
 
@@ -146,16 +156,16 @@ echo "${enroll_resp}" | jq .
 echo ""
 echo ">>> Step 6: Complete lesson"
 encoded_block="$(uri_encode "${BLOCK_ID}")"
-complete_resp="$(curl -sS -X POST "${BASE_URL}/api/student/lessons/${encoded_course}/${encoded_block}/complete" \
+complete_resp="$(json_request POST "${BASE_URL}/api/student/lessons/${encoded_course}/${encoded_block}/complete" \
   -H "Authorization: Bearer ${student_token}")"
 echo "${complete_resp}" | jq .
 
 # ── 7. Achievements after actions ───────────────
 echo ""
 echo ">>> Step 7: Achievements after actions"
-after_achievements="$(curl -sS "${BASE_URL}/api/student/achievements" \
+after_achievements="$(json_request GET "${BASE_URL}/api/student/achievements" \
   -H "Authorization: Bearer ${student_token}")"
-after_balance="$(curl -sS "${BASE_URL}/api/student/balance" \
+after_balance="$(json_request GET "${BASE_URL}/api/student/balance" \
   -H "Authorization: Bearer ${student_token}" | jq -r '.currentBalance // .balance // 0')"
 after_count="$(echo "${after_achievements}" | jq 'length')"
 
@@ -176,32 +186,22 @@ echo "${after_achievements}" | jq --arg prefix "${CODE_PREFIX}" '
     }
   ]'
 
-# ── 8. Available rewards ────────────────────────
-echo ""
-echo ">>> Step 8: Available rewards"
-curl -sS "${BASE_URL}/api/student/rewards" \
-  -H "Authorization: Bearer ${student_token}" | jq '.[] | {name, pointsCost, iconUrl}'
+mandatory_codes=(
+  "${CODE_PREFIX}_course_enrolled"
+  "${CODE_PREFIX}_lesson_complete"
+)
 
-# ── 9. Redeem a reward ──────────────────────────
-echo ""
-echo ">>> Step 9: Redeem first available reward"
-reward_id="$(curl -sS "${BASE_URL}/api/student/rewards" \
-  -H "Authorization: Bearer ${student_token}" | jq -r '.[0].rewardId // empty')"
-if [[ -n "${reward_id}" ]]; then
-  redeem_resp="$(curl -sS -X POST "${BASE_URL}/api/student/rewards/${reward_id}/redeem" \
-    -H "Authorization: Bearer ${student_token}")"
-  echo "${redeem_resp}" | jq '{userRewardId, rewardName: .reward.name, pointsCost: .reward.pointsCost}'
-  echo ""
-  echo "    Balance after redeem:"
-  curl -sS "${BASE_URL}/api/student/balance" \
-    -H "Authorization: Bearer ${student_token}" | jq '{currentBalance, totalSpent}'
-else
-  echo "    No rewards available to redeem"
-fi
+for code in "${mandatory_codes[@]}"; do
+  issued_count="$(echo "${after_achievements}" | jq --arg code "${code}" '[.[] | select(.achievementCode == $code)] | length')"
+  if [[ "${issued_count}" -eq 0 ]]; then
+    echo "Achievement was not issued: ${code}" >&2
+    exit 1
+  fi
+done
 
-# ── 10. Journal entries from pg-journal ────────
+# ── 8. Journal entries from pg-journal ────────
 echo ""
-echo ">>> Step 10: Ledger events from pg-journal"
+echo ">>> Step 8: Ledger events from pg-journal"
 cd "${SCRIPT_DIR}/.."
 source .env
 docker compose exec -T pg-journal psql \

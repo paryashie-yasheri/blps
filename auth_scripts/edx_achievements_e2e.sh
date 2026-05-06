@@ -2,9 +2,8 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-source "${SCRIPT_DIR}/../.env"
+source "${SCRIPT_DIR}/common.sh"
 
-BASE_URL="${SPRING_HOST%/}"
 COURSE_KEY="${1:?Usage: $0 <course-key> <block-id> [staff-username] [staff-password] [student-username] [student-password]}"
 BLOCK_ID="${2:?Usage: $0 <course-key> <block-id> [staff-username] [staff-password] [student-username] [student-password]}"
 STAFF_USERNAME="${3:-${ADMIN_USERNAME:-admin}}"
@@ -17,36 +16,10 @@ if [[ -z "${STUDENT_USERNAME}" || -z "${STUDENT_PASSWORD}" ]]; then
   exit 1
 fi
 
-for tool in curl jq; do
-  command -v "${tool}" >/dev/null 2>&1 || {
-    echo "Missing required tool: ${tool}" >&2
-    exit 1
-  }
-done
-
-uri_encode() {
-  jq -rn --arg value "$1" '$value|@uri'
-}
-
-extract_token() {
-  local response_json="$1"
-  echo "${response_json}" | jq -r '.access_token // empty'
-}
-
-login_staff() {
-  curl -sS -X POST "${BASE_URL}/api/auth/staff/login" \
-    -H "Content-Type: application/json" \
-    -d "{\"username\":\"${STAFF_USERNAME}\",\"password\":\"${STAFF_PASSWORD}\"}"
-}
-
-login_student() {
-  curl -sS -X POST "${BASE_URL}/api/auth/openedx_user/login" \
-    -H "Content-Type: application/json" \
-    -d "{\"username\":\"${STUDENT_USERNAME}\",\"password\":\"${STUDENT_PASSWORD}\"}"
-}
+require_tools curl jq
 
 echo "=== Login as staff (${STAFF_USERNAME}) ==="
-staff_login_response="$(login_staff)"
+staff_login_response="$(login_staff "${STAFF_USERNAME}" "${STAFF_PASSWORD}")"
 staff_token="$(extract_token "${staff_login_response}")"
 if [[ -z "${staff_token}" ]]; then
   echo "Staff login failed:"
@@ -57,7 +30,7 @@ echo "Staff login OK"
 
 echo ""
 echo "=== Login as Open edX user (${STUDENT_USERNAME}) ==="
-student_login_response="$(login_student)"
+student_login_response="$(login_openedx_user "${STUDENT_USERNAME}" "${STUDENT_PASSWORD}")"
 student_token="$(extract_token "${student_login_response}")"
 if [[ -z "${student_token}" ]]; then
   echo "Student login failed:"
@@ -77,9 +50,9 @@ echo "=== Seed achievement types with real png icons ==="
 
 echo ""
 echo "=== Baseline student state ==="
-before_balance_json="$(curl -sS -X GET "${BASE_URL}/api/student/balance" \
+before_balance_json="$(json_request GET "${BASE_URL}/api/student/balance" \
   -H "Authorization: Bearer ${student_token}")"
-before_achievements_json="$(curl -sS -X GET "${BASE_URL}/api/student/achievements" \
+before_achievements_json="$(json_request GET "${BASE_URL}/api/student/achievements" \
   -H "Authorization: Bearer ${student_token}")"
 before_balance="$(echo "${before_balance_json}" | jq -r '.currentBalance // .balance')"
 before_ach_count="$(echo "${before_achievements_json}" | jq 'length')"
@@ -88,41 +61,41 @@ echo "achievements_before=${before_ach_count}"
 
 echo ""
 echo "=== Open edX progress snapshot BEFORE actions ==="
-curl -sS -X GET "${BASE_URL}/api/edx/courses/${encoded_course_key}/progress" \
+json_request GET "${BASE_URL}/api/edx/courses/${encoded_course_key}/progress" \
   -H "Authorization: Bearer ${student_token}" | jq '{username, user_has_passing_grade, completion_summary, final_grades}'
 
 echo ""
 echo "=== Open edX subsection completion BEFORE actions ==="
-curl -sS -X GET "${BASE_URL}/api/edx/users/${encoded_student_username}/courses/${encoded_course_key}/subsections/${encoded_block_id}/completion" \
+json_request GET "${BASE_URL}/api/edx/users/${encoded_student_username}/courses/${encoded_course_key}/subsections/${encoded_block_id}/completion" \
   -H "Authorization: Bearer ${student_token}" | jq .
 
 echo ""
 echo "=== Trigger course_enrolled event ==="
-enroll_response="$(curl -sS -X POST "${BASE_URL}/api/student/courses/${encoded_course_key}/enroll" \
+enroll_response="$(json_request POST "${BASE_URL}/api/student/courses/${encoded_course_key}/enroll" \
   -H "Authorization: Bearer ${student_token}")"
 echo "${enroll_response}" | jq .
 
 echo ""
 echo "=== Trigger lesson_complete (+ derived events) ==="
-complete_response="$(curl -sS -X POST "${BASE_URL}/api/student/lessons/${encoded_course_key}/${encoded_block_id}/complete" \
+complete_response="$(json_request POST "${BASE_URL}/api/student/lessons/${encoded_course_key}/${encoded_block_id}/complete" \
   -H "Authorization: Bearer ${student_token}")"
 echo "${complete_response}" | jq .
 
 echo ""
 echo "=== Open edX progress snapshot AFTER actions ==="
-curl -sS -X GET "${BASE_URL}/api/edx/courses/${encoded_course_key}/progress" \
+json_request GET "${BASE_URL}/api/edx/courses/${encoded_course_key}/progress" \
   -H "Authorization: Bearer ${student_token}" | jq '{username, user_has_passing_grade, completion_summary, final_grades}'
 
 echo ""
 echo "=== Open edX subsection completion AFTER actions ==="
-curl -sS -X GET "${BASE_URL}/api/edx/users/${encoded_student_username}/courses/${encoded_course_key}/subsections/${encoded_block_id}/completion" \
+json_request GET "${BASE_URL}/api/edx/users/${encoded_student_username}/courses/${encoded_course_key}/subsections/${encoded_block_id}/completion" \
   -H "Authorization: Bearer ${student_token}" | jq .
 
 echo ""
 echo "=== Student state AFTER actions ==="
-after_balance_json="$(curl -sS -X GET "${BASE_URL}/api/student/balance" \
+after_balance_json="$(json_request GET "${BASE_URL}/api/student/balance" \
   -H "Authorization: Bearer ${student_token}")"
-after_achievements_json="$(curl -sS -X GET "${BASE_URL}/api/student/achievements" \
+after_achievements_json="$(json_request GET "${BASE_URL}/api/student/achievements" \
   -H "Authorization: Bearer ${student_token}")"
 after_balance="$(echo "${after_balance_json}" | jq -r '.currentBalance // .balance')"
 after_ach_count="$(echo "${after_achievements_json}" | jq 'length')"

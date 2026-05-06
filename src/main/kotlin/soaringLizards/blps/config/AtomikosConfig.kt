@@ -2,6 +2,7 @@ package soaringLizards.blps.config
 
 import com.atomikos.icatch.jta.UserTransactionImp
 import com.atomikos.icatch.jta.UserTransactionManager
+import com.atomikos.icatch.config.UserTransactionServiceImp
 import com.atomikos.jdbc.AtomikosDataSourceBean
 import jakarta.transaction.TransactionManager
 import jakarta.transaction.UserTransaction
@@ -15,42 +16,38 @@ import org.springframework.context.annotation.DependsOn
 import org.springframework.context.annotation.Primary
 import org.springframework.transaction.annotation.EnableTransactionManagement
 import org.springframework.transaction.jta.JtaTransactionManager
-import java.sql.DriverManager
 import java.nio.file.Files
 import java.nio.file.Path
+import java.util.Properties
 import javax.sql.DataSource
-import org.slf4j.LoggerFactory
 
 data class XaSingleDataSourceProperties(
-    var host: String = "localhost",
-    var port: Int = 5432,
-    var database: String = "studs",
+    var host: String = "",
+    var port: Int = 0,
+    var database: String = "",
     var username: String = "",
     var password: String = "",
-    var schema: String = "public",
-    var uniqueResourceName: String = "main-postgres-xa",
-    var minPoolSize: Int = 1,
-    var maxPoolSize: Int = 8,
-    var borrowConnectionTimeoutSeconds: Int = 30,
-    var maintenanceIntervalSeconds: Int = 60,
-    var maxIdleTimeSeconds: Int = 60,
-    var testQuery: String = "SELECT 1",
+    var schema: String = "",
+    var uniqueResourceName: String = "",
+    var minPoolSize: Int = 0,
+    var maxPoolSize: Int = 0,
+    var borrowConnectionTimeoutSeconds: Int = 0,
+    var maintenanceIntervalSeconds: Int = 0,
+    var maxIdleTimeSeconds: Int = 0,
+    var testQuery: String = "",
+    var startupCheckEnabled: Boolean = false,
+    var requiredOnStartup: Boolean = false,
+    var startupCheckTimeoutSeconds: Int = 0,
 )
 
 @ConfigurationProperties(prefix = "app.datasource.xa")
 data class XaDataSourceProperties(
     @NestedConfigurationProperty
-    var main: XaSingleDataSourceProperties = XaSingleDataSourceProperties(uniqueResourceName = "main-postgres-xa"),
+    var main: XaSingleDataSourceProperties = XaSingleDataSourceProperties(),
     @NestedConfigurationProperty
-    var journal: XaSingleDataSourceProperties = XaSingleDataSourceProperties(
-        database = "journal",
-        uniqueResourceName = "journal-postgres-xa",
-    ),
+    var journal: XaSingleDataSourceProperties = XaSingleDataSourceProperties(),
     @NestedConfigurationProperty
-    var rewards: XaSingleDataSourceProperties = XaSingleDataSourceProperties(
-        database = "rewards",
-        uniqueResourceName = "rewards-postgres-xa",
-    ),
+    var rewards: XaSingleDataSourceProperties = XaSingleDataSourceProperties(),
 )
 
 @ConfigurationProperties(prefix = "app.atomikos")
@@ -60,6 +57,9 @@ data class AtomikosRuntimeProperties(
     var transactionTimeoutSeconds: Int = 30,
     var maxTimeoutSeconds: Int = 60,
     var checkpointInterval: Long = 500,
+    var threaded2pc: Boolean = true,
+    var enableLogging: Boolean = true,
+    var forceShutdown: Boolean = false,
 )
 
 @Configuration
@@ -72,38 +72,36 @@ class AtomikosConfig(
     private val xaDataSourceProperties: XaDataSourceProperties,
     private val atomikosRuntimeProperties: AtomikosRuntimeProperties,
 ) {
-    private val logger = LoggerFactory.getLogger(javaClass)
+    @Bean(initMethod = "init", destroyMethod = "close")
+    fun atomikosUserTransactionService(): UserTransactionServiceImp =
+        UserTransactionServiceImp(atomikosProperties())
 
-    @Bean("atomikosPropertyInitializer")
-    fun atomikosPropertyInitializer(): Any {
+    private fun atomikosProperties(): Properties {
         val logDir = Path.of(atomikosRuntimeProperties.logBaseDir)
         Files.createDirectories(logDir)
-        System.setProperty("com.atomikos.icatch.output_dir", logDir.toString())
-        System.setProperty("com.atomikos.icatch.log_base_dir", logDir.toString())
-        System.setProperty("com.atomikos.icatch.tm_unique_name", atomikosRuntimeProperties.tmUniqueName)
-        System.setProperty(
-            "com.atomikos.icatch.default_jta_timeout",
-            (atomikosRuntimeProperties.transactionTimeoutSeconds * 1000).toString(),
-        )
-        System.setProperty(
-            "com.atomikos.icatch.max_timeout",
-            (atomikosRuntimeProperties.maxTimeoutSeconds * 1000).toString(),
-        )
-        System.setProperty("com.atomikos.icatch.checkpoint_interval", atomikosRuntimeProperties.checkpointInterval.toString())
-        System.setProperty("com.atomikos.icatch.threaded_2pc", "true")
-        System.setProperty("com.atomikos.icatch.enable_logging", "true")
-        return Any()
+
+        return mapOf(
+            "com.atomikos.icatch.output_dir" to logDir,
+            "com.atomikos.icatch.log_base_dir" to logDir,
+            "com.atomikos.icatch.tm_unique_name" to atomikosRuntimeProperties.tmUniqueName,
+            "com.atomikos.icatch.default_jta_timeout" to atomikosRuntimeProperties.transactionTimeoutSeconds * 1000,
+            "com.atomikos.icatch.max_timeout" to atomikosRuntimeProperties.maxTimeoutSeconds * 1000,
+            "com.atomikos.icatch.checkpoint_interval" to atomikosRuntimeProperties.checkpointInterval,
+            "com.atomikos.icatch.threaded_2pc" to atomikosRuntimeProperties.threaded2pc,
+            "com.atomikos.icatch.enable_logging" to atomikosRuntimeProperties.enableLogging,
+        ).toProperties()
     }
 
     @Bean(initMethod = "init", destroyMethod = "close")
-    @DependsOn("atomikosPropertyInitializer")
+    @DependsOn("atomikosUserTransactionService")
     fun atomikosTransactionManager(): UserTransactionManager =
         UserTransactionManager().apply {
-            forceShutdown = false
+            startupTransactionService = false
+            forceShutdown = atomikosRuntimeProperties.forceShutdown
         }
 
     @Bean
-    @DependsOn("atomikosPropertyInitializer")
+    @DependsOn("atomikosUserTransactionService")
     fun atomikosUserTransaction(): UserTransaction =
         UserTransactionImp().apply {
             setTransactionTimeout(atomikosRuntimeProperties.transactionTimeoutSeconds)
@@ -119,23 +117,21 @@ class AtomikosConfig(
 
     @Bean(initMethod = "init", destroyMethod = "close")
     @Primary
-    @DependsOn("atomikosPropertyInitializer", "atomikosTransactionManager", "atomikosUserTransaction")
+    @DependsOn("atomikosUserTransactionService", "atomikosTransactionManager", "atomikosUserTransaction")
     fun mainDataSource(): DataSource =
-        createAtomikosDataSource("main", xaDataSourceProperties.main)
+        createAtomikosDataSource(xaDataSourceProperties.main)
 
     @Bean(initMethod = "init", destroyMethod = "close")
-    @DependsOn("atomikosPropertyInitializer", "atomikosTransactionManager", "atomikosUserTransaction")
+    @DependsOn("atomikosUserTransactionService", "atomikosTransactionManager", "atomikosUserTransaction")
     fun journalDataSource(): DataSource =
-        createAtomikosDataSource("journal", xaDataSourceProperties.journal)
+        createAtomikosDataSource(xaDataSourceProperties.journal)
 
     @Bean(initMethod = "init", destroyMethod = "close")
-    @DependsOn("atomikosPropertyInitializer", "atomikosTransactionManager", "atomikosUserTransaction")
+    @DependsOn("atomikosUserTransactionService", "atomikosTransactionManager", "atomikosUserTransaction")
     fun rewardsDataSource(): DataSource =
-        createAtomikosDataSource("rewards", xaDataSourceProperties.rewards)
+        createAtomikosDataSource(xaDataSourceProperties.rewards)
 
-    private fun createAtomikosDataSource(name: String, properties: XaSingleDataSourceProperties): DataSource {
-        verifyJdbcConnectivity(name, properties)
-
+    private fun createAtomikosDataSource(properties: XaSingleDataSourceProperties): DataSource {
         val xaDataSource = PGXADataSource().apply {
             serverNames = arrayOf(properties.host)
             portNumbers = intArrayOf(properties.port)
@@ -156,34 +152,9 @@ class AtomikosConfig(
             testQuery = normalizeSqlTestQuery(properties.testQuery)
         }
     }
-
-    private fun verifyJdbcConnectivity(name: String, properties: XaSingleDataSourceProperties) {
-        val jdbcUrl = "jdbc:postgresql://${properties.host}:${properties.port}/${properties.database}"
-        val testQuery = normalizeSqlTestQuery(properties.testQuery)
-
-        try {
-            DriverManager.getConnection(jdbcUrl, properties.username, properties.password).use { connection ->
-                connection.createStatement().use { statement ->
-                    statement.queryTimeout = 3
-                    statement.execute(testQuery)
-                }
-            }
-            logger.info("startup_jdbc_connectivity_ok name={} url={}", name, jdbcUrl)
-        } catch (ex: Exception) {
-            logger.error("startup_jdbc_connectivity_failed name={} url={}", name, jdbcUrl, ex)
-            throw IllegalStateException("Startup check failed: '$name' datasource is unavailable", ex)
-        }
-    }
-
-    private fun normalizeSqlTestQuery(raw: String): String {
-        val trimmed = raw.trim()
-        if (trimmed.length >= 2) {
-            val first = trimmed.first()
-            val last = trimmed.last()
-            if ((first == '"' && last == '"') || (first == '\'' && last == '\'')) {
-                return trimmed.substring(1, trimmed.length - 1).trim()
-            }
-        }
-        return trimmed
-    }
 }
+
+private fun Map<String, Any>.toProperties(): Properties =
+    Properties().also { properties ->
+        forEach { (key, value) -> properties[key] = value.toString() }
+    }

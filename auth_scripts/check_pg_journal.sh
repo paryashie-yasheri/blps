@@ -1,18 +1,22 @@
 #!/usr/bin/env bash
+set -euo pipefail
 
-./login_as_user.sh "huji_5" "pass1234"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+source "${SCRIPT_DIR}/common.sh"
+
+require_tools curl jq docker
+
+"${SCRIPT_DIR}/login_as_user.sh" "${EDX_API_TEST_USERNAME}" "${EDX_API_TEST_PASSWORD}"
 
 # 3) Донат (это должно записать событие DONATION в ledger_events)
-TOKEN=$(cat .token.txt)
-source ../.env
-curl -sS -X POST "${SPRING_HOST}/api/user-balance/donate" \
+TOKEN="$(load_token)"
+json_request POST "${BASE_URL}/api/user-balance/donate" \
   -H "Authorization: Bearer ${TOKEN}" \
   -H "Content-Type: application/json" \
   -d '{"amount": 25}' | jq .
 
 # 4) Проверка журнала в pg-journal
-cd ..
-source .env
+cd "${REPO_DIR}"
 docker compose exec -T pg-journal psql \
   -U "${JOURNAL_POSTGRES_USER}" \
   -d "${JOURNAL_POSTGRES_DB}" \
