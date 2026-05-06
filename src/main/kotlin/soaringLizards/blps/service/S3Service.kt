@@ -41,6 +41,10 @@ class S3Service(
                 else -> "$tenantId:$accessKey"
             }
 
+        private fun normalizeObjectKey(key: String) =
+            key.trim('/')
+                .replace(Regex("/{2,}"), "/")
+
     }
 
     private val creds = StaticCredentialsProvider.create(
@@ -93,7 +97,7 @@ class S3Service(
                     GetObjectRequest
                         .builder()
                         .bucket(s3Properties.bucket)
-                        .key(key)
+                        .key(normalizeObjectKey(key))
                         .build(),
                 )
                 .build(),
@@ -119,7 +123,7 @@ class S3Service(
                 DeleteObjectRequest
                     .builder()
                     .bucket(s3Properties.bucket)
-                    .key(key)
+                    .key(normalizeObjectKey(key))
                     .build(),
             )
     }
