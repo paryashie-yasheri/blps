@@ -30,7 +30,7 @@ uri_encode() {
 
 extract_token() {
   local response_json="$1"
-  echo "${response_json}" | jq -r '.accessToken // empty'
+  echo "${response_json}" | jq -r '.access_token // empty'
 }
 
 login_staff() {

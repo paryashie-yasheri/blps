@@ -59,8 +59,11 @@ class EdxSessionAuthManager(
         }
     }
 
+    private val essentialCookies = setOf("csrftoken", "sessionid", "edx-jwt-cookie-header", "edx-jwt-cookie")
+
     private fun buildCookieHeader(cookies: Map<String, String>): String =
-        cookies.entries.joinToString("; ") { (name, value) -> "$name=$value" }
+        cookies.filterKeys { it in essentialCookies }
+            .entries.joinToString("; ") { (name, value) -> "$name=$value" }
 
     private fun extractExpiry(headerPayload: String?): Instant? {
         if (headerPayload.isNullOrBlank())

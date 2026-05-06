@@ -6,9 +6,10 @@ services:
       - app-network
     shm_size: 128mb
     ports:
-      - 5432:5432
+      - "5432:5432"
     volumes:
       - pg-data:/var/lib/postgresql/data:Z
+      - ./docker-postgres-init-scrips:/docker-entrypoint-initdb.d/:ro
     environment:
       DB_CONNECTION: pgsql
       POSTGRES_HOST: ${POSTGRES_HOST}
@@ -27,7 +28,7 @@ services:
       - app-network
     shm_size: 128mb
     ports:
-      - 5434:5432
+      - "5434:5432"
     volumes:
       - pg-rewards-data:/var/lib/postgresql/data:Z
     environment:
@@ -59,6 +60,28 @@ services:
       POSTGRES_USER: ${JOURNAL_POSTGRES_USER}
       POSTGRES_PASSWORD: ${JOURNAL_POSTGRES_PASSWORD}
 
+    env_file:
+      - .env
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:24.0.4
+    container_name: keycloak
+    ports:
+      - "8081:8080"
+    volumes:
+      - ./keycloak/import:/opt/keycloak/data/import
+    environment:
+      - KEYCLOAK_ADMIN=admin
+      - KEYCLOAK_ADMIN_PASSWORD=admin
+      - KEYCLOAK_IMPORT=/opt/keycloak/data/import/realm-config.json
+    command: [
+      "start-dev",
+      "--import-realm"
+    ]
+    depends_on:
+      - pg
+    networks:
+      - app-network
     env_file:
       - .env
 

@@ -12,8 +12,9 @@ import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
-import org.springframework.boot.test.context.TestConfiguration
+import org.springframework.test.context.TestPropertySource
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
+import org.springframework.boot.test.context.TestConfiguration
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Import
 import org.springframework.context.annotation.Primary
@@ -22,6 +23,7 @@ import org.springframework.mock.web.MockMultipartFile
 import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user
 import org.springframework.test.context.DynamicPropertyRegistry
 import org.springframework.test.context.DynamicPropertySource
+import org.springframework.test.context.TestPropertySource as PropertiesSource
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart
@@ -32,6 +34,7 @@ import soaringLizards.blps.dto.achievementTypes.AchievementTypeUpsertRequest
 import soaringLizards.blps.entity.AchievementCondition
 import soaringLizards.blps.entity.AchievementEventType
 import soaringLizards.blps.entity.AchievementType
+import soaringLizards.blps.integration.IntegrationKeycloak
 import soaringLizards.blps.integration.IntegrationPostgres
 import soaringLizards.blps.integration.TestcontainersCleanupExtension
 import soaringLizards.blps.repository.AchievementConditionRepository
@@ -46,6 +49,7 @@ import kotlin.test.assertNull
 @AutoConfigureMockMvc
 @Import(AchievementControllerIntegrationTest.TestBeans::class)
 @ExtendWith(TestcontainersCleanupExtension::class)
+@PropertiesSource(properties = ["edx.bypass.enabled=true", "edx.bypass.expires-seconds=3600"])
 class AchievementControllerIntegrationTest {
     @Autowired
     private lateinit var mockMvc: MockMvc
@@ -70,6 +74,7 @@ class AchievementControllerIntegrationTest {
         @DynamicPropertySource
         fun registerProperties(registry: DynamicPropertyRegistry) {
             IntegrationPostgres.registerProperties(registry)
+            IntegrationKeycloak.registerProperties(registry)
         }
     }
 
@@ -78,7 +83,7 @@ class AchievementControllerIntegrationTest {
         dsl.execute(
             """
             TRUNCATE TABLE user_achievements, balance_transactions, achievement_conditions, achievement_types,
-            user_balances, users CASCADE
+            user_balances CASCADE
             """.trimIndent(),
         )
         reset(s3Service)
@@ -218,7 +223,7 @@ class AchievementControllerIntegrationTest {
             .andExpect(status().isNoContent)
 
         assertNull(achievementTypeRepository.findById(existing.achievementTypeId!!))
-        assertEquals(0, countConditions(existing.achievementTypeId))
+        assertEquals(0, dsl.fetchCount(DSL.table(DSL.name("achievement_types"))))
         verify(s3Service).delete("achievements/delete-me.png")
     }
 

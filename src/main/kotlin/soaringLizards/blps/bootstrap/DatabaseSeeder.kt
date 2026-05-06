@@ -7,11 +7,11 @@ import org.springframework.stereotype.Component
 import soaringLizards.blps.config.properties.AdminCredentialsProperties
 import soaringLizards.blps.dto.user.RegisterDto
 import soaringLizards.blps.exception.UserAlreadyExistAuthenticationException
-import soaringLizards.blps.service.UserService
+import soaringLizards.blps.service.KeycloakService
 
 @Component
 class DatabaseSeeder(
-    private val userService: UserService,
+    private val keycloakService: KeycloakService,
     private val adminCredentialsProperties: AdminCredentialsProperties,
 ) : ApplicationListener<ApplicationReadyEvent> {
 
@@ -26,7 +26,7 @@ class DatabaseSeeder(
                 adminCredentialsProperties.password,
                 adminCredentialsProperties.email,
             )
-            userService.registerUser(adminRegisterDto, "ADMIN")
+            keycloakService.registerUser(adminRegisterDto, "ADMIN")
 
             logger.info("Default Admin User Created!")
         } catch (_: UserAlreadyExistAuthenticationException) {

@@ -19,7 +19,7 @@ login_response=$(curl -s -X POST "${BASE_URL}/api/auth/openedx_user/login" \
   -H "Content-Type: application/json" \
   -d "{\"username\":\"${USERNAME}\",\"password\":\"${PASSWORD}\"}")
 
-token=$(echo "${login_response}" | jq -r '.accessToken // empty')
+token=$(echo "${login_response}" | jq -r '.access_token // empty')
 if [[ -z "${token}" ]]; then
   echo "Login failed: ${login_response}" >&2
   exit 1

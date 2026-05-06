@@ -216,7 +216,12 @@ dependencies {
     // security
     runtimeOnly("io.jsonwebtoken:jjwt-impl:0.11.5")
     runtimeOnly("io.jsonwebtoken:jjwt-jackson:0.11.5")
+    implementation("io.jsonwebtoken:jjwt-api:0.11.5")
     testImplementation("org.springframework.boot:spring-boot-starter-security-test")
+    implementation("org.keycloak:keycloak-admin-client:26.0.9")
+    implementation("org.springframework.boot:spring-boot-starter-security")
+    implementation("org.springframework.boot:spring-boot-starter-oauth2-resource-server")
+
 
     // s3
     implementation("software.amazon.awssdk:s3:2.42.33")
@@ -224,7 +229,6 @@ dependencies {
 
     // other
     implementation("org.slf4j:jcl-over-slf4j")
-    implementation("io.jsonwebtoken:jjwt-api:0.11.5")
     implementation("net.logstash.logback:logstash-logback-encoder:8.0")
     implementation("tools.jackson.module:jackson-module-kotlin")
 
@@ -285,14 +289,17 @@ fun createLiquibaseArgs(env: Map<String, String>): List<String> {
 val liquibaseUpdate by tasks.register<JavaExec>("liquibaseUpdate") {
     group = "liquibase"
     description = "Apply database migrations before code generation"
-
+    outputs.upToDateWhen { false }
+    outputs.cacheIf { false }
     classpath = configurations["liquibaseRuntime"]
-    mainClass.set("liquibase.integration.commandline.LiquibaseCommandLine")
+    mainClass.set("liquibase.integration.commandline.Main")
+    doFirst {
 
-    val connectionArgs = createLiquibaseArgs(createEnvMap()).toMutableList()
-    connectionArgs += "update"
+        val connectionArgs = createLiquibaseArgs(createEnvMap()).toMutableList()
+        connectionArgs += "update"
 
-    args = connectionArgs
+        args = connectionArgs
+    }
 }
 
 val liquibaseUpdateTestContainer by tasks.register<JavaExec>("liquibaseUpdateTestContainer") {

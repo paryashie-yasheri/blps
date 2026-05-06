@@ -62,3 +62,17 @@ edx:
     base-url: "http://local.openedx.io/api"
     username: ${admin}
     password: ${admin}
+  bypass:
+    enabled: true
+    expires-seconds: 3600
+
+keycloak:
+  server-url: http://localhost:8081
+  master:
+    realm: master
+    client-id: admin-cli
+    client-secret: ""
+  admin:
+    username: admin
+    password: admin
+    client-id: admin-cli

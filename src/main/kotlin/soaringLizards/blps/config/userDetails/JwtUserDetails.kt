@@ -6,6 +6,7 @@ import org.springframework.security.core.userdetails.UserDetails
 import org.springframework.security.oauth2.jwt.Jwt
 import soaringLizards.blps.dto.edx.EdxAuthenticatedSession
 import soaringLizards.blps.dto.user.Email
+import soaringLizards.blps.exception.BusinessLogicException
 import java.util.*
 
 class JwtUserDetails(
@@ -14,7 +15,7 @@ class JwtUserDetails(
     val email: Email,
     val role: String,
     val token: String,
-    private val authorities: Collection<GrantedAuthority> = listOf(SimpleGrantedAuthority("ROLE_$role")),
+    private val authorities: Collection<GrantedAuthority> = listOf(SimpleGrantedAuthority("ROLE_${role.uppercase()}")),
     val edxSession: EdxAuthenticatedSession?,
 ) : UserDetails {
 
@@ -34,13 +35,16 @@ class JwtUserDetails(
 }
 
 fun Jwt.toJwtUserDetails(): JwtUserDetails {
-    val username = subject
-    val email = Email(getClaimAsString("email"))
-    val uuid = UUID.fromString(getClaimAsString("user-id"))
+    val email = Email(getClaimAsString("email") ?: throw BusinessLogicException("User email claim is missing"))
+    val uuid = UUID.fromString(subject ?: throw BusinessLogicException("User id claim is missing"))
+    val username = getClaimAsString("preferred_username")
+        ?: throw BusinessLogicException("User preferred_username claim is missing")
 
-    val roles = getClaimAsStringList("roles") ?: listOf("OPENEDX_USER")
+    val roles =
+        getClaimAsStringList("roles") ?: throw BusinessLogicException("Roles claim is missing")
     val role = roles.firstOrNull() ?: "OPENEDX_USER"
-    val authorities = roles.map { SimpleGrantedAuthority("ROLE_$it") }
+
+    val authorities = roles.map { SimpleGrantedAuthority("ROLE_${it.uppercase()}") }
 
 
     val edxSession =
