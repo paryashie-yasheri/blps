@@ -10,12 +10,18 @@ import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.transaction.jta.JtaTransactionManager
 import org.springframework.test.context.DynamicPropertyRegistry
 import org.springframework.test.context.DynamicPropertySource
+import org.springframework.test.context.TestPropertySource
+import soaringLizards.blps.integration.IntegrationKeycloak
 import soaringLizards.blps.integration.IntegrationPostgres
 import soaringLizards.blps.integration.TestcontainersCleanupExtension
 import javax.sql.DataSource
 
 @SpringBootTest
 @ExtendWith(TestcontainersCleanupExtension::class)
+@TestPropertySource(properties = [
+    "edx.bypass.enabled=true",
+    "edx.bypass.expires-seconds=3600"
+])
 class ApplicationTests {
 
     @Autowired
@@ -32,12 +38,12 @@ class ApplicationTests {
     @Autowired
     private lateinit var transactionManager: JtaTransactionManager
 
-
     companion object {
         @JvmStatic
         @DynamicPropertySource
         fun registerProperties(registry: DynamicPropertyRegistry) {
             IntegrationPostgres.registerProperties(registry)
+            IntegrationKeycloak.registerProperties(registry)
         }
     }
 
