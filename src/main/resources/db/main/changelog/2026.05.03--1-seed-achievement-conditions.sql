@@ -2,11 +2,18 @@
 --changeset blps:2026.05.03--1-seed-achievement-conditions
 
 --rollback DELETE FROM achievement_conditions WHERE achievement_type_id IN (SELECT achievement_type_id FROM achievement_types WHERE code IN ('course_joined', 'first_lesson', 'course_completed'));
---rollback DELETE FROM achievement_types WHERE code = 'course_joined';
---rollback UPDATE achievement_types SET is_active = false WHERE code IN ('first_lesson', 'course_completed');
+--rollback DELETE FROM achievement_types WHERE code IN ('course_joined', 'first_lesson', 'course_completed');
 
 INSERT INTO achievement_types (code, name, description, points_awarded, is_repeatable, icon, is_active)
 VALUES ('course_joined', 'Первый курс', 'Запишитесь на курс', 5, false, '/icons/course_joined.png', true)
+ON CONFLICT (code) DO NOTHING;
+
+INSERT INTO achievement_types (code, name, description, points_awarded, is_repeatable, icon, is_active)
+VALUES ('first_lesson', 'Первый урок', 'Завершите первый урок', 10, false, '/icons/first_lesson.png', true)
+ON CONFLICT (code) DO NOTHING;
+
+INSERT INTO achievement_types (code, name, description, points_awarded, is_repeatable, icon, is_active)
+VALUES ('course_completed', 'Курс завершён', 'Завершите курс', 20, false, '/icons/course_completed.png', true)
 ON CONFLICT (code) DO NOTHING;
 
 UPDATE achievement_types
