@@ -1,10 +1,11 @@
 spring:
-  config:
-    activate:
-      on-profile: prod
-
-server:
-  port: 8090
+  application:
+    name: datalake-sync
+  datasource:
+    url: jdbc:postgresql://localhost:5433/studs_journal
+    username: postgres
+    password: postgres
+    driver-class-name: org.postgresql.Driver
 
 datalake:
   spark:
@@ -18,3 +19,16 @@ datalake:
       endpoint: http://minio:9000
       access-key: admin
       secret-key: password
+  ledger:
+    sync:
+      batch-size: 1000
+      cron: "0 0 3 * * ?"
+  quartz:
+    enabled: true
+    job-store-type: memory
+    properties:
+      org.quartz:
+        scheduler:
+          instanceName: LedgerSyncScheduler
+        threadPool:
+          threadCount: 2

@@ -3,10 +3,11 @@ package soaringlizards.datalakesync
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.boot.runApplication
+import soaringlizards.datalakesync.config.LedgerSyncConfig
 import soaringlizards.datalakesync.config.SparkSqlConfig
 
 @SpringBootApplication
-@EnableConfigurationProperties(SparkSqlConfig::class)
+@EnableConfigurationProperties(SparkSqlConfig::class, LedgerSyncConfig::class)
 class DatalakeSyncApplication
 
 fun main(args: Array<String>) {
