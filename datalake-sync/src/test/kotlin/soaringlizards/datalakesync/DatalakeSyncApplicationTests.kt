@@ -1,4 +1,4 @@
-package com.soaringlizards.datalakesync
+package soaringlizards.datalakesync
 
 import org.junit.jupiter.api.Test
 import org.springframework.boot.test.context.SpringBootTest

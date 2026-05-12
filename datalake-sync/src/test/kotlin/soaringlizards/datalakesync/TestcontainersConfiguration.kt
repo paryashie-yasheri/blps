@@ -1,4 +1,4 @@
-package com.soaringlizards.datalakesync
+package soaringlizards.datalakesync
 
 import org.springframework.boot.test.context.TestConfiguration
 

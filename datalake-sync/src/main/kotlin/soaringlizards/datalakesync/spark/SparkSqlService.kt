@@ -1,9 +1,9 @@
-package com.soaringlizards.datalakesync.spark
+package soaringlizards.datalakesync.spark
 
-import com.soaringlizards.datalakesync.config.SparkSqlConfig
 import jakarta.annotation.PostConstruct
 import org.springframework.context.annotation.Profile
 import org.springframework.stereotype.Service
+import soaringlizards.datalakesync.config.SparkSqlConfig
 import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest

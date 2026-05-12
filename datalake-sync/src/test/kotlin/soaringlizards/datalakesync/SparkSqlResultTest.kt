@@ -1,9 +1,9 @@
-package com.soaringlizards.datalakesync
+package soaringlizards.datalakesync
 
-import org.junit.jupiter.api.Test
-import kotlin.test.assertEquals
-import com.soaringlizards.datalakesync.spark.SparkSqlResult
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Test
+import soaringlizards.datalakesync.spark.SparkSqlResult
+import kotlin.test.assertEquals
 
 class SparkSqlResultTest {
 

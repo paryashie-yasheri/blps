@@ -1,9 +1,9 @@
-package com.soaringlizards.datalakesync
+package soaringlizards.datalakesync
 
-import com.soaringlizards.datalakesync.config.SparkSqlConfig
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.boot.runApplication
+import soaringlizards.datalakesync.config.SparkSqlConfig
 
 @SpringBootApplication
 @EnableConfigurationProperties(SparkSqlConfig::class)

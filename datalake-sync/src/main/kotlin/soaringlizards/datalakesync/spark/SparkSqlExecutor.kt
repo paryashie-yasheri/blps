@@ -1,15 +1,7 @@
-package com.soaringlizards.datalakesync.spark
+package soaringlizards.datalakesync.spark
 
-import com.soaringlizards.datalakesync.config.SparkSqlConfig
+import soaringlizards.datalakesync.config.SparkSqlConfig
 import java.util.concurrent.TimeUnit
-
-data class SparkSqlResult(
-    val stdout: String,
-    val stderr: String,
-    val exitCode: Int,
-) {
-    val isSuccess: Boolean get() = exitCode == 0
-}
 
 class SparkSqlExecutor(private val config: SparkSqlConfig) {
 

@@ -1,12 +1,12 @@
-package com.soaringlizards.datalakesync
+package soaringlizards.datalakesync
 
-import com.soaringlizards.datalakesync.spark.SparkSqlResult
-import com.soaringlizards.datalakesync.spark.SparkSqlService
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
+import soaringlizards.datalakesync.spark.SparkSqlResult
+import soaringlizards.datalakesync.spark.SparkSqlService
 
 class SparkSqlServiceTest {
 
@@ -19,7 +19,7 @@ class SparkSqlServiceTest {
         mockExecResult = SparkSqlResult(
             stdout = "1\t2026-05-12 10:00:00.000\ttest comment\nTime taken: 1.0 seconds, Fetched 1 row(s)",
             stderr = "",
-            exitCode = 0
+            exitCode = 0,
         )
     }
 

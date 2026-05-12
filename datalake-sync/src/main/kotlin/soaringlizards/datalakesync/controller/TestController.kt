@@ -1,9 +1,9 @@
-package com.soaringlizards.datalakesync.controller
+package soaringlizards.datalakesync.controller
 
-import com.soaringlizards.datalakesync.spark.SparkSqlResult
-import com.soaringlizards.datalakesync.spark.SparkSqlService
 import org.springframework.context.annotation.Profile
 import org.springframework.web.bind.annotation.*
+import soaringlizards.datalakesync.spark.SparkSqlResult
+import soaringlizards.datalakesync.spark.SparkSqlService
 
 @RestController
 @RequestMapping("/test")
