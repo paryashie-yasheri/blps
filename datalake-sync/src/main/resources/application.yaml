@@ -7,6 +7,15 @@ spring:
     password: postgres
     driver-class-name: org.postgresql.Driver
 
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always
+
 datalake:
   spark:
     container: spark-iceberg

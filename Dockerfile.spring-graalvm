@@ -1,0 +1,157 @@
+# syntax=docker/dockerfile:1.6.0
+#
+# GraalVM native image build for BLPS Spring Boot app.
+#
+# Uses Docker-in-Docker (DinD) to:
+#   1. Start an inner PostgreSQL container for jOOQ code generation
+#   2. Generate jOOQ sources against the running DB
+#   3. Build the Spring Boot fat JAR
+#   4. Build a GraalVM 24.0 native executable
+#
+# Usage:
+#   docker build -f Dockerfile.spring-graalvm --target runtime --tag blps-spring-graalvm:latest .
+#
+# Requires: --privileged (for DinD) and Docker socket access
+#
+# Build time: ~15-45 min first run, ~5 min cached rebuilds
+# RAM needed: ~8 GB
+# Disk needed: ~10 GB
+
+# ── DinD + Build stage (Alpine Linux) ────────────────────────────────────────
+FROM docker:25-dind AS builder
+
+# Clear DOCKER_HOST so CLI defaults to unix socket
+ENV DOCKER_HOST=
+
+# Install build dependencies (Alpine packages)
+RUN apk add --no-cache \
+        openjdk21 \
+        gradle \
+        bash \
+        curl \
+        wget \
+        tar \
+        xz \
+        gzip \
+        git \
+        ca-certificates \
+        build-base \
+        zlib-dev \
+        python3 \
+        py3-pip \
+        postgresql-client
+
+# ── Install GraalVM 24.0.2 ─────────────────────────────────────────────────
+ENV JAVA_HOME=/opt/graalvm-ce
+ENV PATH=$JAVA_HOME/bin:$PATH
+RUN wget -q -O /tmp/graalvm.tar.gz \
+        "https://github.com/graalvm/graalvm-ce-builds/releases/download/jdk-21.0.2/graalvm-community-jdk-21.0.2_linux-x64_bin.tar.gz" && \
+    mkdir -p /opt && tar xzf /tmp/graalvm.tar.gz -C /opt && rm /tmp/graalvm.tar.gz && \
+    DIR=$(ls /opt | grep graalvm) && mv /opt/$DIR /opt/graalvm-ce && \
+    ls /opt/graalvm-ce/bin/native-image /opt/graalvm-ce/bin/gu
+
+RUN $JAVA_HOME/bin/gu install native-image && \
+    $JAVA_HOME/bin/gu install native-image-install-update-user
+
+# ── Spring Native reachability metadata ─────────────────────────────────────
+RUN mkdir -p $JAVA_HOME/conf/graalvm && \
+    wget -q -O /tmp/spring-native.zip \
+      "https://repo1.maven.org/maven2/org/springframework/experimental/spring-graalvm-native/0.10.6/spring-graalvm-native-0.10.6-reachability-metadata.zip" && \
+    unzip -q -o /tmp/spring-native.zip -d /tmp/spring-native && \
+    cp -r /tmp/spring-native/REACHABILITY_META/* $JAVA_HOME/conf/graalvm/ || true
+
+WORKDIR /build
+
+# ── Copy project sources ────────────────────────────────────────────────────
+COPY . /src/
+WORKDIR /src
+
+# ── SINGLE RUN: start dockerd, db, jOOQ, JAR, native image ─────────────────
+# All dockerd operations must be in the same RUN step because dockerd
+# runs as a background process and its socket persists within the container
+# layer, but not across layers.
+RUN set -x && \
+    \
+    # Start dockerd in background
+    dockerd --host=unix:///var/run/docker.sock >/tmp/dockerd.log 2>&1 & \
+    echo "Waiting for dockerd..." && \
+    for i in $(seq 1 30); do \
+        docker info >/dev/null 2>&1 && break || { echo "wait $i"; sleep 2; }; \
+    done && \
+    docker info | head -3 && \
+    \
+    # Start inner PostgreSQL for jOOQ codegen
+    docker run -d \
+        --name blps-build-pg \
+        -e POSTGRES_DB=studs \
+        -e POSTGRES_USER=postgres \
+        -e POSTGRES_PASSWORD=postgres \
+        postgres:16.6 \
+        -c max_prepared_transactions=100 && \
+    \
+    # Wait for PostgreSQL to be ready
+    for i in $(seq 1 30); do \
+        docker exec blps-build-pg pg_isready -U postgres && break || { echo "pg wait $i"; sleep 2; }; \
+    done && \
+    \
+    # Generate jOOQ sources
+    gradle :generateJooq --no-daemon 2>&1 | tail -20 && \
+    \
+    # Overlay generated sources on top of source tree
+    mkdir -p build/generated-sources && \
+    cp -r build/generated-sources/jaooq/* src/main/kotlin/ 2>/dev/null || \
+    cp -r build/generated-sources/* src/ 2>/dev/null || true && \
+    \
+    # Build fat JAR
+    gradle bootJar -x test --no-daemon -Pspring.profiles.active=prod 2>&1 | tail -10 && \
+    \
+    # Copy JAR to build dir
+    cp build/libs/demo-*.jar /build/app.jar && \
+    ls -lh /build/app.jar && \
+    \
+    # Extract layered JAR for native-image
+    java -Djarmode=layertools -jar /build/app.jar extract --destination /build/layers && \
+    ls /build/layers/ && \
+    \
+    # Build GraalVM native image
+    native-image \
+        --layered-jar-input-path=/build/layers \
+        --initialize-at-build-time=org.slf4j,ch.qos.logback,org.apache.commons.logging \
+        --initialize-at-build-time=org.apache.commons.text,org.apache.commons.lang3 \
+        --initialize-at-build-time=com.fasterxml.jackson,com.ctc.wftt,org.yaml.snakeyaml \
+        --initialize-at-build-time=sun.security.ssl,java.util.jar,java.util.zip \
+        --initialize-at-build-time=org.springframework,org.aopalliance,org.springframework.security \
+        --initialize-at-build-time=org.springframework.web,org.springframework.beans,org.springframework.core \
+        --initialize-at-build-time=soaringLizards \
+        --initialize-at-build-time=org.postgresql,com.atomikos \
+        --initialize-at-build-time=net.minidev,net.sf.jopt \
+        --initialize-at-build-time=org.quartz,org.quartz.utils \
+        -H:Name=spring-app \
+        -H:+AddAllCharsets \
+        -H:+ReportExceptionStackTraces \
+        -H:EnableURLProtocols=http,https \
+        -H:+InstallSafepointGuards \
+        --no-fallback \
+        && ls -lh spring-app && \
+    \
+    # Cleanup inner PostgreSQL
+    docker stop blps-build-pg && docker rm blps-build-pg || true && \
+    \
+    echo "=== Build complete ===" && \
+    ls -lh /build/spring-app
+
+
+# ── Runtime image ───────────────────────────────────────────────────────────
+FROM debian:trixie-slim AS runtime
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    zlib1g libstdc++6 curl && rm -rf /var/lib/apt/lists/*
+
+COPY --from=builder /build/spring-app /app/
+COPY --from=builder /build/spring-app-config.json /app/ 2>/dev/null || true
+
+EXPOSE 8080
+HEALTHCHECK --interval=15s --timeout=5s --retries=10 --start-period=60s \
+    CMD curl -f http://localhost:8080/actuator/health || exit 1
+
+ENTRYPOINT ["/app/spring-app"]

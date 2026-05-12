@@ -1,0 +1,300 @@
+services:
+  # ── Databases ────────────────────────────────────────────────────────────────
+  pg:
+    image: postgres:16.6
+    container_name: blps-pg-prod
+    command: postgres -c max_prepared_transactions=100
+    networks: [app-network]
+    shm_size: 128mb
+    volumes:
+      - pg-data:/var/lib/postgresql/data:Z
+      - ./docker-postgres-init-scrips:/docker-entrypoint-initdb.d/:ro
+    environment:
+      POSTGRES_DB: studs
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+  pg-rewards:
+    image: postgres:16.6
+    container_name: blps-pg-rewards-prod
+    command: postgres -c max_prepared_transactions=100
+    networks: [app-network]
+    shm_size: 128mb
+    volumes:
+      - pg-rewards-data:/var/lib/postgresql/data:Z
+    environment:
+      POSTGRES_DB: studs_rewards
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+  pg-journal:
+    image: postgres:16.6
+    container_name: blps-pg-journal-prod
+    command: postgres -c max_prepared_transactions=100
+    networks: [app-network]
+    shm_size: 128mb
+    volumes:
+      - pg-journal-data:/var/lib/postgresql/data:Z
+    environment:
+      POSTGRES_DB: studs_journal
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+  # ── Identity & Auth ───────────────────────────────────────────────────────────
+  keycloak:
+    image: quay.io/keycloak/keycloak-native:latest
+    container_name: blps-keycloak-prod
+    networks: [app-network]
+    volumes:
+      - ./keycloak/import:/opt/keycloak/data/import:ro
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+    command:
+      - start-dev
+      - --import-realm
+    ports:
+      - "8081:8080"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/health || curl -sf http://localhost:8080/health || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+    depends_on:
+      pg:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+
+  # ── Data Lake ────────────────────────────────────────────────────────────────
+  spark-iceberg:
+    build:
+      context: ./spark
+      dockerfile: Dockerfile
+    container_name: blps-spark-iceberg-prod
+    networks:
+      - app-network
+      - iceberg_net
+    volumes:
+      - ./warehouse:/home/iceberg/warehouse
+      - ./notebooks:/home/iceberg/notebooks/notebooks
+    environment:
+      AWS_ACCESS_KEY_ID: admin
+      AWS_SECRET_ACCESS_KEY: password
+      AWS_REGION: us-east-1
+    ports:
+      - "8888:8888"
+      - "8080:8080"
+      - "10000:10000"
+      - "10001:10001"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/ || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+
+  rest:
+    image: apache/iceberg-rest-fixture:latest
+    container_name: blps-iceberg-rest-prod
+    networks:
+      - iceberg_net
+    environment:
+      AWS_ACCESS_KEY_ID: admin
+      AWS_SECRET_ACCESS_KEY: password
+      AWS_REGION: us-east-1
+      CATALOG_WAREHOUSE: s3://warehouse/
+      CATALOG_IO__IMPL: org.apache.iceberg.aws.s3.S3FileIO
+      CATALOG_S3_ENDPOINT: http://minio:9000
+    ports:
+      - "8181:8181"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8181/ || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  minio:
+    image: minio/minio:latest
+    container_name: blps-minio-prod
+    networks:
+      - iceberg_net
+    environment:
+      MINIO_ROOT_USER: admin
+      MINIO_ROOT_PASSWORD: password
+      MINIO_DOMAIN: minio
+    ports:
+      - "9001:9001"
+      - "9000:9000"
+    volumes:
+      - minio-data:/data
+    command: ["server", "/data", "--console-address", ":9001"]
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  mc:
+    image: minio/mc:latest
+    container_name: blps-mc-prod
+    depends_on:
+      minio:
+        condition: service_healthy
+    networks:
+      - iceberg_net
+    environment:
+      AWS_ACCESS_KEY_ID: admin
+      AWS_SECRET_ACCESS_KEY: password
+      AWS_REGION: us-east-1
+    entrypoint: |
+      /bin/sh -c "
+      sleep 5;
+      /usr/bin/mc alias set minio http://minio:9000 admin password;
+      /usr/bin/mc rm -r --force minio/warehouse 2>/dev/null || true;
+      /usr/bin/mc mb minio/warehouse;
+      /usr/bin/mc anonymous set public minio/warehouse;
+      tail -f /dev/null
+      "
+
+  # ── Spring Boot Applications ─────────────────────────────────────────────────
+  spring:
+    image: blps-spring-native:latest
+    container_name: blps-spring-prod
+    networks: [app-network]
+    ports:
+      - "${SPRING_PORT:-8080}:8080"
+    environment:
+      POSTGRES_HOST: pg
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: studs
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      REWARDS_POSTGRES_HOST: pg-rewards
+      REWARDS_POSTGRES_PORT: 5434
+      REWARDS_POSTGRES_DB: studs_rewards
+      REWARDS_POSTGRES_USER: postgres
+      REWARDS_POSTGRES_PASSWORD: postgres
+      JOURNAL_POSTGRES_HOST: pg-journal
+      JOURNAL_POSTGRES_PORT: 5433
+      JOURNAL_POSTGRES_DB: studs_journal
+      JOURNAL_POSTGRES_USER: postgres
+      JOURNAL_POSTGRES_PASSWORD: postgres
+      SPRING_PROFILES_ACTIVE: prod
+      SPRING_DATASOURCE_DRIVER_CLASS_NAME: org.postgresql.Driver
+      JOURNAL_LIQUIBASE_ENABLED: "true"
+      ATOMIKOS_LOG_BASE_DIR: /tmp/atomikos
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+    depends_on:
+      pg:
+        condition: service_healthy
+      pg-rewards:
+        condition: service_healthy
+      pg-journal:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+    volumes:
+      - spring-logs:/tmp/atomikos
+
+  datalake-sync:
+    image: blps-datalake-sync-native:latest
+    container_name: blps-datalake-sync-prod
+    networks: [app-network, iceberg_net]
+    ports:
+      - "8090:8090"
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      DATALAKE_SPARK__CATALOG__URI: http://rest:8181
+      DATALAKE_SPARK__S3__ENDPOINT: http://minio:9000
+      DATALAKE_LEDGER__DB__URL: jdbc:postgresql://pg-journal:5432/studs_journal
+      DATALAKE_LEDGER__DB__USERNAME: postgres
+      DATALAKE_LEDGER__DB__PASSWORD: postgres
+      DATALAKE_QUARTZ__ENABLED: "true"
+      JAVA_OPTS: -Xmx256m
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8090/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+    depends_on:
+      rest:
+        condition: service_healthy
+      spark-iceberg:
+        condition: service_healthy
+      pg-journal:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+  # ── Build stage (optional, for CI/CD) ─────────────────────────────────────
+  build-native:
+    build:
+      context: .
+      dockerfile: Dockerfile.native
+      target: runtime
+      args:
+        JDK_IMAGE: eclipse-temurin:21-jdk-alpine
+        BASE_IMAGE: eclipse-temurin:21-jre-alpine
+    image: blps-spring-native:latest
+    container_name: blps-build-native
+    profiles:
+      - build
+
+volumes:
+  pg-data:
+  pg-rewards-data:
+  pg-journal-data:
+  minio-data:
+  spring-logs:
+
+networks:
+  app-network:
+    driver: bridge
+  iceberg_net:
+    driver: bridge
