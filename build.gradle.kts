@@ -246,8 +246,11 @@ tasks.withType<Test> {
     useJUnitPlatform()
 }
 
+tasks.named("test") {
+    dependsOn(":datalake-sync:test")
+}
 
-tasks.test {
+tasks.named<Test>("test") {
     environment("SPRING_PROFILES_ACTIVE", "test")
     environment("api.version", "1.44")
     systemProperty("spring.profiles.active", "test")
