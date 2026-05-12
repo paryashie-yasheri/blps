@@ -239,6 +239,8 @@ configurations.all {
         force("org.testcontainers:testcontainers:$testcontainersVersion")
         force("org.testcontainers:jdbc:$testcontainersVersion")
         force("org.testcontainers:database-commons:$testcontainersVersion")
+        force("org.apache.commons:commons-text:1.12.0")
+        force("org.apache.commons:commons-lang3:3.12.0")
     }
 }
 

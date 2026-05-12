@@ -3,16 +3,15 @@ package soaringlizards.datalakesync.spark
 import jakarta.annotation.PostConstruct
 import org.springframework.context.annotation.Profile
 import org.springframework.stereotype.Service
+import org.springframework.web.client.RestClient
 import soaringlizards.datalakesync.config.SparkSqlConfig
-import java.net.URI
-import java.net.http.HttpClient
-import java.net.http.HttpRequest
-import java.net.http.HttpResponse
 
 @Service
 @Profile("!test")
-class SparkSqlService(private val config: SparkSqlConfig) {
-
+class SparkSqlService(
+    private val config: SparkSqlConfig,
+    private val restClient: RestClient,
+) {
     private val exec = SparkSqlExecutor.builder(config)
 
     @PostConstruct
@@ -27,21 +26,16 @@ class SparkSqlService(private val config: SparkSqlConfig) {
     }
 
     private fun createNamespaceViaRest(ns: String) {
-        val client = HttpClient.newHttpClient()
-        val body = """{"namespace": ["$ns"]}"""
-        val request = HttpRequest.newBuilder()
-            .uri(URI("http://localhost:8181/v1/namespaces"))
-            .header("Content-Type", "application/json")
-            .POST(HttpRequest.BodyPublishers.ofString(body))
-            .build()
         try {
-            val response = client.send(request, HttpResponse.BodyHandlers.ofString())
-            if (response.statusCode() == 200 || response.statusCode() == 201) {
-                println("Namespace $ns ready")
-            } else if (response.body().contains("already exists")) {
-                println("Namespace $ns already exists")
-            } else {
-                println("Create namespace response: ${response.statusCode()} ${response.body()}")
+            val response = restClient.post()
+                .uri("/v1/namespaces")
+                .body(mapOf("namespace" to listOf(ns)))
+                .retrieve()
+                .toEntity(String::class.java)
+            when {
+                response.statusCode.is2xxSuccessful -> println("Namespace $ns ready")
+                response.body?.contains("already exists") == true -> println("Namespace $ns already exists")
+                else -> println("Create namespace response: ${response.statusCode} ${response.body}")
             }
         } catch (e: Exception) {
             println("Create namespace failed: ${e.message}")
@@ -49,7 +43,6 @@ class SparkSqlService(private val config: SparkSqlConfig) {
     }
 
     private fun createTableViaRest(ns: String, table: String) {
-        val client = HttpClient.newHttpClient()
         val schema = """
             {
               "schema": {
@@ -61,20 +54,16 @@ class SparkSqlService(private val config: SparkSqlConfig) {
               }
             }
         """.trimIndent()
-        val body = """{"name": "$table", "schema": $schema}"""
-        val request = HttpRequest.newBuilder()
-            .uri(URI("http://localhost:8181/v1/namespaces/$ns/tables"))
-            .header("Content-Type", "application/json")
-            .POST(HttpRequest.BodyPublishers.ofString(body))
-            .build()
         try {
-            val response = client.send(request, HttpResponse.BodyHandlers.ofString())
-            if (response.statusCode() == 200 || response.statusCode() == 201) {
-                println("Table $ns.$table ready")
-            } else if (response.body().contains("already exists")) {
-                println("Table $ns.$table already exists")
-            } else {
-                println("Create table response: ${response.statusCode()} ${response.body()}")
+            val response = restClient.post()
+                .uri("/v1/namespaces/$ns/tables")
+                .body(mapOf("name" to table, "schema" to schema))
+                .retrieve()
+                .toEntity(String::class.java)
+            when {
+                response.statusCode.is2xxSuccessful -> println("Table $ns.$table ready")
+                response.body?.contains("already exists") == true -> println("Table $ns.$table already exists")
+                else -> println("Create table response: ${response.statusCode} ${response.body}")
             }
         } catch (e: Exception) {
             println("Create table failed: ${e.message}")
@@ -82,15 +71,15 @@ class SparkSqlService(private val config: SparkSqlConfig) {
     }
 
     fun insertRow(id: Int, comment: String): SparkSqlResult {
-        val safeComment = comment
-            .replace("\\", "\\\\")
-            .replace("'", "''")
-        return exec.execute(
-            "INSERT INTO mydb.testtable VALUES ($id, current_timestamp(), '$safeComment')",
-        )
+        return query(
+            "INSERT INTO mydb.testtable VALUES (?, ?, ?)",
+            QueryParam.int(id),
+            QueryParam.raw("current_timestamp()"),
+            QueryParam.str(comment),
+        ).executeWith(exec)
     }
 
     fun selectAll(): SparkSqlResult {
-        return exec.execute("SELECT * FROM mydb.testtable")
+        return query("SELECT * FROM mydb.testtable").executeWith(exec)
     }
 }
