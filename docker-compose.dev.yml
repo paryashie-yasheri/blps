@@ -131,6 +131,8 @@ services:
       - redis-server --requirepass "$${REDIS_PASSWORD:?REDIS_PASSWORD variable is not set}"
     volumes:
       - cache:/data
+    networks:
+      - app-network
     env_file:
       - .env
 
