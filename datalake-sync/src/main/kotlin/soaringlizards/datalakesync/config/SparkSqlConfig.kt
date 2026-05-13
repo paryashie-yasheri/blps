@@ -9,6 +9,7 @@ data class SparkSqlConfig(
     val warehouse: Warehouse = Warehouse(),
     val s3: S3 = S3(),
     val network: String? = null,
+    val createTestTable: Boolean = true,
 ) {
     data class Catalog(
         val name: String = "demo",

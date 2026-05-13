@@ -11,7 +11,7 @@ class LedgerSyncJob : Job {
     private val logger = LoggerFactory.getLogger(LedgerSyncJob::class.java)
 
     override fun execute(context: JobExecutionContext) {
-        val service = context.scheduler.context.get("ledgerSyncService") as? LedgerSyncService
+        val service = context.scheduler.context["ledgerSyncService"] as? LedgerSyncService
             ?: throw JobExecutionException("LedgerSyncService not found in scheduler context")
         try {
             val result = service.sync()

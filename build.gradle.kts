@@ -124,7 +124,7 @@ description = "blps"
 
 jib {
     to {
-        image = "blps/backend:jib-dev"
+        image = "soaring-lizards/blps-main:jib-dev"
     }
 }
 

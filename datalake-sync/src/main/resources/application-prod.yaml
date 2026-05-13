@@ -8,6 +8,7 @@ server:
 
 datalake:
   spark:
+    create-test-table: false
     container: spark-iceberg
     catalog:
       name: demo

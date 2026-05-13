@@ -5,12 +5,12 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
+import soaringlizards.datalakesync.spark.DevSparkSqlService
 import soaringlizards.datalakesync.spark.SparkSqlResult
-import soaringlizards.datalakesync.spark.SparkSqlService
 
 class SparkSqlServiceTest {
 
-    private lateinit var mockService: SparkSqlService
+    private lateinit var mockService: DevSparkSqlService
     private lateinit var mockExecResult: SparkSqlResult
 
     @BeforeEach

@@ -7,8 +7,8 @@ import org.springframework.web.client.RestClient
 import soaringlizards.datalakesync.config.SparkSqlConfig
 
 @Service
-@Profile("!test")
-class SparkSqlService(
+@Profile("dev")
+class DevSparkSqlService(
     private val config: SparkSqlConfig,
     private val restClient: RestClient,
 ) {
@@ -18,8 +18,10 @@ class SparkSqlService(
     fun initialize() {
         try {
             createNamespaceViaRest("mydb")
-            createTableViaRest("mydb", "testtable")
-            println("Iceberg table mydb.testtable ready")
+            if (config.createTestTable) {
+                createTableViaRest("mydb", "testtable")
+                println("Iceberg table mydb.testtable ready")
+            }
         } catch (e: Exception) {
             println("Init failed: ${e.message}")
         }
@@ -43,17 +45,14 @@ class SparkSqlService(
     }
 
     private fun createTableViaRest(ns: String, table: String) {
-        val schema = """
-            {
-              "schema": {
-                "fields": [
-                  {"name": "id", "type": "int", "required": true},
-                  {"name": "ts", "type": "timestamp", "required": false},
-                  {"name": "comment", "type": "string", "required": false}
-                ]
-              }
-            }
-        """.trimIndent()
+        val schema = mapOf(
+            "type" to "struct",
+            "fields" to listOf(
+                mapOf("id" to mapOf("type" to "int", "optional" to false)),
+                mapOf("ts" to mapOf("type" to "timestamp", "optional" to true)),
+                mapOf("comment" to mapOf("type" to "string", "optional" to true)),
+            ),
+        )
         try {
             val response = restClient.post()
                 .uri("/v1/namespaces/$ns/tables")
