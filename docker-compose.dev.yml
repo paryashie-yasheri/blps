@@ -112,8 +112,11 @@ services:
       - pulsar
     environment:
       PULSAR_URL: ${PROMOCODE_PULSAR_URL:-pulsar://pulsar:6650}
-      PULSAR_TOPIC: ${PROMOCODE_PULSAR_TOPIC:-persistent://public/default/reward-redemptions}
+      PULSAR_TOPIC: ${PULSAR_REWARD_REDEMPTION_TOPIC:-persistent://public/default/reward-redemptions}
       PULSAR_SUBSCRIPTION: ${PROMOCODE_PULSAR_SUBSCRIPTION:-promocode-service}
+      REDIS_ADDR: ${REDIS_ADDR:localhost:6379}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:""}
+      REDIS_DB: ${REDIS_DB:0}
     networks:
       - app-network
 
