@@ -9,7 +9,7 @@ spring:
     admin-credentials:
       username: ${KEYCLOAK_ADMIN}
       password: ${KEYCLOAK_ADMIN_PASSWORD}
-      email: ${ADMIN_EMAIL}
+      email: ${KEYCLOAK_ADMIN_EMAIL}
 
 edx:
   api:
