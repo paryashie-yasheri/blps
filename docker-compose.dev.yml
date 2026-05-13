@@ -69,7 +69,7 @@ services:
       - "8081:8080"
     volumes:
       - ./keycloak/import:/opt/keycloak/data/import
-    entrypoint: ["/opt/keycloak/data/import/entrypoint.sh"]
+    entrypoint: [ "/opt/keycloak/data/import/entrypoint.sh" ]
     environment:
       - KEYCLOAK_IMPORT=/opt/keycloak/data/import/realm-config.json
       - KEYCLOAK_ADMIN=${KEYCLOAK_ADMIN}
@@ -89,6 +89,49 @@ services:
     env_file:
       - .env
 
+  pulsar:
+    image: apachepulsar/pulsar:4.0.10
+    container_name: pulsar
+    command: bin/pulsar standalone --advertised-address localhost
+    env_file:
+      - .env
+    networks:
+      - app-network
+    ports:
+      - "6650:6650"
+      - "8082:8080"
+    volumes:
+      - pulsar-data:/pulsar/data
+
+  promocode-service:
+    build:
+      context: ./promocode-service
+    profiles:
+      - promocode
+    depends_on:
+      - pulsar
+    environment:
+      PULSAR_URL: ${PROMOCODE_PULSAR_URL:-pulsar://pulsar:6650}
+      PULSAR_TOPIC: ${PROMOCODE_PULSAR_TOPIC:-persistent://public/default/reward-redemptions}
+      PULSAR_SUBSCRIPTION: ${PROMOCODE_PULSAR_SUBSCRIPTION:-promocode-service}
+    networks:
+      - app-network
+
+  redis:
+    image: redis:7.4-alpine
+    restart: always
+    ports:
+      - "6379:6379"
+    command:
+      - /bin/sh
+      - -c
+      - redis-server --requirepass "$${REDIS_PASSWORD:?REDIS_PASSWORD variable is not set}"
+    volumes:
+      - cache:/data
+    env_file:
+      - .env
+
+
 #  spring:
 #    image: blps/backend:jib-dev
 #    ports:
@@ -106,6 +149,8 @@ volumes:
   pg-data:
   pg-rewards-data:
   pg-journal-data:
+  pulsar-data:
+  cache:
 
 networks:
   app-network:

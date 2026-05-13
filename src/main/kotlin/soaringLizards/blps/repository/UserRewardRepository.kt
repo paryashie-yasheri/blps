@@ -39,11 +39,13 @@ class UserRewardRepository(
             }
     }
 
-    fun insert(balanceId: UUID, rewardId: UUID): Int =
+    fun insert(balanceId: UUID, rewardId: UUID): UUID =
         dsl.insertInto(USER_REWARDS)
             .set(USER_REWARDS.BALANCE_ID, balanceId)
             .set(USER_REWARDS.REWARD_ID, rewardId)
-            .execute()
+            .returningResult(USER_REWARDS.USER_REWARD_ID)
+            .fetchOne(USER_REWARDS.USER_REWARD_ID)
+            ?: throw IllegalStateException("Failed to insert user reward")
 
     fun delete(id: UUID) =
         dsl.deleteFrom(USER_REWARDS)
