@@ -7,8 +7,8 @@ spring:
 
   security:
     admin-credentials:
-      username: ${ADMIN_USERNAME}
-      password: ${ADMIN_PASSWORD}
+      username: ${KEYCLOAK_ADMIN}
+      password: ${KEYCLOAK_ADMIN_PASSWORD}
       email: ${ADMIN_EMAIL}
 
 edx:

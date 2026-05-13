@@ -9,8 +9,8 @@ spring:
     name: blps
   security:
     admin-credentials:
-      username: ${ADMIN_USERNAME:admin}
-      password: ${ADMIN_PASSWORD:admin}
+      username: ${KEYCLOAK_ADMIN:admin}
+      password: ${KEYCLOAK_ADMIN_PASSWORD:admin}
       email: ${ADMIN_EMAIL:admin@mail.com}
 
       oauth2:

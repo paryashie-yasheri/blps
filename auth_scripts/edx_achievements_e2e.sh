@@ -6,8 +6,8 @@ source "${SCRIPT_DIR}/common.sh"
 
 COURSE_KEY="${1:?Usage: $0 <course-key> <block-id> [staff-username] [staff-password] [student-username] [student-password]}"
 BLOCK_ID="${2:?Usage: $0 <course-key> <block-id> [staff-username] [staff-password] [student-username] [student-password]}"
-STAFF_USERNAME="${3:-${ADMIN_USERNAME:-admin}}"
-STAFF_PASSWORD="${4:-${ADMIN_PASSWORD:-admin}}"
+STAFF_USERNAME="${3:-${KEYCLOAK_ADMIN:-admin}}"
+STAFF_PASSWORD="${4:-${KEYCLOAK_ADMIN_PASSWORD:-admin}}"
 STUDENT_USERNAME="${5:-${EDX_API_TEST_USERNAME:-}}"
 STUDENT_PASSWORD="${6:-${EDX_API_TEST_PASSWORD:-}}"
 
