@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.RestController
 
 @RestController
 @RequestMapping("/ledger")
-@Profile("dev")
+@Profile("dev", "prod")
 class LedgerSyncController(private val syncService: LedgerSyncService) {
     private val logger = LoggerFactory.getLogger(LedgerSyncController::class.java)
 

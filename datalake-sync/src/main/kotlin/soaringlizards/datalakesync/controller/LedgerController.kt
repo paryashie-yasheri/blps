@@ -13,7 +13,7 @@ import java.util.UUID
 
 @RestController
 @RequestMapping("/ledger")
-@Profile("dev")
+@Profile("dev", "prod")
 class LedgerController(private val ledgerDataLakeService: LedgerDataLakeService) {
 
     @PostMapping("/write")
