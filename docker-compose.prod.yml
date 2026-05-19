@@ -146,7 +146,7 @@ services:
       - "9000:9000"
       - "9001:9001"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      test: [ "CMD", "curl", "-f", "http://localhost:9000/minio/health/live" ]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -218,17 +218,17 @@ services:
       - "${SPRING_PORT:-8080}:${SPRING_PORT:-8080}"
     environment:
       POSTGRES_HOST: pg
-      POSTGRES_PORT: ${POSTGRES_PORT}
+      POSTGRES_PORT: 5432
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       REWARDS_POSTGRES_HOST: pg-rewards
-      REWARDS_POSTGRES_PORT: ${REWARDS_POSTGRES_PORT}
+      REWARDS_POSTGRES_PORT: 5432
       REWARDS_POSTGRES_DB: ${REWARDS_POSTGRES_DB}
       REWARDS_POSTGRES_USER: ${REWARDS_POSTGRES_USER}
       REWARDS_POSTGRES_PASSWORD: ${REWARDS_POSTGRES_PASSWORD}
       JOURNAL_POSTGRES_HOST: pg-journal
-      JOURNAL_POSTGRES_PORT: ${JOURNAL_POSTGRES_PORT}
+      JOURNAL_POSTGRES_PORT: 5432
       JOURNAL_POSTGRES_DB: ${JOURNAL_POSTGRES_DB}
       JOURNAL_POSTGRES_USER: ${JOURNAL_POSTGRES_USER}
       JOURNAL_POSTGRES_PASSWORD: ${JOURNAL_POSTGRES_PASSWORD}
