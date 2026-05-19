@@ -106,8 +106,6 @@ services:
   promocode-service:
     build:
       context: ./promocode-service
-    profiles:
-      - promocode
     depends_on:
       - pulsar
     environment:
