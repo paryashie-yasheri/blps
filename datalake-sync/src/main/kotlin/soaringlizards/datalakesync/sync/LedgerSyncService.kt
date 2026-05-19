@@ -5,8 +5,8 @@ import org.springframework.context.annotation.Profile
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.stereotype.Service
 import soaringlizards.datalakesync.config.LedgerSyncConfig
-import soaringlizards.datalakesync.spark.QueryParam
 import soaringlizards.datalakesync.spark.SparkSqlExecutor
+import soaringlizards.datalakesync.spark.iceberg.LedgerDataLakeRepository
 import soaringlizards.datalakesync.spark.query
 import java.time.OffsetDateTime
 
@@ -15,6 +15,7 @@ import java.time.OffsetDateTime
 class LedgerSyncService(
     private val jdbcTemplate: JdbcTemplate,
     private val config: LedgerSyncConfig,
+    private val repository: LedgerDataLakeRepository,
     configForSpark: soaringlizards.datalakesync.config.SparkSqlConfig,
 ) {
     private val logger = LoggerFactory.getLogger(LedgerSyncService::class.java)
@@ -113,62 +114,20 @@ class LedgerSyncService(
 
     fun insertBatch(events: List<LedgerEventRow>): Int {
         if (events.isEmpty()) return 0
-        var inserted = 0
-        val existingIds = getExistingEventIds(events.map { it.eventId })
-        for (e in events) {
-            if (e.eventId in existingIds) {
-                logger.debug("Skipping duplicate event_id={}", e.eventId)
-                continue
-            }
-            val ts = e.occurredAt.toString().replace("T", " ").replace("+00:00", "")
-            val result = query(
-                "INSERT INTO $ns.$tbl VALUES (?, ?, ?, CAST(? AS TIMESTAMP), ?, ?, ?, ?, ?, ?, ?)",
-                QueryParam.str(e.eventId),
-                QueryParam.str(e.operationId),
-                QueryParam.str(e.eventType),
-                QueryParam.str(ts),
-                QueryParam.str(e.userId),
-                QueryParam.str(e.balanceId),
-                QueryParam.int(e.amount),
-                QueryParam.int(e.balanceBefore),
-                QueryParam.int(e.balanceAfter),
-                QueryParam.str(e.rewardId ?: ""),
-                QueryParam.str(e.description ?: ""),
-            ).executeWith(executorBuilder)
-            if (result.isSuccess) inserted++ else logger.warn(
-                "Insert failed for event_id={}: {}",
-                e.eventId,
-                result.stdout,
-            )
+        val eventIds = events.map { it.eventId }
+        val existingResult = repository.selectByEventIds(eventIds)
+        val existingIds = if (existingResult.isSuccess) {
+            existingResult.stdout.lines()
+                .filter { it.isNotBlank() && !it.startsWith("Time taken") && !it.startsWith("event_id") }
+                .map { it.trim() }
+                .filter { it.isNotEmpty() }
+                .toSet()
+        } else {
+            emptySet()
         }
-        return inserted
+        val newEvents = events.filter { it.eventId !in existingIds }
+        if (newEvents.isEmpty()) return 0
+        val result = repository.insertBatch(newEvents)
+        return if (result.isSuccess) newEvents.size else 0
     }
-
-    private fun getExistingEventIds(eventIds: List<String>): Set<String> {
-        if (eventIds.isEmpty()) return emptySet()
-        val inClause = eventIds.joinToString(",") { "'$it'" }
-        val result = executorBuilder.execute(
-            "SELECT event_id FROM $ns.$tbl WHERE event_id IN ($inClause)",
-        )
-        if (!result.isSuccess) return emptySet()
-        return result.stdout.lines()
-            .filter { it.isNotBlank() && !it.startsWith("Time taken") && !it.startsWith("event_id") }
-            .map { it.trim() }
-            .filter { it.isNotEmpty() }
-            .toSet()
-    }
-
-    data class LedgerEventRow(
-        val eventId: String,
-        val operationId: String,
-        val eventType: String,
-        val occurredAt: OffsetDateTime,
-        val userId: String,
-        val balanceId: String,
-        val amount: Int,
-        val balanceBefore: Int,
-        val balanceAfter: Int,
-        val rewardId: String?,
-        val description: String?,
-    )
 }
