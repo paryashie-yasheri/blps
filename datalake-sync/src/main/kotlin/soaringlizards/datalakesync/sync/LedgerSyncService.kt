@@ -90,7 +90,7 @@ class LedgerSyncService(
         if (since == null) {
             jdbcTemplate.query(sql) { rs -> rows.add(mapRow(rs)) }
         } else {
-            val param = since.format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSSSSSxxxxx"))
+            val param = since.toString()
             jdbcTemplate.query(sql, { ps -> ps.setString(1, param) }) { rs ->
                 rows.add(mapRow(rs))
             }
