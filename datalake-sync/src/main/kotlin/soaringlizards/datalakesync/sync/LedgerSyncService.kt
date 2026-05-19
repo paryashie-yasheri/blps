@@ -5,7 +5,6 @@ import org.springframework.context.annotation.Profile
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.stereotype.Service
 import soaringlizards.datalakesync.config.LedgerSyncConfig
-import soaringlizards.datalakesync.spark.PreparedQuery
 import soaringlizards.datalakesync.spark.QueryParam
 import soaringlizards.datalakesync.spark.SparkSqlExecutor
 import soaringlizards.datalakesync.spark.query
@@ -54,14 +53,14 @@ class LedgerSyncService(
             .firstOrNull { line ->
                 val trimmed = line.trim()
                 trimmed.isNotBlank() &&
-                    trimmed != "NULL" &&
-                    !line.startsWith("Time taken") &&
-                    !line.contains("(") &&
-                    !line.startsWith("Setting ") &&
-                    !line.startsWith("To adjust") &&
-                    !line.startsWith("Spark ") &&
-                    !line.startsWith("26/") &&
-                    Regex("\\d{4}-\\d{2}-\\d{2}").containsMatchIn(line)
+                        trimmed != "NULL" &&
+                        !line.startsWith("Time taken") &&
+                        !line.contains("(") &&
+                        !line.startsWith("Setting ") &&
+                        !line.startsWith("To adjust") &&
+                        !line.startsWith("Spark ") &&
+                        !line.startsWith("26/") &&
+                        Regex("\\d{4}-\\d{2}-\\d{2}").containsMatchIn(line)
             }
             ?.trim()
         if (line == null) return null
@@ -136,7 +135,11 @@ class LedgerSyncService(
                 QueryParam.str(e.rewardId ?: ""),
                 QueryParam.str(e.description ?: ""),
             ).executeWith(executorBuilder)
-            if (result.isSuccess) inserted++ else logger.warn("Insert failed for event_id={}: {}", e.eventId, result.stdout)
+            if (result.isSuccess) inserted++ else logger.warn(
+                "Insert failed for event_id={}: {}",
+                e.eventId,
+                result.stdout,
+            )
         }
         return inserted
     }
@@ -145,7 +148,7 @@ class LedgerSyncService(
         if (eventIds.isEmpty()) return emptySet()
         val inClause = eventIds.joinToString(",") { "'$it'" }
         val result = executorBuilder.execute(
-            "SELECT event_id FROM $ns.$tbl WHERE event_id IN ($inClause)"
+            "SELECT event_id FROM $ns.$tbl WHERE event_id IN ($inClause)",
         )
         if (!result.isSuccess) return emptySet()
         return result.stdout.lines()

@@ -35,8 +35,8 @@ sealed class QueryParam {
                         "\t" to "\\t",
                         "\u0000" to "\\0",
                         "\u001a" to "\\Z",
-                    )
-                )
+                    ),
+                ),
             )
         }
 
@@ -94,7 +94,7 @@ class PreparedQuery(private val template: String) {
                 sb.append(
                     params.getOrElse(paramIndex) {
                         throw IllegalStateException("Not enough parameters: expected at least ${paramIndex + 1}, got ${params.size}")
-                    }.toSqlString()
+                    }.toSqlString(),
                 )
                 paramIndex++
             } else {

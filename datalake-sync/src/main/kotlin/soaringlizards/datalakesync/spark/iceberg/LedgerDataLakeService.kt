@@ -3,7 +3,6 @@ package soaringlizards.datalakesync.spark.iceberg
 import org.springframework.context.annotation.Profile
 import org.springframework.stereotype.Service
 import soaringlizards.datalakesync.config.SparkSqlConfig
-import soaringlizards.datalakesync.spark.PreparedQuery
 import soaringlizards.datalakesync.spark.QueryParam
 import soaringlizards.datalakesync.spark.SparkSqlExecutor
 import soaringlizards.datalakesync.spark.SparkSqlResult
@@ -58,7 +57,7 @@ class LedgerDataLakeService(
     fun selectAll(limit: Int = 100): SparkSqlResult {
         return query(
             "SELECT * FROM ${ns()}.${tbl()} LIMIT ?",
-            QueryParam.int(limit)
+            QueryParam.int(limit),
         ).executeWith(executorBuilder)
     }
 
@@ -66,7 +65,7 @@ class LedgerDataLakeService(
         return query(
             "SELECT * FROM ${ns()}.${tbl()} WHERE user_id = ? LIMIT ?",
             QueryParam.str(userId),
-            QueryParam.int(limit)
+            QueryParam.int(limit),
         ).executeWith(executorBuilder)
     }
 
@@ -74,7 +73,7 @@ class LedgerDataLakeService(
         return query(
             "SELECT * FROM ${ns()}.${tbl()} WHERE event_type = ? LIMIT ?",
             QueryParam.str(eventType),
-            QueryParam.int(limit)
+            QueryParam.int(limit),
         ).executeWith(executorBuilder)
     }
 
