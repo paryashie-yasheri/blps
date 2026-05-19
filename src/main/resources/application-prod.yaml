@@ -13,6 +13,6 @@ spring:
 
 edx:
   api:
-    base-url: "http://local.openedx.io/api"
+    base-url: "${LMS_URL}/api"
     admin-username: ${EDX_API_ADMIN_USERNAME:admin}
     admin-password: ${EDX_API_ADMIN_PASSWORD:admin}
