@@ -4,7 +4,7 @@ import org.apache.commons.text.translate.AggregateTranslator
 import org.apache.commons.text.translate.CharSequenceTranslator
 import org.apache.commons.text.translate.LookupTranslator
 
-sealed class QueryParam {
+abstract class QueryParam {
     abstract fun toSqlString(): String
 
     data class IntParam(val value: Int) : QueryParam() {
@@ -61,7 +61,7 @@ sealed class QueryParam {
         fun bool(v: Boolean) = BoolParam(v)
         fun str(v: String) = StringParam(v)
         fun raw(v: String) = RawParam(v)
-        fun null_() = NullParam
+        fun `null`() = NullParam
     }
 }
 
