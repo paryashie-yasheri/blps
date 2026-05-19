@@ -124,13 +124,13 @@ description = "blps"
 
 jib {
     to {
-        image = "blps/backend:jib-dev"
+        image = "soaring-lizards/blps-main:jib-dev"
     }
 }
 
 java {
     toolchain {
-        languageVersion = JavaLanguageVersion.of(17)
+        languageVersion = JavaLanguageVersion.of(21)
     }
 }
 
@@ -239,6 +239,8 @@ configurations.all {
         force("org.testcontainers:testcontainers:$testcontainersVersion")
         force("org.testcontainers:jdbc:$testcontainersVersion")
         force("org.testcontainers:database-commons:$testcontainersVersion")
+        force("org.apache.commons:commons-text:1.12.0")
+        force("org.apache.commons:commons-lang3:3.12.0")
     }
 }
 
@@ -246,8 +248,11 @@ tasks.withType<Test> {
     useJUnitPlatform()
 }
 
+tasks.named("test") {
+    dependsOn(":datalake-sync:test")
+}
 
-tasks.test {
+tasks.named<Test>("test") {
     environment("SPRING_PROFILES_ACTIVE", "test")
     environment("api.version", "1.44")
     systemProperty("spring.profiles.active", "test")

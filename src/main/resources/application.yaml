@@ -117,12 +117,6 @@ keycloak:
     client-id: ${KEYCLOAK_MASTER_CLIENT_ID}
     client-secret: ${KEYCLOAK_MASTER_CLIENT_SECRET}
 
-auth:
-  jwt:
-    secret: ${JWT_SECRET}
-    expiration-ms: ${JWT_EXPIRATION_MS:3600000}
-
-
 management:
   endpoints:
     web:

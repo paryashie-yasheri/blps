@@ -1,0 +1,34 @@
+spring:
+  application:
+    name: datalake-sync
+  datasource:
+    url: jdbc:postgresql://localhost:5433/studs_journal
+    username: postgres
+    password: postgres
+    driver-class-name: org.postgresql.Driver
+
+datalake:
+  spark:
+    container: spark-iceberg
+    catalog:
+      name: demo
+      uri: http://rest:8181
+    warehouse:
+      uri: s3://warehouse/
+    s3:
+      endpoint: http://minio:9000
+      access-key: admin
+      secret-key: password
+  ledger:
+    sync:
+      batch-size: 1000
+      cron: "0 0 3 * * ?"
+  quartz:
+    enabled: true
+    job-store-type: memory
+    properties:
+      org.quartz:
+        scheduler:
+          instanceName: LedgerSyncScheduler
+        threadPool:
+          threadCount: 2
