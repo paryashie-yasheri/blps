@@ -25,6 +25,9 @@ class LedgerSyncService(
 
     companion object {
         private val TIMESTAMP_REGEX = Regex("\\d{4}-\\d{2}-\\d{2}")
+        private const val LEDGER_COLUMNS = "event_id, operation_id, event_type, occurred_at, user_id, balance_id, amount, balance_before, balance_after, reward_id, description"
+        private const val FETCH_ALL_SQL = "SELECT $LEDGER_COLUMNS FROM ledger_events ORDER BY occurred_at ASC"
+        private const val FETCH_SINCE_SQL = "SELECT $LEDGER_COLUMNS FROM ledger_events WHERE occurred_at > ?::timestamptz ORDER BY occurred_at ASC"
     }
 
     data class SyncResult(
@@ -79,11 +82,7 @@ class LedgerSyncService(
     }
 
     fun fetchNewEvents(since: OffsetDateTime?): List<LedgerEventRow> {
-        val sql = if (since == null) {
-            "SELECT event_id, operation_id, event_type, occurred_at, user_id, balance_id, amount, balance_before, balance_after, reward_id, description FROM ledger_events ORDER BY occurred_at ASC"
-        } else {
-            "SELECT event_id, operation_id, event_type, occurred_at, user_id, balance_id, amount, balance_before, balance_after, reward_id, description FROM ledger_events WHERE occurred_at > ?::timestamptz ORDER BY occurred_at ASC"
-        }
+        val sql = if (since == null) FETCH_ALL_SQL else FETCH_SINCE_SQL
 
         val batchSize = config.sync.batchSize
         val rows = mutableListOf<LedgerEventRow>()
