@@ -19,7 +19,7 @@ if curl -s "${BASE_URL}"/actuator/health > /dev/null 2>&1; then
     
     # Test staff login
     echo "4. Testing staff login..."
-    response=$(curl -s --json "{\"username\":\"${ADMIN_USERNAME}\",\"password\":\"${ADMIN_PASSWORD}\"}" \
+    response=$(curl -s --json "{\"username\":\"${KEYCLOAK_ADMIN}\",\"password\":\"${KEYCLOAK_ADMIN_PASSWORD}\"}" \
       "${SPRING_HOST}/api/auth/staff/login")
 
     echo "${response}" | jq .

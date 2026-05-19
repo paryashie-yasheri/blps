@@ -9,20 +9,9 @@ spring:
     name: blps
   security:
     admin-credentials:
-      username: ${ADMIN_USERNAME:admin}
-      password: ${ADMIN_PASSWORD:admin}
-      email: ${ADMIN_EMAIL:admin@mail.com}
-
-      oauth2:
-        authorization-server:
-          issuer-url: "${SPRING_HOST}"
-          introspection-endpoint: /oauth2/token-info
-          jwt-secret: "${JWT_SECRET}"
-          scopes: [ "read.scope", "write.scope" ]
-          redirect-uri: "http://127.0.0.1:8080/code"
-          client-secret: "{noop}${AUTH_SERVER_CLIENT_SECRET}"
-          client-name: "blps-stuff-auth"
-          client-id: "blps-stuff-auth"
+      username: ${KEYCLOAK_ADMIN:admin}
+      password: ${KEYCLOAK_ADMIN_PASSWORD:admin}
+      email: ${KEYCLOAK_ADMIN_EMAIL:admin@mail.com}
 
   oauth2:
     client:
