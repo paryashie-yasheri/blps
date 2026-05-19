@@ -89,11 +89,11 @@ services:
     image: redis:7.4-alpine
     restart: always
     ports:
-      - "6379:6379"
+      - "6380:6380"
     command:
       - /bin/sh
       - -c
-      - redis-server --requirepass "$${REDIS_PASSWORD:?REDIS_PASSWORD variable is not set}"
+      - redis-server --port 6380 --requirepass "$${REDIS_PASSWORD:?REDIS_PASSWORD variable is not set}"
     volumes:
       - cache:/data
     networks:

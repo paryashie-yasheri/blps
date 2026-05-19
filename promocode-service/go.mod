@@ -2,7 +2,10 @@ module promocode-service
 
 go 1.26.2
 
-require github.com/apache/pulsar-client-go v0.19.0
+require (
+	github.com/apache/pulsar-client-go v0.19.0
+	github.com/redis/go-redis/v9 v9.19.0
+)
 
 require (
 	github.com/AthenZ/athenz v1.12.13 // indirect
