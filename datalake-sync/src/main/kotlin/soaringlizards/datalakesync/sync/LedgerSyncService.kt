@@ -23,6 +23,10 @@ class LedgerSyncService(
     private val ns = "datalake"
     private val tbl = "ledger_events"
 
+    companion object {
+        private val TIMESTAMP_REGEX = Regex("\\d{4}-\\d{2}-\\d{2}")
+    }
+
     data class SyncResult(
         val fetched: Int,
         val inserted: Int,
@@ -50,27 +54,28 @@ class LedgerSyncService(
             logger.warn("Failed to query MAX(occurred_at): {}", result.stdout)
             return null
         }
-        val line = result.stdout.lines()
-            .firstOrNull { line ->
-                val trimmed = line.trim()
-                trimmed.isNotBlank() &&
-                        trimmed != "NULL" &&
-                        !line.startsWith("Time taken") &&
-                        !line.contains("(") &&
-                        !line.startsWith("Setting ") &&
-                        !line.startsWith("To adjust") &&
-                        !line.startsWith("Spark ") &&
-                        !line.startsWith("26/") &&
-                        Regex("\\d{4}-\\d{2}-\\d{2}").containsMatchIn(line)
-            }
-            ?.trim()
-        if (line == null) return null
+        val line = findTimestampLine(result.stdout.lines()) ?: return null
         return try {
             OffsetDateTime.parse(line.replace(" ", "T") + "+00:00")
         } catch (e: Exception) {
             logger.warn("Failed to parse cursor '{}': {}", line, e.message)
             null
         }
+    }
+
+    private fun findTimestampLine(lines: List<String>): String? {
+        return lines.firstOrNull { line ->
+            val trimmed = line.trim()
+            trimmed.isNotBlank() &&
+                    trimmed != "NULL" &&
+                    !line.startsWith("Time taken") &&
+                    !line.contains("(") &&
+                    !line.startsWith("Setting ") &&
+                    !line.startsWith("To adjust") &&
+                    !line.startsWith("Spark ") &&
+                    !line.startsWith("26/") &&
+                    TIMESTAMP_REGEX.containsMatchIn(line)
+        }?.trim()
     }
 
     fun fetchNewEvents(since: OffsetDateTime?): List<LedgerEventRow> {
