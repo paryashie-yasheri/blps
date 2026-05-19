@@ -171,8 +171,7 @@ services:
         echo 'Waiting...';
         sleep 2;
       done;
-      /usr/bin/mc rm -r --force minio/warehouse 2>/dev/null || true;
-      /usr/bin/mc mb minio/warehouse;
+      /usr/bin/mc mb minio/warehouse 2>/dev/null || true;
       /usr/bin/mc policy set public minio/warehouse;
       echo 'Bucket ready';
       tail -f /dev/null

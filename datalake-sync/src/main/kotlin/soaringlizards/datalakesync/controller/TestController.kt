@@ -11,7 +11,7 @@ import soaringlizards.datalakesync.spark.SparkSqlResult
 class TestController(private val devSparkSqlService: DevSparkSqlService) {
 
     @PostMapping("/write")
-    fun write(@RequestBody body: WriteRequest): SparkSqlResult {
+    fun write(@RequestBody body: TestWriteRequest): SparkSqlResult {
         return devSparkSqlService.insertRow(body.id, body.comment)
     }
 
@@ -20,5 +20,5 @@ class TestController(private val devSparkSqlService: DevSparkSqlService) {
         return devSparkSqlService.selectAll()
     }
 
-    data class WriteRequest(val id: Int, val comment: String)
+    data class TestWriteRequest(val id: Int, val comment: String)
 }

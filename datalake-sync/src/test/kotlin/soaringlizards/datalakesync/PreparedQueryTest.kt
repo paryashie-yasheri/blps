@@ -18,7 +18,7 @@ class PreparedQueryTest {
             "INSERT INTO t VALUES (?, ?, ?)",
             QueryParam.int(1),
             QueryParam.str("hello"),
-            QueryParam.null_()
+            QueryParam.`null`(),
         ).build()
         assertEquals("INSERT INTO t VALUES (1, 'hello', NULL)", sql)
     }
@@ -66,7 +66,7 @@ class PreparedQueryTest {
         val sql = query("INSERT INTO t VALUES (?, ?, ?)")
             .bind(QueryParam.int(99))
             .bind(QueryParam.str("test"))
-            .bind(QueryParam.null_())
+            .bind(QueryParam.`null`())
             .build()
         assertEquals("INSERT INTO t VALUES (99, 'test', NULL)", sql)
     }
@@ -84,10 +84,11 @@ class PreparedQueryTest {
 
     @Test
     fun `convenience factory methods`() {
-        val sql = query("SELECT * FROM t WHERE id = ? AND name = ? AND active = ?",
+        val sql = query(
+            "SELECT * FROM t WHERE id = ? AND name = ? AND active = ?",
             QueryParam.int(5),
             QueryParam.str("Alice"),
-            QueryParam.bool(false)
+            QueryParam.bool(false),
         ).build()
         assertEquals("SELECT * FROM t WHERE id = 5 AND name = 'Alice' AND active = false", sql)
     }

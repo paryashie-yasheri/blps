@@ -7,7 +7,7 @@ import org.springframework.context.annotation.Primary
 import org.springframework.web.client.RestClient
 import soaringlizards.datalakesync.spark.DevSparkSqlService
 import soaringlizards.datalakesync.spark.SparkSqlExecutor
-import soaringlizards.datalakesync.spark.iceberg.LedgerDataLakeService
+import soaringlizards.datalakesync.spark.iceberg.LedgerDataLakeRepository
 import soaringlizards.datalakesync.spark.iceberg.LedgerTableManager
 
 @TestConfiguration
@@ -31,5 +31,5 @@ class MockSparkConfig {
 
     @Bean
     @Primary
-    fun ledgerDataLakeService(): LedgerDataLakeService = mock()
+    fun ledgerDataLakeService(): LedgerDataLakeRepository = mock()
 }

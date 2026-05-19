@@ -1,83 +1,77 @@
 package soaringlizards.datalakesync.spark.iceberg
 
+import jakarta.annotation.PostConstruct
 import org.springframework.context.annotation.Profile
 import org.springframework.stereotype.Service
-import soaringlizards.datalakesync.config.SparkSqlConfig
-import soaringlizards.datalakesync.spark.QueryParam
-import soaringlizards.datalakesync.spark.SparkSqlExecutor
+import soaringlizards.datalakesync.dto.WriteRequest
 import soaringlizards.datalakesync.spark.SparkSqlResult
-import soaringlizards.datalakesync.spark.query
+import java.util.*
 
 @Service
 @Profile("!test")
 class LedgerDataLakeService(
     private val tableManager: LedgerTableManager,
-    config: SparkSqlConfig,
+    private val ledgerDataLakeRepository: LedgerDataLakeRepository,
 ) {
-    private val executorBuilder = SparkSqlExecutor.builder(config)
-
-    @jakarta.annotation.PostConstruct
+    @PostConstruct
     fun initialize() {
         tableManager.createNamespace()
         tableManager.createTable()
     }
 
-    private fun ns() = "datalake"
-    private fun tbl() = "ledger_events"
+    fun insert(request: WriteRequest) =
+        ledgerDataLakeRepository.insert(
+            eventId = request.eventId ?: UUID.randomUUID().toString(),
+            operationId = request.operationId,
+            eventType = request.eventType,
+            occurredAt = request.occurredAt,
+            userId = request.userId,
+            balanceId = request.balanceId,
+            amount = request.amount,
+            balanceBefore = request.balanceBefore,
+            balanceAfter = request.balanceAfter,
+            rewardId = request.rewardId,
+            description = request.description,
+        )
 
-    fun insert(
-        eventId: String,
-        operationId: String,
-        eventType: String,
-        occurredAt: String,
+    fun read(limit: Int): SparkSqlResult {
+        return ledgerDataLakeRepository.selectAll(limit)
+    }
+
+    fun readByUser(
         userId: String,
-        balanceId: String,
-        amount: Int,
-        balanceBefore: Int,
-        balanceAfter: Int,
-        rewardId: String?,
-        description: String?,
+        limit: Int,
     ): SparkSqlResult {
-        return query(
-            "INSERT INTO ${ns()}.${tbl()} VALUES (?, ?, ?, CAST(? AS TIMESTAMP), ?, ?, ?, ?, ?, ?, ?)",
-            QueryParam.str(eventId),
-            QueryParam.str(operationId),
-            QueryParam.str(eventType),
-            QueryParam.str(occurredAt),
-            QueryParam.str(userId),
-            QueryParam.str(balanceId),
-            QueryParam.int(amount),
-            QueryParam.int(balanceBefore),
-            QueryParam.int(balanceAfter),
-            QueryParam.str(rewardId ?: ""),
-            QueryParam.str(description ?: ""),
-        ).executeWith(executorBuilder)
-    }
-
-    fun selectAll(limit: Int = 100): SparkSqlResult {
-        return query(
-            "SELECT * FROM ${ns()}.${tbl()} LIMIT ?",
-            QueryParam.int(limit),
-        ).executeWith(executorBuilder)
-    }
-
-    fun selectByUserId(userId: String, limit: Int = 100): SparkSqlResult {
-        return query(
-            "SELECT * FROM ${ns()}.${tbl()} WHERE user_id = ? LIMIT ?",
-            QueryParam.str(userId),
-            QueryParam.int(limit),
-        ).executeWith(executorBuilder)
-    }
-
-    fun selectByEventType(eventType: String, limit: Int = 100): SparkSqlResult {
-        return query(
-            "SELECT * FROM ${ns()}.${tbl()} WHERE event_type = ? LIMIT ?",
-            QueryParam.str(eventType),
-            QueryParam.int(limit),
-        ).executeWith(executorBuilder)
+        return ledgerDataLakeRepository.selectByUserId(userId, limit)
     }
 
     fun count(): SparkSqlResult {
-        return query("SELECT COUNT(*) FROM ${ns()}.${tbl()}").executeWith(executorBuilder)
+        return ledgerDataLakeRepository.count()
+    }
+
+    fun seed(): SparkSqlResult {
+        val results = mutableListOf<SparkSqlResult>()
+        for (i in 1..5) {
+            val eventId = UUID.randomUUID().toString()
+            val operationId = UUID.randomUUID().toString()
+            val userId = UUID.randomUUID().toString()
+            val balanceId = UUID.randomUUID().toString()
+
+            val result = ledgerDataLakeRepository.insert(
+                eventId = eventId,
+                operationId = operationId,
+                eventType = "DEPOSIT",
+                occurredAt = "2026-05-12T10:00:00.000Z",
+                userId = userId,
+                balanceId = balanceId,
+                amount = i * 100,
+                balanceBefore = (i - 1) * 100,
+                balanceAfter = i * 100,
+                rewardId = null,
+                description = "Test deposit $i",
+            )
+            results.add(result)
+        }
+        return results.last()
     }
 }
