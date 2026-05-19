@@ -3,7 +3,6 @@ package soaringlizards.datalakesync.controller
 import org.springframework.context.annotation.Profile
 import org.springframework.web.bind.annotation.*
 import soaringlizards.datalakesync.spark.DevSparkSqlService
-import soaringlizards.datalakesync.spark.SparkSqlResult
 
 @RestController
 @RequestMapping("/test")
@@ -11,14 +10,12 @@ import soaringlizards.datalakesync.spark.SparkSqlResult
 class TestController(private val devSparkSqlService: DevSparkSqlService) {
 
     @PostMapping("/write")
-    fun write(@RequestBody body: TestWriteRequest): SparkSqlResult {
-        return devSparkSqlService.insertRow(body.id, body.comment)
-    }
+    fun write(@RequestBody body: TestWriteRequest) =
+        devSparkSqlService.insertRow(body.id, body.comment)
 
     @GetMapping("/read")
-    fun read(): SparkSqlResult {
-        return devSparkSqlService.selectAll()
-    }
+    fun read() =
+        devSparkSqlService.selectAll()
 
     data class TestWriteRequest(val id: Int, val comment: String)
 }
