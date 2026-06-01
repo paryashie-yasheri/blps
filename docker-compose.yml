@@ -85,6 +85,22 @@ services:
     env_file:
       - .env
 
+  redis:
+    image: redis:7.4-alpine
+    restart: always
+    ports:
+      - "6380:6380"
+    command:
+      - /bin/sh
+      - -c
+      - redis-server --port 6380 --requirepass "$${REDIS_PASSWORD:?REDIS_PASSWORD variable is not set}"
+    volumes:
+      - cache:/data
+    networks:
+      - app-network
+    env_file:
+      - .env
+
   spring:
     build:
       context: .
@@ -104,6 +120,7 @@ volumes:
   pg-data:
   pg-rewards-data:
   pg-journal-data:
+  cache:
 
 networks:
   app-network:

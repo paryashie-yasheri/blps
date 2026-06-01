@@ -3,15 +3,19 @@ services:
     image: postgres:16.6
     container_name: blps-pg-dev
     command: postgres -c max_prepared_transactions=${POSTGRES_MAX_PREPARED_TRANSACTIONS:-100}
-    networks: [ app-network ]
+    networks:
+      - app-network
+    shm_size: 128mb
     ports:
       - "5432:5432"
-    shm_size: 128mb
     volumes:
       - pg-data:/var/lib/postgresql/data:Z
       - ./docker-postgres-init-scrips:/docker-entrypoint-initdb.d/:ro
     environment:
-      POSTGRES_DB: ${POSTGRES_DB}
+      DB_CONNECTION: pgsql
+      POSTGRES_HOST: ${POSTGRES_HOST}
+      POSTGRES_DB: studs
+      PGDATA: /var/lib/postgresql/data/pgdata
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     healthcheck:
@@ -19,19 +23,25 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    env_file:
+      - .env
 
   pg-rewards:
     image: postgres:16.6
     container_name: blps-pg-rewards-dev
     command: postgres -c max_prepared_transactions=${REWARDS_POSTGRES_MAX_PREPARED_TRANSACTIONS:-100}
-    networks: [ app-network ]
+    networks:
+      - app-network
+    shm_size: 128mb
     ports:
       - "5434:5432"
-    shm_size: 128mb
     volumes:
       - pg-rewards-data:/var/lib/postgresql/data:Z
     environment:
+      DB_CONNECTION: pgsql
+      POSTGRES_HOST: ${REWARDS_POSTGRES_HOST}
       POSTGRES_DB: ${REWARDS_POSTGRES_DB}
+      PGDATA: /var/lib/postgresql/data/pgdata
       POSTGRES_USER: ${REWARDS_POSTGRES_USER}
       POSTGRES_PASSWORD: ${REWARDS_POSTGRES_PASSWORD}
     healthcheck:
@@ -39,19 +49,25 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    env_file:
+      - .env
 
   pg-journal:
     image: postgres:16.6
     container_name: blps-pg-journal-dev
     command: postgres -c max_prepared_transactions=${JOURNAL_POSTGRES_MAX_PREPARED_TRANSACTIONS:-100}
-    networks: [ app-network ]
+    networks:
+      - app-network
+    shm_size: 128mb
     ports:
       - "5433:5432"
-    shm_size: 128mb
     volumes:
       - pg-journal-data:/var/lib/postgresql/data:Z
     environment:
+      DB_CONNECTION: pgsql
+      POSTGRES_HOST: ${JOURNAL_POSTGRES_HOST}
       POSTGRES_DB: ${JOURNAL_POSTGRES_DB}
+      PGDATA: /var/lib/postgresql/data/pgdata
       POSTGRES_USER: ${JOURNAL_POSTGRES_USER}
       POSTGRES_PASSWORD: ${JOURNAL_POSTGRES_PASSWORD}
     healthcheck:
@@ -59,57 +75,140 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    env_file:
+      - .env
 
   keycloak:
     image: quay.io/keycloak/keycloak:24.0.4
     container_name: blps-keycloak-dev
-    networks: [ app-network ]
-    env_file:
-      - .env
+    ports:
+      - "8081:8080"
     volumes:
       - ./keycloak/import:/opt/keycloak/data/import
     entrypoint: [ "/opt/keycloak/data/import/entrypoint.sh" ]
     environment:
-      - KEYCLOAK_IMPORT=/tmp/realm-config.json
+      - KEYCLOAK_IMPORT=/opt/keycloak/data/import/realm-config.json
       - KEYCLOAK_ADMIN=${KEYCLOAK_ADMIN}
       - KEYCLOAK_ADMIN_PASSWORD=${KEYCLOAK_ADMIN_PASSWORD}
-      - KC_HEALTH_ENABLED=true
-      - KC_LOG_LEVEL=WARN
-    command: [ "start-dev", "--import-realm" ]
-    ports:
-      - "8081:8080"
+      - KC_LOG_LEVEL=INFO
+      - KC_LOG_LEVEL_ORG_KEYCLOAK=DEBUG
+      - KC_LOG_LEVEL_ORG_KEYCLOAK=DEBUG
     healthcheck:
       test: [ "CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/8080;echo -e \"GET /health/ready HTTP/1.1\r\nhost: http://localhost\r\nConnection: close\r\n\r\n\" >&3;grep \"HTTP/1.1 200 OK\" <&3" ]
       interval: 5s
       timeout: 5s
       retries: 30
       start_period: 60s
+    command: [
+      "start-dev",
+      "--import-realm",
+      "--verbose"
+    ]
     depends_on:
-      pg:
-        condition: service_healthy
+      - pg
+    networks:
+      - app-network
+    env_file:
+      - .env
+
+  pulsar:
+    image: apachepulsar/pulsar:4.0.10
+    container_name: pulsar
+    command: bin/pulsar standalone --advertised-address localhost
+    env_file:
+      - .env
+    networks:
+      - app-network
+    ports:
+      - "6650:6650"
+      - "8082:8080"
+    volumes:
+      - pulsar-data:/pulsar/data
+
+  promocode-service:
+    build:
+      context: ./promocode-service
+    depends_on:
+      - pulsar
+    environment:
+      PULSAR_URL: ${PROMOCODE_PULSAR_URL}
+      PULSAR_TOPIC: ${PULSAR_REWARD_REDEMPTION_TOPIC}
+      PULSAR_SUBSCRIPTION: ${PROMOCODE_PULSAR_SUBSCRIPTION}
+      REDIS_ADDR: ${REDIS_ADDR}
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      REDIS_DB: ${REDIS_DB}
+    networks:
+      - app-network
+
+  redis:
+    image: redis:7.4-alpine
+    restart: always
+    ports:
+      - "6380:6380"
+    command:
+      - /bin/sh
+      - -c
+      - redis-server --port 6380 --requirepass "$${REDIS_PASSWORD:?REDIS_PASSWORD variable is not set}"
+    volumes:
+      - cache:/data
+    networks:
+      - app-network
+    env_file:
+      - .env
+
+
+  #  spring:
+  #    image: blps/backend:jib-dev
+  #    ports:
+  #      - "${SPRING_PORT}:${SPRING_PORT}"
+  #    depends_on:
+  #      - pg
+  #      - pg-rewards
+  #      - pg-journal
+  #    networks:
+  #      - app-network
+  #    env_file:
+  #      - .env
 
   spark-iceberg:
     image: tabulario/spark-iceberg:latest
     container_name: blps-spark-iceberg-dev
     networks: [ app-network ]
+    depends_on:
+      - rest
+      - minio
     volumes:
       - ./warehouse:/home/iceberg/warehouse
       - ./notebooks:/home/iceberg/notebooks/notebooks
     environment:
-      AWS_ACCESS_KEY_ID: admin
-      AWS_SECRET_ACCESS_KEY: password
-      AWS_REGION: us-east-1
+      - AWS_ACCESS_KEY_ID=admin
+      - AWS_SECRET_ACCESS_KEY=password
+      - AWS_REGION=us-east-1
     ports:
       - "8888:8888"
       - "8080:8080"
       - "10000:10000"
       - "10001:10001"
+
     healthcheck:
       test: [ "CMD-SHELL", "curl -f http://localhost:8080/ || exit 1" ]
       interval: 10s
       timeout: 5s
       retries: 5
 
+  rest:
+    image: apache/iceberg-rest-fixture
+    container_name: iceberg-rest
+    networks: [ app-network ]
+    ports:
+      - "8181:8181"
+    environment:
+      - AWS_ACCESS_KEY_ID=admin
+      - AWS_SECRET_ACCESS_KEY=password
+      - AWS_REGION=us-east-1
+      - CATALOG_WAREHOUSE=s3://warehouse/
+      - CATALOG_IO__IMPL=org.apache.iceberg.aws.s3.S3FileIO
+      - CATALOG_S3_ENDPOINT=http://minio:9000
   minio:
     image: minio/minio
     container_name: blps-minio-dev
@@ -126,7 +225,7 @@ services:
       - "9000:9000"
       - "9001:9001"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      test: [ "CMD", "curl", "-f", "http://localhost:9000/minio/health/live" ]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -158,32 +257,6 @@ services:
     depends_on:
       minio:
         condition: service_healthy
-
-  rest:
-    image: apache/iceberg-rest-fixture:latest
-    container_name: blps-iceberg-rest-dev
-    networks: [ app-network ]
-    environment:
-      AWS_ACCESS_KEY_ID: admin
-      AWS_SECRET_ACCESS_KEY: password
-      AWS_REGION: us-east-1
-      AWS_S3_FORCE_PATH_STYLE: "true"
-      CATALOG_WAREHOUSE: s3://warehouse
-      CATALOG_IO__IMPL: org.apache.iceberg.aws.s3.S3FileIO
-      CATALOG_S3_ENDPOINT: http://minio:9000
-      CATALOG_S3_FORCE_PATH_STYLE: "true"
-    ports:
-      - "8181:8181"
-    healthcheck:
-      test: [ "CMD-SHELL", "curl --fail http://localhost:8181/v1/config || exit 1" ]
-      interval: 1s
-      timeout: 5s
-      retries: 10
-    depends_on:
-      minio:
-        condition: service_healthy
-      mc:
-        condition: service_started
 
   datalake-sync:
     build:
@@ -230,6 +303,8 @@ volumes:
   pg-data:
   pg-rewards-data:
   pg-journal-data:
+  pulsar-data:
+  cache:
 
 networks:
   app-network:

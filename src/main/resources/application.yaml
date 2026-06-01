@@ -31,6 +31,12 @@ spring:
       host: ${SPRING_HOST:"http://localhost:${server.port}/"}
 
 app:
+  pulsar:
+    enabled: ${PULSAR_ENABLED:true}
+    service-url: ${PULSAR_SERVICE_URL:pulsar://localhost:6650}
+    reward-redemption-topic: ${PULSAR_REWARD_REDEMPTION_TOPIC:persistent://public/default/reward-redemptions}
+    producer-name: ${PULSAR_REWARD_REDEMPTION_PRODUCER_NAME:blps-reward-redemptions}
+    send-timeout-ms: ${PULSAR_SEND_TIMEOUT_MS:3000}
   datasource:
     xa:
       main:

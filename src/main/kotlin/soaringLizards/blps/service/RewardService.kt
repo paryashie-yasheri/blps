@@ -4,6 +4,7 @@ import org.springframework.security.access.AccessDeniedException
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import soaringLizards.blps.dto.balanceTransactions.BalanceTransactionDto
+import soaringLizards.blps.dto.events.RewardRedemptionEvent
 import soaringLizards.blps.dto.ledger.LedgerEventDto
 import soaringLizards.blps.dto.rewards.RewardDto
 import soaringLizards.blps.dto.rewards.UserRewardDto
@@ -25,6 +26,7 @@ class RewardService(
     private val s3Service: S3Service,
     private val transactionService: TransactionService,
     private val ledgerEventService: LedgerEventService,
+    private val rewardRedemptionEventPublisher: RewardRedemptionEventPublisher,
     private val transactionManager: TransactionManager,
 ) {
     private val logger = LoggerFactory.getLogger(javaClass)
@@ -46,7 +48,13 @@ class RewardService(
     fun redeemReward(userId: UUID, rewardId: UUID): UserRewardDto {
         val operationId = UUID.randomUUID()
         val xid = transactionManager.transaction?.toString()
-        logger.info("redeem_reward_started operationId={} xid={} userId={} rewardId={}", operationId, xid, userId, rewardId)
+        logger.info(
+            "redeem_reward_started operationId={} xid={} userId={} rewardId={}",
+            operationId,
+            xid,
+            userId,
+            rewardId,
+        )
         try {
             val balance = userBalanceRepository.findByUserId(userId)
                 ?: throw BusinessLogicException("User balance not found")
@@ -105,16 +113,27 @@ class RewardService(
                 ),
             )
 
-            userRewardRepository.insert(balance.balanceId, rewardId)
+            val userRewardId = userRewardRepository.insert(balance.balanceId, rewardId)
+            val redeemedAt = OffsetDateTime.now()
 
             if (reward.quantity != null) {
                 rewardRepository.decrementQuantity(rewardId)
             }
 
+            rewardRedemptionEventPublisher.publishAfterCommit(
+                RewardRedemptionEvent(
+                    operationId = operationId,
+                    userId = userId,
+                    rewardId = rewardId,
+                    userRewardId = userRewardId,
+                    occurredAt = redeemedAt.toString(),
+                ),
+            )
+
             return UserRewardDto(
-                userRewardId = null,
+                userRewardId = userRewardId.toString(),
                 reward = reward.toRewardDto(),
-                redeemedAt = OffsetDateTime.now().toString(),
+                redeemedAt = redeemedAt.toString(),
             )
         } catch (ex: Exception) {
             logger.error(

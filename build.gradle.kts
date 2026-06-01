@@ -150,6 +150,7 @@ kotlin {
 }
 
 val testcontainersVersion = "1.21.4"
+val pulsarVersion = "4.0.10"
 
 buildscript {
     repositories {
@@ -231,11 +232,19 @@ dependencies {
     implementation("org.slf4j:jcl-over-slf4j")
     implementation("net.logstash.logback:logstash-logback-encoder:8.0")
     implementation("tools.jackson.module:jackson-module-kotlin")
+    implementation(enforcedPlatform("org.apache.pulsar:pulsar-bom:$pulsarVersion"))
+    implementation("org.apache.pulsar:pulsar-client")
 
 }
 
 configurations.all {
     resolutionStrategy {
+        eachDependency {
+            if (requested.group == "org.apache.pulsar") {
+                useVersion(pulsarVersion)
+                because("Keep Pulsar client modules aligned with the broker image used in dev compose")
+            }
+        }
         force("org.testcontainers:testcontainers:$testcontainersVersion")
         force("org.testcontainers:jdbc:$testcontainersVersion")
         force("org.testcontainers:database-commons:$testcontainersVersion")
