@@ -10,7 +10,7 @@ import org.springframework.transaction.support.TransactionSynchronization
 import org.springframework.transaction.support.TransactionSynchronizationManager
 import soaringLizards.blps.config.properties.PulsarProperties
 import soaringLizards.blps.dto.events.RewardRedemptionEvent
-import tools.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.databind.ObjectMapper
 import java.util.concurrent.RejectedExecutionException
 
 @Service

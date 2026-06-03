@@ -6,16 +6,17 @@ import org.junit.jupiter.api.extension.ExtensionContext
 class TestcontainersCleanupExtension : BeforeAllCallback {
 
     override fun beforeAll(context: ExtensionContext) {
-        context
+        val store = context
             .root
             .getStore(ExtensionContext.Namespace.create(TestcontainersCleanupExtension::class.java))
-            .computeIfAbsent(CLEANUP_KEY) { _ ->
-                ExtensionContext.Store.CloseableResource {
-                    runCatching { IntegrationPostgres.stop() }
-                    runCatching { DegradedRewardsPostgres.stop() }
-                    runCatching { IntegrationKeycloak.stop() }
-                }
-            }
+
+        if (store.get(CLEANUP_KEY) == null) {
+            store.put(CLEANUP_KEY, ExtensionContext.Store.CloseableResource {
+                runCatching { IntegrationPostgres.stop() }
+                runCatching { DegradedRewardsPostgres.stop() }
+                runCatching { IntegrationKeycloak.stop() }
+            })
+        }
     }
 
     private companion object {

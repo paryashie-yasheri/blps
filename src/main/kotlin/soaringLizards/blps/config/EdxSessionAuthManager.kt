@@ -9,8 +9,8 @@ import org.springframework.util.LinkedMultiValueMap
 import org.springframework.web.client.RestClient
 import soaringLizards.blps.dto.edx.EdxAuthenticatedSession
 import soaringLizards.blps.exception.LmsException
-import tools.jackson.databind.ObjectMapper
-import tools.jackson.module.kotlin.jacksonObjectMapper
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import java.nio.charset.StandardCharsets
 import java.time.Instant
 import java.util.*
@@ -116,20 +116,20 @@ class EdxSessionAuthManager(
         val cookies = linkedMapOf<String, String>()
 
         logger.info("Step 1: Getting LMS login session...")
-        val initFailed = authClient.get()
-            .uri("/user/v1/account/login_session/")
-            .exchange { _, response ->
-                logger.info("LMS init response status: ${response.statusCode}")
-                mergeCookies(cookies, response.headers[HttpHeaders.SET_COOKIE].orEmpty())
-                val failed = response.statusCode.isError
-                if (failed) {
-                    val body = response.body.readAllBytes().toString(StandardCharsets.UTF_8)
-                    logger.warn("LMS init response body: $body")
-                }
-                failed
-            }
+        val initFailed: Boolean = try {
+            authClient.get()
+                .uri("/user/v1/account/login_session/")
+                .exchange<Boolean?> { _, response ->
+                    logger.info("LMS init response status: ${response.statusCode}")
+                    mergeCookies(cookies, response.headers[HttpHeaders.SET_COOKIE].orEmpty())
+                    response.statusCode.isError
+                } ?: true
+        } catch (e: Exception) {
+            logger.warn("LMS init failed: ${e.message}")
+            true
+        }
 
-        if (initFailed) {
+        if (initFailed == true) {
             logger.warn("LMS init returned error")
             throw LmsException(mapOf("error" to "LMS_INIT_FAILED", "message" to "LMS initialization failed"))
         }
@@ -155,7 +155,8 @@ class EdxSessionAuthManager(
             add("password", password)
         }
 
-        return authClient.post()
+        @Suppress("UNCHECKED_CAST")
+        val result = authClient.post()
             .uri("/user/v2/account/login_session/")
             .contentType(MediaType.APPLICATION_FORM_URLENCODED)
             .header("X-CSRFToken", csrfToken)
@@ -164,18 +165,20 @@ class EdxSessionAuthManager(
             .exchange { _, response ->
                 val body = response.body.readAllBytes().toString(StandardCharsets.UTF_8)
                 logger.info("LMS login response status: ${response.statusCode}, body: ${body.take(200)}")
-                mergeCookies(cookies, response.headers[HttpHeaders.SET_COOKIE].orEmpty())
+                mergeCookies(cookies, response.headers.getOrEmpty(HttpHeaders.SET_COOKIE))
 
                 if (response.statusCode.isError) {
                     val json = objectMapper.readTree(body)
-                    val errorCode = json.path("error_code").takeIf { !it.isMissingNode }?.asString() ?: "http_error"
-                    val errorMessage = json.path("value").takeIf { !it.isMissingNode }?.asString()
+                    val errorCode = json.path("error_code").takeIf { !it.isMissingNode }?.asText() ?: "http_error"
+                    val errorMessage = json.path("value").takeIf { !it.isMissingNode }?.asText()
                         ?: "LMS HTTP error: ${response.statusCode}"
                     LoginResult(false, body, errorCode, errorMessage)
                 } else {
                     LoginResult(true, body, null, null)
                 }
-            }
+            } as LoginResult
+
+        return result
     }
 
     private fun validateLoginSuccess(loginResult: LoginResult) {
@@ -194,8 +197,8 @@ class EdxSessionAuthManager(
         logger.info("LMS login response JSON: $loginJson")
 
         if (!loginJson.path("success").asBoolean(false)) {
-            val errorCode = loginJson.path("error_code").asString() ?: "incorrect_credentials"
-            val message = loginJson.path("value").asString() ?: "Authentication failed"
+            val errorCode = loginJson.path("error_code").asText().ifEmpty { "incorrect_credentials" }
+            val message = loginJson.path("value").asText().ifEmpty { "Authentication failed" }
             logger.warn("LMS login returned failure: $message")
             throw LmsException(mapOf("error" to errorCode, "message" to message))
         }
@@ -232,23 +235,21 @@ class EdxSessionAuthManager(
         logger.info("Fetching email from LMS for user: $username")
 
         return try {
-            val response = authClient.get()
-                .uri("/user/v1/accounts/{username}", username)
-                .header(HttpHeaders.COOKIE, session.cookieHeader)
-                .header("X-CSRFToken", session.csrfToken)
-                .exchange { _, resp ->
-                    if (resp.statusCode.isError) {
-                        val body = resp.body.readAllBytes().toString(StandardCharsets.UTF_8)
-                        logger.warn("Failed to fetch user email: ${resp.statusCode}, body: $body")
-                        null
-                    } else {
-                        resp.body.readAllBytes().toString(StandardCharsets.UTF_8)
-                    }
-                }
+            val response: String? = try {
+                authClient.get()
+                    .uri("/user/v1/accounts/{username}", username)
+                    .header(HttpHeaders.COOKIE, session.cookieHeader)
+                    .header("X-CSRFToken", session.csrfToken)
+                    .retrieve()
+                    .body(String::class.java)
+            } catch (e: org.springframework.web.client.HttpClientErrorException) {
+                logger.warn("Failed to fetch user email: ${e.statusCode}, body: ${e.responseBodyAsString}")
+                null
+            }
 
             response?.let {
                 val json = objectMapper.readTree(it)
-                val email = json.path("email").asString(null)
+                val email = json.path("email").takeIf { !it.isMissingNode && !it.isNull }?.asText()
                 logger.info("Got email for $username: $email")
                 email
             }

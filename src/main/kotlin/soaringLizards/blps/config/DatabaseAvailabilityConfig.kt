@@ -3,8 +3,8 @@ package soaringLizards.blps.config
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.boot.ApplicationRunner
-import org.springframework.boot.health.contributor.HealthIndicator
-import org.springframework.boot.jdbc.health.DataSourceHealthIndicator
+import org.springframework.boot.actuate.health.HealthIndicator
+import org.springframework.boot.actuate.jdbc.DataSourceHealthIndicator
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.jdbc.core.JdbcTemplate

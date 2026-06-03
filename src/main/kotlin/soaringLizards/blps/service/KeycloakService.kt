@@ -145,7 +145,7 @@ class KeycloakService(
                 .toKeycloakTokenResponse()
                 .toLoginResponse(request.username, "OPENEDX_USER")
 
-        }
+        }!!
     }
 
     fun getUserRoles(username: String): List<String> {

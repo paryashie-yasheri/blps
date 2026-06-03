@@ -6,8 +6,8 @@ import soaringLizards.blps.dto.edx.EdxAuthenticatedSession
 import soaringLizards.blps.dto.edx.EdxEnrollmentCourseResponseDetails
 import soaringLizards.blps.dto.edx.EdxEnrollmentRequest
 import soaringLizards.blps.dto.edx.EdxEnrollmentResponse
-import tools.jackson.databind.JsonNode
-import tools.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.databind.JsonNode
+import com.fasterxml.jackson.databind.ObjectMapper
 import java.time.OffsetDateTime
 
 @Component
@@ -92,7 +92,7 @@ class EdxEnrollmentClient(
     }
 
     private fun JsonNode.textOrNull(fieldName: String): String? =
-        path(fieldName).takeUnless { it.isMissingNode || it.isNull }?.asString()
+        path(fieldName).takeUnless { it.isMissingNode || it.isNull }?.asText()
 
     private fun JsonNode.booleanOrNull(fieldName: String): Boolean? =
         path(fieldName).takeUnless { it.isMissingNode || it.isNull }?.asBoolean()

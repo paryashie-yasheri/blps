@@ -41,7 +41,7 @@ class AchievementTypeService(
         return try {
             transactionTemplate.execute {
                 createAchievementTypeInTransaction(request, uploadedIconKey)
-            }.toResponse()
+            }!!.toResponse()
         } catch (e: Exception) {
             if (uploadedIconKey != null)
                 runCatching { s3Service.delete(uploadedIconKey) }
@@ -66,7 +66,7 @@ class AchievementTypeService(
                     request = request,
                     iconKey = iconKeyToPersist,
                 )
-            }.toResponse()
+            }!!.toResponse()
 
             if (uploadedIconKey != null && existing.iconKey != null && existing.iconKey != uploadedIconKey)
                 runCatching { s3Service.delete(existing.iconKey) }

@@ -109,9 +109,9 @@ class TestContainerManager(
 }
 
 plugins {
-    kotlin("jvm") version "2.2.21"
-    kotlin("plugin.spring") version "2.2.21"
-    id("org.springframework.boot") version "4.0.3"
+    kotlin("jvm") version "2.1.20"
+    kotlin("plugin.spring") version "2.1.20"
+    id("org.springframework.boot") version "3.4.5"
     id("io.spring.dependency-management") version "1.1.7"
 
     id("com.google.cloud.tools.jib") version "3.5.2"
@@ -139,6 +139,7 @@ kotlin {
         freeCompilerArgs.addAll(
             "-Xjsr305=strict",
             "-Xannotation-default-target=param-property",
+            "-Xmulti-dollar-interpolation",
         )
     }
     sourceSets {
@@ -177,14 +178,12 @@ dependencies {
     // springboot
     implementation("org.springframework.boot:spring-boot-starter")
     implementation("org.springframework.boot:spring-boot-starter-jooq")
-    implementation("org.springframework.boot:spring-boot-starter-liquibase")
+    implementation("org.liquibase:liquibase-core")
     implementation("org.springframework.boot:spring-boot-starter-security")
     implementation("org.springframework.boot:spring-boot-starter-actuator")
-    implementation("org.springframework.boot:spring-boot-starter-webmvc")
     implementation("org.springframework.boot:spring-boot-starter-web")
-    implementation("org.springframework.boot:spring-boot-starter-webservices")
     implementation("org.springframework.boot:spring-boot-starter-validation")
-    implementation("org.springframework.security:spring-security-oauth2-authorization-server:7.0.3")
+    implementation("org.springframework.security:spring-security-oauth2-authorization-server")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
     developmentOnly("org.springframework.boot:spring-boot-devtools")
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.6")
@@ -207,8 +206,8 @@ dependencies {
     add("liquibaseRuntime", "org.postgresql:postgresql")
     add("liquibaseRuntime", "info.picocli:picocli:4.7.6")
     add("liquibaseRuntime", "com.h2database:h2:2.2.224") // точн надо?
-    testImplementation("org.springframework.boot:spring-boot-starter-webmvc-test")
     testImplementation("org.springframework.boot:spring-boot-starter-test")
+    testImplementation("org.springframework.security:spring-security-test")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
@@ -225,7 +224,6 @@ dependencies {
     runtimeOnly("io.jsonwebtoken:jjwt-impl:0.11.5")
     runtimeOnly("io.jsonwebtoken:jjwt-jackson:0.11.5")
     implementation("io.jsonwebtoken:jjwt-api:0.11.5")
-    testImplementation("org.springframework.boot:spring-boot-starter-security-test")
     implementation("org.keycloak:keycloak-admin-client:26.0.9")
     implementation("org.springframework.boot:spring-boot-starter-security")
     implementation("org.springframework.boot:spring-boot-starter-oauth2-resource-server")
@@ -238,7 +236,7 @@ dependencies {
     // other
     implementation("org.slf4j:jcl-over-slf4j")
     implementation("net.logstash.logback:logstash-logback-encoder:8.0")
-    implementation("tools.jackson.module:jackson-module-kotlin")
+    implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
     implementation(enforcedPlatform("org.apache.pulsar:pulsar-bom:$pulsarVersion"))
     implementation("org.apache.pulsar:pulsar-client")
 
@@ -377,7 +375,6 @@ tasks.register<JavaExec>("generateJooqFromExistingDb") {
     }
 }
 
-@DisableCachingByDefault
 tasks.named("generateJooq").configure {
     dependsOn(liquibaseUpdateTestContainer)
 }
@@ -399,16 +396,3 @@ val codegen by tasks.register<DefaultTask>("codegen") {
     )
 }
 
-// fixme: попытался починить что у меня переодически после кодгена не останавливаются контейнеры, но эти штуки депрекейтед
-gradle.taskGraph.addTaskExecutionListener(
-    object : TaskExecutionListener {
-        override fun beforeExecute(task: Task) = Unit
-
-        override fun afterExecute(task: Task, state: TaskState) {
-            if (state.failure != null) {
-                println("Task ${task.path} failed, stopping Testcontainers...")
-                stopTestContainerManager()
-            }
-        }
-    },
-)
