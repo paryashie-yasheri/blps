@@ -1,0 +1,44 @@
+{
+  "schemaVersion": "1.0",
+  "components": [
+    {
+      "key": "rewardList",
+      "type": "text",
+      "label": "Доступные награды",
+      "text": "На этой странице отображаются доступные для получения награды. Выберите награду и подтвердите списание баллов.",
+      "properties": {}
+    },
+    {
+      "key": "rewardsTable",
+      "type": "table",
+      "label": "Список наград",
+      "properties": {},
+      "columns": [
+        { "key": "name", "label": "Название" },
+        { "key": "pointsCost", "label": "Стоимость (баллы)" },
+        { "key": "quantity", "label": "Осталось" },
+        { "key": "description", "label": "Описание" }
+      ]
+    },
+    {
+      "key": "rewardId",
+      "type": "textfield",
+      "label": "ID выбранной награды",
+      "validate": {
+        "required": true
+      },
+      "properties": {}
+    },
+    {
+      "key": "submitBtn",
+      "type": "button",
+      "label": "Получить награду",
+      "action": "submit",
+      "properties": {}
+    }
+  ],
+  "type": "default",
+  "id": "Form_redeem_reward",
+  "executionPlatform": "Camunda 7",
+  "executionPlatformVersion": "7.23.0"
+}

@@ -1,0 +1,40 @@
+{
+  "schemaVersion": "1.0",
+  "components": [
+    {
+      "key": "resultHeader",
+      "type": "text",
+      "text": "Результат операции",
+      "properties": {}
+    },
+    {
+      "key": "operationResult",
+      "type": "text",
+      "label": "Статус",
+      "properties": {}
+    },
+    {
+      "key": "newBalance",
+      "type": "number",
+      "label": "Текущий баланс",
+      "properties": {}
+    },
+    {
+      "key": "awardedAchievements",
+      "type": "text",
+      "label": "Полученные достижения",
+      "properties": {}
+    },
+    {
+      "key": "closeBtn",
+      "type": "button",
+      "label": "Завершить",
+      "action": "submit",
+      "properties": {}
+    }
+  ],
+  "type": "default",
+  "id": "Form_operation_result",
+  "executionPlatform": "Camunda 7",
+  "executionPlatformVersion": "7.23.0"
+}

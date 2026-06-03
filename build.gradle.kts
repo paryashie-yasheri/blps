@@ -151,6 +151,7 @@ kotlin {
 
 val testcontainersVersion = "1.21.4"
 val pulsarVersion = "4.0.10"
+val camundaVersion = "7.23.0"
 
 buildscript {
     repositories {
@@ -214,6 +215,12 @@ dependencies {
     testImplementation("org.mockito.kotlin:mockito-kotlin:5.2.1")
 
 
+    // camunda
+    implementation(platform("org.camunda.bpm:camunda-bom:$camundaVersion"))
+    implementation("org.camunda.bpm:camunda-engine-spring-6")
+    implementation("org.camunda.bpm:camunda-engine-plugin-spin")
+    implementation("org.camunda.spin:camunda-spin-dataformat-all")
+
     // security
     runtimeOnly("io.jsonwebtoken:jjwt-impl:0.11.5")
     runtimeOnly("io.jsonwebtoken:jjwt-jackson:0.11.5")
@@ -255,10 +262,6 @@ configurations.all {
 
 tasks.withType<Test> {
     useJUnitPlatform()
-}
-
-tasks.named("test") {
-    dependsOn(":datalake-sync:test")
 }
 
 tasks.named<Test>("test") {
