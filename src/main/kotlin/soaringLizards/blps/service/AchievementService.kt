@@ -28,7 +28,7 @@ data class AwardedAchievement(
     val code: String,
     val name: String,
     val pointsAwarded: Int,
-)
+) : java.io.Serializable
 
 @Service
 class AchievementService(

@@ -8,7 +8,7 @@ data class RewardDto(
     val iconUrl: String?,
     val isActive: Boolean,
     val quantity: Int?,
-)
+) : java.io.Serializable
 
 data class RewardCreateRequest(
     val name: String,

@@ -54,6 +54,19 @@ class SecurityConfig(
 
     @Bean
     @Order(2)
+    fun camundaSecurityFilterChain(http: HttpSecurity): SecurityFilterChain {
+        return http
+            .securityMatcher("/camunda/**")
+            .authorizeHttpRequests { auth ->
+                auth.anyRequest().permitAll()
+            }
+            .csrf { it.disable() }
+            .headers { it.frameOptions { frame -> frame.sameOrigin() } }
+            .build()!!
+    }
+
+    @Bean
+    @Order(3)
     fun filterChain(http: HttpSecurity) =
         http
             .authorizeHttpRequests { auth ->

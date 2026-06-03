@@ -4,7 +4,7 @@ data class UserRewardDto(
     val userRewardId: String?,
     val reward: RewardDto,
     val redeemedAt: String,
-)
+) : java.io.Serializable
 
 data class UserRewardWithBalanceDto(
     val userRewardId: String?,

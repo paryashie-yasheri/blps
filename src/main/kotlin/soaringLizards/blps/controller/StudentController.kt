@@ -1,18 +1,18 @@
 package soaringLizards.blps.controller
 
 import io.swagger.v3.oas.annotations.tags.Tag
+import org.camunda.bpm.engine.RuntimeService
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.web.bind.annotation.*
 import soaringLizards.blps.config.userDetails.JwtUserDetails
 import soaringLizards.blps.dto.student.CourseEnrollResponse
 import soaringLizards.blps.dto.student.LessonCompleteResponse
+import soaringLizards.blps.dto.student.toAwardedAchievementDtos
 import soaringLizards.blps.dto.userAchievements.UserAchievementWithDetailsDto
-import soaringLizards.blps.service.AchievementService
-import soaringLizards.blps.service.EdxService
-import soaringLizards.blps.service.RewardService
-import soaringLizards.blps.service.StudentAchievementWorkflowService
-import soaringLizards.blps.service.UserBalanceService
+import soaringLizards.blps.dto.rewards.UserRewardDto
+import soaringLizards.blps.entity.AchievementEventType
+import soaringLizards.blps.service.*
 import java.util.*
 
 @Tag(name = "Студент - управление курсами, достижениями и наградами")
@@ -24,6 +24,7 @@ class StudentController(
     private val userBalanceService: UserBalanceService,
     private val achievementService: AchievementService,
     private val rewardService: RewardService,
+    private val runtimeService: RuntimeService,
 ) {
     @PreAuthorize("hasRole('OPENEDX_USER')")
     @GetMapping("/courses")
@@ -53,8 +54,28 @@ class StudentController(
     fun enroll(
         @AuthenticationPrincipal currentUser: JwtUserDetails,
         @PathVariable courseId: String,
-    ): CourseEnrollResponse =
-        studentAchievementWorkflowService.enroll(currentUser, courseId)
+    ): CourseEnrollResponse {
+        val pi = runtimeService.createProcessInstanceByKey("Process_student_workflow")
+            .businessKey("enroll-${currentUser.id}-${courseId}")
+            .setVariable("processAction", "ENROLL")
+            .setVariable("userId", currentUser.id.toString())
+            .setVariable("courseId", courseId)
+            .setVariable("eventType", AchievementEventType.COURSE_ENROLLED.name)
+            .execute()
+
+        val awarded = runtimeService.getVariable(pi.id, "awardedAchievements") as? List<*>
+        val balance = runtimeService.getVariable(pi.id, "currentBalance") as? Int ?: 0
+        val enrollmentResult = runtimeService.getVariable(pi.id, "enrollmentResult")
+
+        @Suppress("UNCHECKED_CAST")
+        val awDtos = (awarded as? List<AwardedAchievement>)?.toAwardedAchievementDtos() ?: emptyList()
+
+        return CourseEnrollResponse(
+            enrollment = enrollmentResult as? soaringLizards.blps.dto.edx.EdxEnrollmentResponse,
+            awardedAchievements = awDtos,
+            currentBalance = balance,
+        )
+    }
 
     @PreAuthorize("hasRole('OPENEDX_USER')")
     @PostMapping("/lessons/{courseKey}/{blockId}/complete")
@@ -62,8 +83,28 @@ class StudentController(
         @AuthenticationPrincipal currentUser: JwtUserDetails,
         @PathVariable courseKey: String,
         @PathVariable blockId: String,
-    ): LessonCompleteResponse =
-        studentAchievementWorkflowService.completeLesson(currentUser, courseKey, blockId)
+    ): LessonCompleteResponse {
+        val pi = runtimeService.createProcessInstanceByKey("Process_student_workflow")
+            .businessKey("lesson-${currentUser.id}-${courseKey}-${blockId}")
+            .setVariable("processAction", "LESSON_COMPLETE")
+            .setVariable("userId", currentUser.id.toString())
+            .setVariable("courseKey", courseKey)
+            .setVariable("blockId", blockId)
+            .setVariable("eventType", AchievementEventType.LESSON_COMPLETE.name)
+            .setVariable("completion", 1.0)
+            .execute()
+
+        val awarded = runtimeService.getVariable(pi.id, "awardedAchievements") as? List<*>
+        val balance = runtimeService.getVariable(pi.id, "currentBalance") as? Int ?: 0
+
+        @Suppress("UNCHECKED_CAST")
+        val awDtos = (awarded as? List<AwardedAchievement>)?.toAwardedAchievementDtos() ?: emptyList()
+
+        return LessonCompleteResponse(
+            awardedAchievements = awDtos,
+            currentBalance = balance,
+        )
+    }
 
     @PreAuthorize("hasRole('OPENEDX_USER')")
     @GetMapping("/balance")
@@ -89,5 +130,16 @@ class StudentController(
     fun redeemReward(
         @AuthenticationPrincipal currentUser: JwtUserDetails,
         @PathVariable rewardId: UUID,
-    ) = rewardService.redeemReward(currentUser.id, rewardId)
+    ): UserRewardDto {
+        val pi = runtimeService.createProcessInstanceByKey("Process_student_workflow")
+            .businessKey("redeem-${currentUser.id}-${rewardId}")
+            .setVariable("processAction", "REDEEM")
+            .setVariable("userId", currentUser.id.toString())
+            .setVariable("rewardId", rewardId.toString())
+            .setVariable("operationId", UUID.randomUUID().toString())
+            .setVariable("occurredAt", java.time.OffsetDateTime.now().toString())
+            .execute()
+
+        return runtimeService.getVariable(pi.id, "redeemResult") as UserRewardDto
+    }
 }

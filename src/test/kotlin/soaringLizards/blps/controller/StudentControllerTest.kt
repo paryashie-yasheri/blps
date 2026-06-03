@@ -11,6 +11,7 @@ import soaringLizards.blps.dto.edx.EdxAuthenticatedSession
 import soaringLizards.blps.dto.student.CourseEnrollResponse
 import soaringLizards.blps.dto.student.LessonCompleteResponse
 import soaringLizards.blps.dto.user.Email
+import org.camunda.bpm.engine.RuntimeService
 import soaringLizards.blps.service.AchievementService
 import soaringLizards.blps.service.EdxService
 import soaringLizards.blps.service.RewardService
@@ -26,12 +27,15 @@ class StudentControllerTest {
     private val rewardService = mock<RewardService>()
     private val studentAchievementWorkflowService = mock<StudentAchievementWorkflowService>()
 
+    private val runtimeService = mock<RuntimeService>()
+
     private val controller = StudentController(
         edxService = edxService,
         studentAchievementWorkflowService = studentAchievementWorkflowService,
         userBalanceService = userBalanceService,
         achievementService = achievementService,
         rewardService = rewardService,
+        runtimeService = runtimeService,
     )
 
     @Test
