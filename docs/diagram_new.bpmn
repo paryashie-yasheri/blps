@@ -1,0 +1,844 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" id="Definitions_blps" targetNamespace="http://bpmn.io/schema/bpmn" exporter="bpmn-js (https://demo.bpmn.io)" exporterVersion="18.13.2">
+
+  <bpmn:collaboration id="Collaboration_blps">
+    <bpmn:participant id="Participant_student" name="Студент" processRef="Process_student" />
+    <bpmn:participant id="Participant_system" name="BLPS Backend" processRef="Process_system" />
+    <bpmn:participant id="Participant_openedx" name="OpenEdX LMS" processRef="Process_openedx" />
+    <bpmn:participant id="Participant_moderator" name="Модератор" processRef="Process_moderator" />
+    <bpmn:participant id="Participant_scheduled" name="Планировщик" processRef="Process_scheduled" />
+    <bpmn:messageFlow id="MF_enroll_to_edx" sourceRef="Activity_enroll" targetRef="Activity_edx_enroll" />
+    <bpmn:messageFlow id="MF_edx_enroll_done" sourceRef="Activity_edx_enroll" targetRef="Activity_enroll" />
+    <bpmn:messageFlow id="MF_lesson_to_track" sourceRef="Activity_lesson" targetRef="Activity_edx_track" />
+    <bpmn:messageFlow id="MF_track_to_subsection" sourceRef="Activity_track_completion" targetRef="Activity_edx_subsection" />
+    <bpmn:messageFlow id="MF_track_to_progress" sourceRef="Activity_track_completion" targetRef="Activity_edx_progress" />
+    <bpmn:messageFlow id="MF_progress_done" sourceRef="Activity_edx_progress" targetRef="Activity_fetch_progress" />
+    <bpmn:messageFlow id="MF_courses_list" sourceRef="Activity_edx_list_courses" targetRef="Activity_view_courses" />
+    <bpmn:messageFlow id="MF_view_courses_to_edx" sourceRef="Activity_view_courses" targetRef="Activity_edx_list_courses" />
+    <bpmn:messageFlow id="MF_login_to_keycloak" sourceRef="Activity_login_edx" targetRef="Activity_keycloak_login" />
+    <bpmn:messageFlow id="MF_keycloak_user_create" sourceRef="Activity_create_keycloak_user" targetRef="Activity_keycloak_create_user" />
+    <bpmn:messageFlow id="MF_balance_create" sourceRef="Activity_create_balance" targetRef="Activity_balance_view" />
+    <bpmn:messageFlow id="MF_enroll_to_backend" sourceRef="Activity_enroll" targetRef="Activity_achievement_check_all" />
+    <bpmn:messageFlow id="MF_ach_done_to_student" sourceRef="Activity_balance_add" targetRef="Activity_add_balance" />
+    <bpmn:messageFlow id="MF_progress_to_ach" sourceRef="Activity_fetch_progress" targetRef="Activity_achievement_check_all" />
+    <bpmn:messageFlow id="MF_view_rewards" sourceRef="Activity_view_rewards" targetRef="Activity_rewards_list" />
+    <bpmn:messageFlow id="MF_redeem_start" sourceRef="Activity_redeem" targetRef="Gateway_redeem_checks" />
+    <bpmn:messageFlow id="MF_redeem_done" sourceRef="Activity_redeem_xa" targetRef="Activity_redeem" />
+    <bpmn:messageFlow id="MF_pulsar" sourceRef="Activity_pulsar_publish" targetRef="Activity_promocode_redis" />
+    <bpmn:messageFlow id="MF_mod_ach" sourceRef="Activity_mod_ach_create" targetRef="Activity_achievement_check_all" />
+    <bpmn:messageFlow id="MF_mod_r" sourceRef="Activity_mod_r_create" targetRef="Activity_rewards_list" />
+  </bpmn:collaboration>
+
+  <!-- ===== POOL 1: СТУДЕНТ ===== -->
+  <bpmn:process id="Process_student" name="Студент" isExecutable="true">
+    <bpmn:startEvent id="StartEvent_login">
+      <bpmn:outgoing>Flow_login_to_gateway</bpmn:outgoing>
+    </bpmn:startEvent>
+
+    <bpmn:task id="Activity_login_edx" name="Аутентификация в OpenEdX">
+      <bpmn:incoming>Flow_login_to_gateway</bpmn:incoming>
+      <bpmn:outgoing>Flow_edx_to_keycloak</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:task id="Activity_create_keycloak_user" name="Создание пользователя в Keycloak (если новый)">
+      <bpmn:incoming>Flow_edx_to_keycloak</bpmn:incoming>
+      <bpmn:outgoing>Flow_keycloak_to_balance</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:task id="Activity_create_balance" name="Создание баланса (1000 баллов)">
+      <bpmn:incoming>Flow_keycloak_to_balance</bpmn:incoming>
+      <bpmn:outgoing>Flow_balance_to_main</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:inclusiveGateway id="Gateway_main_actions">
+      <bpmn:incoming>Flow_balance_to_main</bpmn:incoming>
+      <bpmn:outgoing>Flow_main_to_courses</bpmn:outgoing>
+      <bpmn:outgoing>Flow_main_to_balance_view</bpmn:outgoing>
+      <bpmn:outgoing>Flow_main_to_achievements_view</bpmn:outgoing>
+    </bpmn:inclusiveGateway>
+
+    <bpmn:task id="Activity_view_courses" name="Просмотр курсов">
+      <bpmn:incoming>Flow_main_to_courses</bpmn:incoming>
+      <bpmn:outgoing>Flow_courses_to_gateway</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:task id="Activity_view_balance" name="Просмотр баланса">
+      <bpmn:incoming>Flow_main_to_balance_view</bpmn:incoming>
+      <bpmn:outgoing>Flow_balance_view_to_gateway</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:task id="Activity_view_achievements" name="Просмотр достижений">
+      <bpmn:incoming>Flow_main_to_achievements_view</bpmn:incoming>
+      <bpmn:outgoing>Flow_achievements_view_to_gateway</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:inclusiveGateway id="Gateway_action_choice">
+      <bpmn:incoming>Flow_courses_to_gateway</bpmn:incoming>
+      <bpmn:incoming>Flow_balance_view_to_gateway</bpmn:incoming>
+      <bpmn:incoming>Flow_achievements_view_to_gateway</bpmn:incoming>
+      <bpmn:outgoing>Flow_gateway_to_enroll</bpmn:outgoing>
+      <bpmn:outgoing>Flow_gateway_to_lesson</bpmn:outgoing>
+      <bpmn:outgoing>Flow_gateway_to_rewards</bpmn:outgoing>
+    </bpmn:inclusiveGateway>
+
+    <bpmn:task id="Activity_enroll" name="Запись на курс">
+      <bpmn:incoming>Flow_gateway_to_enroll</bpmn:incoming>
+      <bpmn:outgoing>Flow_enroll_to_achievement_check</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:task id="Activity_lesson" name="Прохождение урока">
+      <bpmn:incoming>Flow_gateway_to_lesson</bpmn:incoming>
+      <bpmn:outgoing>Flow_lesson_to_completion</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:task id="Activity_track_completion" name="Отслеживание completion в EdX">
+      <bpmn:incoming>Flow_lesson_to_completion</bpmn:incoming>
+      <bpmn:outgoing>Flow_completion_to_subsection</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:task id="Activity_fetch_subsection" name="Проверка subsection completion">
+      <bpmn:incoming>Flow_completion_to_subsection</bpmn:incoming>
+      <bpmn:outgoing>Flow_subsection_to_progress</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:task id="Activity_fetch_progress" name="Проверка course progress">
+      <bpmn:incoming>Flow_subsection_to_progress</bpmn:incoming>
+      <bpmn:outgoing>Flow_progress_to_achievements</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:task id="Activity_check_achievements" name="Проверка достижений (4 event types)">
+      <bpmn:incoming>Flow_enroll_to_achievement_check</bpmn:incoming>
+      <bpmn:incoming>Flow_progress_to_achievements</bpmn:incoming>
+      <bpmn:outgoing>Flow_achievements_check_to_balance_add</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:task id="Activity_add_balance" name="Начисление баллов за достижения">
+      <bpmn:incoming>Flow_achievements_check_to_balance_add</bpmn:incoming>
+      <bpmn:outgoing>Flow_balance_add_to_back</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:inclusiveGateway id="Gateway_back_to_action">
+      <bpmn:incoming>Flow_balance_add_to_back</bpmn:incoming>
+      <bpmn:outgoing>Flow_back_to_courses</bpmn:outgoing>
+      <bpmn:outgoing>Flow_back_to_rewards</bpmn:outgoing>
+    </bpmn:inclusiveGateway>
+
+    <bpmn:task id="Activity_view_rewards" name="Просмотр доступных наград">
+      <bpmn:incoming>Flow_gateway_to_rewards</bpmn:incoming>
+      <bpmn:incoming>Flow_back_to_rewards</bpmn:incoming>
+      <bpmn:outgoing>Flow_view_rewards_to_redeem</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:task id="Activity_redeem" name="Списание баллов и получение награды">
+      <bpmn:incoming>Flow_view_rewards_to_redeem</bpmn:incoming>
+      <bpmn:outgoing>Flow_redeem_to_end</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:endEvent id="Event_end_redeem">
+      <bpmn:incoming>Flow_redeem_to_end</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <!-- Student sequence flows -->
+    <bpmn:sequenceFlow id="Flow_login_to_gateway" sourceRef="StartEvent_login" targetRef="Activity_login_edx" />
+    <bpmn:sequenceFlow id="Flow_edx_to_keycloak" sourceRef="Activity_login_edx" targetRef="Activity_create_keycloak_user" />
+    <bpmn:sequenceFlow id="Flow_keycloak_to_balance" sourceRef="Activity_create_keycloak_user" targetRef="Activity_create_balance" />
+    <bpmn:sequenceFlow id="Flow_balance_to_main" sourceRef="Activity_create_balance" targetRef="Gateway_main_actions" />
+    <bpmn:sequenceFlow id="Flow_main_to_courses" sourceRef="Gateway_main_actions" targetRef="Activity_view_courses" />
+    <bpmn:sequenceFlow id="Flow_main_to_balance_view" sourceRef="Gateway_main_actions" targetRef="Activity_view_balance" />
+    <bpmn:sequenceFlow id="Flow_main_to_achievements_view" sourceRef="Gateway_main_actions" targetRef="Activity_view_achievements" />
+    <bpmn:sequenceFlow id="Flow_courses_to_gateway" sourceRef="Activity_view_courses" targetRef="Gateway_action_choice" />
+    <bpmn:sequenceFlow id="Flow_balance_view_to_gateway" sourceRef="Activity_view_balance" targetRef="Gateway_action_choice" />
+    <bpmn:sequenceFlow id="Flow_achievements_view_to_gateway" sourceRef="Activity_view_achievements" targetRef="Gateway_action_choice" />
+    <bpmn:sequenceFlow id="Flow_gateway_to_enroll" sourceRef="Gateway_action_choice" targetRef="Activity_enroll" />
+    <bpmn:sequenceFlow id="Flow_gateway_to_lesson" sourceRef="Gateway_action_choice" targetRef="Activity_lesson" />
+    <bpmn:sequenceFlow id="Flow_gateway_to_rewards" sourceRef="Gateway_action_choice" targetRef="Activity_view_rewards" />
+    <bpmn:sequenceFlow id="Flow_enroll_to_achievement_check" sourceRef="Activity_enroll" targetRef="Activity_check_achievements" />
+    <bpmn:sequenceFlow id="Flow_lesson_to_completion" sourceRef="Activity_lesson" targetRef="Activity_track_completion" />
+    <bpmn:sequenceFlow id="Flow_completion_to_subsection" sourceRef="Activity_track_completion" targetRef="Activity_fetch_subsection" />
+    <bpmn:sequenceFlow id="Flow_subsection_to_progress" sourceRef="Activity_fetch_subsection" targetRef="Activity_fetch_progress" />
+    <bpmn:sequenceFlow id="Flow_progress_to_achievements" sourceRef="Activity_fetch_progress" targetRef="Activity_check_achievements" />
+    <bpmn:sequenceFlow id="Flow_achievements_check_to_balance_add" sourceRef="Activity_check_achievements" targetRef="Activity_add_balance" />
+    <bpmn:sequenceFlow id="Flow_balance_add_to_back" sourceRef="Activity_add_balance" targetRef="Gateway_back_to_action" />
+    <bpmn:sequenceFlow id="Flow_back_to_courses" sourceRef="Gateway_back_to_action" targetRef="Activity_view_courses" />
+    <bpmn:sequenceFlow id="Flow_back_to_rewards" sourceRef="Gateway_back_to_action" targetRef="Activity_view_rewards" />
+    <bpmn:sequenceFlow id="Flow_view_rewards_to_redeem" sourceRef="Activity_view_rewards" targetRef="Activity_redeem" />
+    <bpmn:sequenceFlow id="Flow_redeem_to_end" sourceRef="Activity_redeem" targetRef="Event_end_redeem" />
+  </bpmn:process>
+
+  <!-- ===== POOL 2: BLPS BACKEND ===== -->
+  <bpmn:process id="Process_system" name="BLPS Backend" isExecutable="true">
+    <bpmn:laneSet>
+      <bpmn:lane id="Lane_auth" name="Аутентификация (Keycloak)">
+        <bpmn:flowNodeRef>Activity_keycloak_login</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Activity_keycloak_create_user</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_achievements" name="Достижения">
+        <bpmn:flowNodeRef>Activity_achievement_check_all</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Activity_achievement_condition_match</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_achievement_exists</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_balance" name="Баланс">
+        <bpmn:flowNodeRef>Activity_balance_view</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Activity_balance_add</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Activity_balance_deduct_xa</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_rewards" name="Награды">
+        <bpmn:flowNodeRef>Activity_rewards_list</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Activity_redeem_xa</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_redeem_checks</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_pulsar" name="Pulsar / Promocode">
+        <bpmn:flowNodeRef>Activity_pulsar_publish</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Activity_promocode_redis</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_journal" name="Ledger Journal">
+        <bpmn:flowNodeRef>Activity_journal_append</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_datalake" name="Datalake Sync">
+        <bpmn:flowNodeRef>Activity_datalake_sync</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+
+    <!-- Аутентификация -->
+    <bpmn:task id="Activity_keycloak_login" name="Выдача JWT токена">
+      <bpmn:incoming>Flow_msg_edx_done</bpmn:incoming>
+      <bpmn:outgoing>Flow_msg_keycloak_done</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Activity_keycloak_create_user" name="Создание пользователя">
+      <bpmn:incoming>Flow_msg_keycloak_create</bpmn:incoming>
+      <bpmn:outgoing>Flow_msg_keycloak_created</bpmn:outgoing>
+    </bpmn:task>
+
+    <!-- Достижения -->
+    <bpmn:task id="Activity_achievement_check_all" name="Загрузить активные типы достижений">
+      <bpmn:incoming>Flow_msg_enroll_done</bpmn:incoming>
+      <bpmn:incoming>Flow_msg_progress_done</bpmn:incoming>
+      <bpmn:outgoing>Flow_ach_check_to_condition</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Activity_achievement_condition_match" name="Проверить условия (eventType, coursePattern, blockPattern, minCompletion)">
+      <bpmn:incoming>Flow_ach_check_to_condition</bpmn:incoming>
+      <bpmn:outgoing>Flow_condition_to_gateway</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:exclusiveGateway id="Gateway_achievement_exists">
+      <bpmn:incoming>Flow_condition_to_gateway</bpmn:incoming>
+      <bpmn:outgoing>Flow_gateway_award</bpmn:outgoing>
+      <bpmn:outgoing>Flow_gateway_skip</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:task id="Activity_award_achievement" name="Запись UserAchievement">
+      <bpmn:incoming>Flow_gateway_award</bpmn:incoming>
+      <bpmn:outgoing>Flow_award_to_balance_add</bpmn:outgoing>
+    </bpmn:task>
+
+    <!-- Баланс -->
+    <bpmn:task id="Activity_balance_view" name="Чтение user_balances" />
+    <bpmn:task id="Activity_balance_add" name="Начисление баллов (обновление balance + BalanceTransaction)">
+      <bpmn:incoming>Flow_award_to_balance_add</bpmn:incoming>
+      <bpmn:outgoing>Flow_balance_added</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Activity_balance_deduct_xa" name="Списание баллов (XA)" />
+
+    <!-- Награды -->
+    <bpmn:task id="Activity_rewards_list" name="Чтение rewards" />
+    <bpmn:task id="Gateway_redeem_checks" name="Проверка: баланс + isActive + quantity">
+      <bpmn:incoming>Flow_msg_redeem_start</bpmn:incoming>
+      <bpmn:outgoing>Flow_redeem_check_to_xa</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Activity_redeem_xa" name="XA Транзакция (3 БД: main + rewards + journal)">
+      <bpmn:incoming>Flow_redeem_check_to_xa</bpmn:incoming>
+      <bpmn:outgoing>Flow_xa_done</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:subProcess id="Activity_redeem_xa_detail" name="Детали XA" triggeredByEvent="false">
+      <bpmn:incoming>Flow_redeem_check_to_xa</bpmn:incoming>
+      <bpmn:outgoing>Flow_xa_done</bpmn:outgoing>
+      <bpmn:startEvent id="Event_xa_start" />
+      <bpmn:task id="Activity_xa_balance" name="Main DB: списать balance + BalanceTransaction (REWARD_REDEEM)" />
+      <bpmn:task id="Activity_xa_reward" name="Rewards DB: UserReward + decrement quantity" />
+      <bpmn:task id="Activity_xa_journal" name="Journal DB: LedgerEvent (append-only)">
+        <bpmn:outgoing>Flow_xa_journal_to_end</bpmn:outgoing>
+      </bpmn:task>
+      <bpmn:endEvent id="Event_xa_end">
+        <bpmn:incoming>Flow_xa_journal_to_end</bpmn:incoming>
+      </bpmn:endEvent>
+      <bpmn:sequenceFlow id="Flow_xa_balance_to_reward" sourceRef="Activity_xa_balance" targetRef="Activity_xa_reward" />
+      <bpmn:sequenceFlow id="Flow_xa_reward_to_journal" sourceRef="Activity_xa_reward" targetRef="Activity_xa_journal" />
+      <bpmn:sequenceFlow id="Flow_xa_journal_to_end" sourceRef="Activity_xa_journal" targetRef="Event_xa_end" />
+    </bpmn:subProcess>
+
+    <!-- Pulsar -->
+    <bpmn:task id="Activity_pulsar_publish" name="Publish RewardRedemptionEvent (afterCommit)">
+      <bpmn:incoming>Flow_xa_to_pulsar</bpmn:incoming>
+      <bpmn:outgoing>Flow_pulsar_to_redis</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Activity_promocode_redis" name="Promocode-service: запись в Redis">
+      <bpmn:incoming>Flow_pulsar_to_redis</bpmn:incoming>
+    </bpmn:task>
+
+    <!-- Journal -->
+    <bpmn:task id="Activity_journal_append" name="LedgerEvent.append()" />
+
+    <!-- Datalake Sync -->
+    <bpmn:task id="Activity_datalake_sync" name="Sync Postgres Journal → Iceberg (Spark SQL)">
+      <bpmn:incoming>Flow_timer_sync</bpmn:incoming>
+    </bpmn:task>
+
+    <!-- System flows -->
+    <bpmn:sequenceFlow id="Flow_msg_edx_done" sourceRef="Activity_keycloak_login" targetRef="Activity_keycloak_create_user" />
+    <bpmn:sequenceFlow id="Flow_msg_keycloak_done" sourceRef="Activity_keycloak_login" targetRef="Activity_balance_view" />
+    <bpmn:sequenceFlow id="Flow_msg_keycloak_create" sourceRef="Activity_keycloak_create_user" targetRef="Activity_keycloak_login" />
+    <bpmn:sequenceFlow id="Flow_msg_keycloak_created" sourceRef="Activity_keycloak_create_user" targetRef="Activity_balance_view" />
+    <bpmn:sequenceFlow id="Flow_msg_enroll_done" sourceRef="Activity_achievement_check_all" targetRef="Activity_achievement_condition_match" />
+    <bpmn:sequenceFlow id="Flow_msg_progress_done" sourceRef="Activity_achievement_check_all" targetRef="Activity_achievement_condition_match" />
+    <bpmn:sequenceFlow id="Flow_ach_check_to_condition" sourceRef="Activity_achievement_check_all" targetRef="Activity_achievement_condition_match" />
+    <bpmn:sequenceFlow id="Flow_condition_to_gateway" sourceRef="Activity_achievement_condition_match" targetRef="Gateway_achievement_exists" />
+    <bpmn:sequenceFlow id="Flow_gateway_award" sourceRef="Gateway_achievement_exists" targetRef="Activity_award_achievement" />
+    <bpmn:sequenceFlow id="Flow_gateway_skip" sourceRef="Gateway_achievement_exists" targetRef="Activity_balance_add" />
+    <bpmn:sequenceFlow id="Flow_award_to_balance_add" sourceRef="Activity_award_achievement" targetRef="Activity_balance_add" />
+    <bpmn:sequenceFlow id="Flow_balance_added" sourceRef="Activity_balance_add" targetRef="Activity_rewards_list" />
+    <bpmn:sequenceFlow id="Flow_msg_redeem_start" sourceRef="Activity_rewards_list" targetRef="Gateway_redeem_checks" />
+    <bpmn:sequenceFlow id="Flow_redeem_check_to_xa" sourceRef="Gateway_redeem_checks" targetRef="Activity_redeem_xa" />
+    <bpmn:sequenceFlow id="Flow_xa_done" sourceRef="Activity_redeem_xa" targetRef="Activity_journal_append" />
+    <bpmn:sequenceFlow id="Flow_xa_to_pulsar" sourceRef="Activity_redeem_xa" targetRef="Activity_pulsar_publish" />
+    <bpmn:sequenceFlow id="Flow_pulsar_to_redis" sourceRef="Activity_pulsar_publish" targetRef="Activity_promocode_redis" />
+    <bpmn:sequenceFlow id="Flow_timer_sync" sourceRef="Activity_datalake_sync" targetRef="Activity_datalake_sync" />
+  </bpmn:process>
+
+  <!-- ===== POOL 3: OPENEDX LMS ===== -->
+  <bpmn:process id="Process_openedx" name="OpenEdX LMS" isExecutable="false">
+    <bpmn:serviceTask id="Activity_edx_list_courses" name="GET /api/courses/v1/courses/" />
+    <bpmn:serviceTask id="Activity_edx_course_details" name="GET /api/courses/v1/courses/{key}" />
+    <bpmn:serviceTask id="Activity_edx_enroll" name="POST /api/enrollment/v1/enrollment" />
+    <bpmn:serviceTask id="Activity_edx_track" name="POST /api/completion/v1/completion-batch" />
+    <bpmn:serviceTask id="Activity_edx_progress" name="GET /api/course_home/v1/progress/{key}" />
+    <bpmn:serviceTask id="Activity_edx_subsection" name="GET subsection-completion" />
+  </bpmn:process>
+
+  <!-- ===== POOL 4: МОДЕРАТОР ===== -->
+  <bpmn:process id="Process_moderator" name="Модератор" isExecutable="true">
+    <bpmn:startEvent id="Event_moderator_start" name="Вход на платформу (Keycloak STAFF/ADMIN)">
+      <bpmn:outgoing>Flow_mod_start_to_gateway</bpmn:outgoing>
+    </bpmn:startEvent>
+
+    <bpmn:inclusiveGateway id="Gateway_mod_actions">
+      <bpmn:incoming>Flow_mod_start_to_gateway</bpmn:incoming>
+      <bpmn:outgoing>Flow_mod_to_achievements</bpmn:outgoing>
+      <bpmn:outgoing>Flow_mod_to_rewards</bpmn:outgoing>
+      <bpmn:outgoing>Flow_mod_to_s3</bpmn:outgoing>
+    </bpmn:inclusiveGateway>
+
+    <bpmn:inclusiveGateway id="Gateway_mod_achievements" name="Управление достижениями">
+      <bpmn:incoming>Flow_mod_to_achievements</bpmn:incoming>
+      <bpmn:outgoing>Flow_mod_ach_create</bpmn:outgoing>
+      <bpmn:outgoing>Flow_mod_ach_update</bpmn:outgoing>
+      <bpmn:outgoing>Flow_mod_ach_delete</bpmn:outgoing>
+    </bpmn:inclusiveGateway>
+
+    <bpmn:task id="Activity_mod_ach_create" name="Создание + иконка в S3" />
+    <bpmn:task id="Activity_mod_ach_update" name="Редактирование" />
+    <bpmn:task id="Activity_mod_ach_delete" name="Удаление" />
+
+    <bpmn:inclusiveGateway id="Gateway_mod_rewards" name="Управление наградами">
+      <bpmn:incoming>Flow_mod_to_rewards</bpmn:incoming>
+      <bpmn:outgoing>Flow_mod_r_create</bpmn:outgoing>
+      <bpmn:outgoing>Flow_mod_r_update</bpmn:outgoing>
+      <bpmn:outgoing>Flow_mod_r_delete</bpmn:outgoing>
+    </bpmn:inclusiveGateway>
+
+    <bpmn:task id="Activity_mod_r_create" name="Создание награды" />
+    <bpmn:task id="Activity_mod_r_update" name="Редактирование" />
+    <bpmn:task id="Activity_mod_r_delete" name="Удаление" />
+
+    <bpmn:task id="Activity_mod_s3_upload" name="Загрузка файлов в S3">
+      <bpmn:incoming>Flow_mod_to_s3</bpmn:incoming>
+    </bpmn:task>
+
+    <!-- Moderator flows -->
+    <bpmn:sequenceFlow id="Flow_mod_start_to_gateway" sourceRef="Event_moderator_start" targetRef="Gateway_mod_actions" />
+    <bpmn:sequenceFlow id="Flow_mod_to_achievements" sourceRef="Gateway_mod_actions" targetRef="Gateway_mod_achievements" />
+    <bpmn:sequenceFlow id="Flow_mod_to_rewards" sourceRef="Gateway_mod_actions" targetRef="Gateway_mod_rewards" />
+    <bpmn:sequenceFlow id="Flow_mod_to_s3" sourceRef="Gateway_mod_actions" targetRef="Activity_mod_s3_upload" />
+    <bpmn:sequenceFlow id="Flow_mod_ach_create" sourceRef="Gateway_mod_achievements" targetRef="Activity_mod_ach_create" />
+    <bpmn:sequenceFlow id="Flow_mod_ach_update" sourceRef="Gateway_mod_achievements" targetRef="Activity_mod_ach_update" />
+    <bpmn:sequenceFlow id="Flow_mod_ach_delete" sourceRef="Gateway_mod_achievements" targetRef="Activity_mod_ach_delete" />
+    <bpmn:sequenceFlow id="Flow_mod_r_create" sourceRef="Gateway_mod_rewards" targetRef="Activity_mod_r_create" />
+    <bpmn:sequenceFlow id="Flow_mod_r_update" sourceRef="Gateway_mod_rewards" targetRef="Activity_mod_r_update" />
+    <bpmn:sequenceFlow id="Flow_mod_r_delete" sourceRef="Gateway_mod_rewards" targetRef="Activity_mod_r_delete" />
+  </bpmn:process>
+
+  <!-- ===== POOL 5: ПЛАНИРОВЩИК ===== -->
+  <bpmn:process id="Process_scheduled" name="Планировщик" isExecutable="true">
+    <bpmn:startEvent id="TimerEvent_datalake_sync">
+      <bpmn:timerEventDefinition>
+        <bpmn:timeCycle>0 0 3 * * ?</bpmn:timeCycle>
+      </bpmn:timerEventDefinition>
+      <bpmn:outgoing>Flow_timer_to_sync_start</bpmn:outgoing>
+    </bpmn:startEvent>
+
+    <bpmn:task id="Activity_sync_read_iceberg" name="Чтение MAX(occurred_at) из Iceberg">
+      <bpmn:incoming>Flow_timer_to_sync_start</bpmn:incoming>
+      <bpmn:outgoing>Flow_read_iceberg_to_fetch</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:task id="Activity_sync_fetch_journal" name="Fetch новых событий из Postgres Journal">
+      <bpmn:incoming>Flow_read_iceberg_to_fetch</bpmn:incoming>
+      <bpmn:outgoing>Flow_fetch_to_dedup</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:task id="Activity_sync_dedup" name="Дедупликация по event_id">
+      <bpmn:incoming>Flow_fetch_to_dedup</bpmn:incoming>
+      <bpmn:outgoing>Flow_dedup_to_insert</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:task id="Activity_sync_insert" name="Batch INSERT в Iceberg (Spark SQL)">
+      <bpmn:incoming>Flow_dedup_to_insert</bpmn:incoming>
+    </bpmn:task>
+
+    <bpmn:sequenceFlow id="Flow_timer_to_sync_start" sourceRef="TimerEvent_datalake_sync" targetRef="Activity_sync_read_iceberg" />
+    <bpmn:sequenceFlow id="Flow_read_iceberg_to_fetch" sourceRef="Activity_sync_read_iceberg" targetRef="Activity_sync_fetch_journal" />
+    <bpmn:sequenceFlow id="Flow_fetch_to_dedup" sourceRef="Activity_sync_fetch_journal" targetRef="Activity_sync_dedup" />
+    <bpmn:sequenceFlow id="Flow_dedup_to_insert" sourceRef="Activity_sync_dedup" targetRef="Activity_sync_insert" />
+  </bpmn:process>
+
+  <!-- ===== DIAGRAM (расположение элементов) ===== -->
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Collaboration_blps">
+
+      <!-- Pool: Модератор -->
+      <bpmndi:BPMNShape id="Participant_moderator_di" bpmnElement="Participant_moderator" isHorizontal="true">
+        <dc:Bounds x="100" y="50" width="2300" height="300" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_moderator_start_di" bpmnElement="Event_moderator_start">
+        <dc:Bounds x="140" y="170" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_mod_actions_di" bpmnElement="Gateway_mod_actions">
+        <dc:Bounds x="230" y="165" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_mod_achievements_di" bpmnElement="Gateway_mod_achievements">
+        <dc:Bounds x="430" y="85" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_mod_rewards_di" bpmnElement="Gateway_mod_rewards">
+        <dc:Bounds x="430" y="215" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_mod_ach_create_di" bpmnElement="Activity_mod_ach_create">
+        <dc:Bounds x="560" y="60" width="120" height="60" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_mod_ach_update_di" bpmnElement="Activity_mod_ach_update">
+        <dc:Bounds x="560" y="140" width="120" height="60" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_mod_ach_delete_di" bpmnElement="Activity_mod_ach_delete">
+        <dc:Bounds x="560" y="220" width="120" height="60" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_mod_r_create_di" bpmnElement="Activity_mod_r_create">
+        <dc:Bounds x="750" y="60" width="120" height="60" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_mod_r_update_di" bpmnElement="Activity_mod_r_update">
+        <dc:Bounds x="750" y="140" width="120" height="60" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_mod_r_delete_di" bpmnElement="Activity_mod_r_delete">
+        <dc:Bounds x="750" y="220" width="120" height="60" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_mod_s3_upload_di" bpmnElement="Activity_mod_s3_upload">
+        <dc:Bounds x="350" y="250" width="120" height="60" />
+      </bpmndi:BPMNShape>
+
+      <!-- Pool: Студент -->
+      <bpmndi:BPMNShape id="Participant_student_di" bpmnElement="Participant_student" isHorizontal="true">
+        <dc:Bounds x="100" y="380" width="2300" height="380" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="StartEvent_login_di" bpmnElement="StartEvent_login">
+        <dc:Bounds x="130" y="540" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_login_edx_di" bpmnElement="Activity_login_edx">
+        <dc:Bounds x="220" y="520" width="110" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_create_keycloak_user_di" bpmnElement="Activity_create_keycloak_user">
+        <dc:Bounds x="380" y="520" width="110" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_create_balance_di" bpmnElement="Activity_create_balance">
+        <dc:Bounds x="540" y="520" width="100" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_main_actions_di" bpmnElement="Gateway_main_actions">
+        <dc:Bounds x="690" y="535" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_view_courses_di" bpmnElement="Activity_view_courses">
+        <dc:Bounds x="800" y="480" width="100" height="60" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_view_balance_di" bpmnElement="Activity_view_balance">
+        <dc:Bounds x="800" y="560" width="100" height="60" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_view_achievements_di" bpmnElement="Activity_view_achievements">
+        <dc:Bounds x="800" y="640" width="100" height="60" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_action_choice_di" bpmnElement="Gateway_action_choice">
+        <dc:Bounds x="970" y="535" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_enroll_di" bpmnElement="Activity_enroll">
+        <dc:Bounds x="1080" y="500" width="100" height="60" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_lesson_di" bpmnElement="Activity_lesson">
+        <dc:Bounds x="1080" y="600" width="100" height="60" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_track_completion_di" bpmnElement="Activity_track_completion">
+        <dc:Bounds x="1240" y="600" width="110" height="60" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_fetch_subsection_di" bpmnElement="Activity_fetch_subsection">
+        <dc:Bounds x="1400" y="600" width="110" height="60" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_fetch_progress_di" bpmnElement="Activity_fetch_progress">
+        <dc:Bounds x="1560" y="600" width="110" height="60" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_check_achievements_di" bpmnElement="Activity_check_achievements">
+        <dc:Bounds x="1240" y="490" width="130" height="60" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_add_balance_di" bpmnElement="Activity_add_balance">
+        <dc:Bounds x="1420" y="490" width="110" height="60" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_back_to_action_di" bpmnElement="Gateway_back_to_action">
+        <dc:Bounds x="1580" y="505" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_view_rewards_di" bpmnElement="Activity_view_rewards">
+        <dc:Bounds x="1700" y="500" width="110" height="60" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_redeem_di" bpmnElement="Activity_redeem">
+        <dc:Bounds x="1860" y="500" width="110" height="60" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_end_redeem_di" bpmnElement="Event_end_redeem">
+        <dc:Bounds x="2040" y="510" width="36" height="36" />
+      </bpmndi:BPMNShape>
+
+      <!-- Pool: BLPS Backend -->
+      <bpmndi:BPMNShape id="Participant_system_di" bpmnElement="Participant_system" isHorizontal="true">
+        <dc:Bounds x="100" y="800" width="3000" height="600" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_auth_di" bpmnElement="Lane_auth" isHorizontal="true">
+        <dc:Bounds x="130" y="800" width="2970" height="120" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_achievements_di" bpmnElement="Lane_achievements" isHorizontal="true">
+        <dc:Bounds x="130" y="920" width="2970" height="120" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_balance_di" bpmnElement="Lane_balance" isHorizontal="true">
+        <dc:Bounds x="130" y="1040" width="2970" height="120" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_rewards_di" bpmnElement="Lane_rewards" isHorizontal="true">
+        <dc:Bounds x="130" y="1160" width="2970" height="120" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_pulsar_di" bpmnElement="Lane_pulsar" isHorizontal="true">
+        <dc:Bounds x="130" y="1280" width="2970" height="120" />
+      </bpmndi:BPMNShape>
+
+      <!-- Auth lane -->
+      <bpmndi:BPMNShape id="Activity_keycloak_login_di" bpmnElement="Activity_keycloak_login">
+        <dc:Bounds x="200" y="830" width="130" height="60" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_keycloak_create_user_di" bpmnElement="Activity_keycloak_create_user">
+        <dc:Bounds x="400" y="830" width="130" height="60" />
+      </bpmndi:BPMNShape>
+
+      <!-- Achievements lane -->
+      <bpmndi:BPMNShape id="Activity_achievement_check_all_di" bpmnElement="Activity_achievement_check_all">
+        <dc:Bounds x="200" y="950" width="140" height="60" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_achievement_condition_match_di" bpmnElement="Activity_achievement_condition_match">
+        <dc:Bounds x="400" y="950" width="160" height="60" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_achievement_exists_di" bpmnElement="Gateway_achievement_exists">
+        <dc:Bounds x="620" y="955" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_award_achievement_di" bpmnElement="Activity_award_achievement">
+        <dc:Bounds x="730" y="940" width="120" height="60" />
+      </bpmndi:BPMNShape>
+
+      <!-- Balance lane -->
+      <bpmndi:BPMNShape id="Activity_balance_view_di" bpmnElement="Activity_balance_view">
+        <dc:Bounds x="200" y="1060" width="120" height="60" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_balance_add_di" bpmnElement="Activity_balance_add">
+        <dc:Bounds x="900" y="1060" width="150" height="60" />
+      </bpmndi:BPMNShape>
+
+      <!-- Rewards lane -->
+      <bpmndi:BPMNShape id="Activity_rewards_list_di" bpmnElement="Activity_rewards_list">
+        <dc:Bounds x="200" y="1180" width="120" height="60" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_redeem_checks_di" bpmnElement="Gateway_redeem_checks">
+        <dc:Bounds x="400" y="1185" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_redeem_xa_di" bpmnElement="Activity_redeem_xa">
+        <dc:Bounds x="530" y="1170" width="180" height="60" />
+      </bpmndi:BPMNShape>
+
+      <!-- Journal + Datalake lanes (hidden, for completeness) -->
+      <bpmndi:BPMNShape id="Lane_journal_di" bpmnElement="Lane_journal" isHorizontal="true">
+        <dc:Bounds x="130" y="1400" width="2970" height="1" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_datalake_di" bpmnElement="Lane_datalake" isHorizontal="true">
+        <dc:Bounds x="130" y="1401" width="2970" height="1" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_journal_append_di" bpmnElement="Activity_journal_append">
+        <dc:Bounds x="200" y="1400" width="1" height="1" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_datalake_sync_di" bpmnElement="Activity_datalake_sync">
+        <dc:Bounds x="200" y="1401" width="1" height="1" />
+      </bpmndi:BPMNShape>
+
+      <!-- Pulsar lane -->
+      <bpmndi:BPMNShape id="Activity_pulsar_publish_di" bpmnElement="Activity_pulsar_publish">
+        <dc:Bounds x="200" y="1300" width="170" height="60" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_promocode_redis_di" bpmnElement="Activity_promocode_redis">
+        <dc:Bounds x="440" y="1300" width="170" height="60" />
+      </bpmndi:BPMNShape>
+
+      <!-- Pool: Планировщик -->
+      <bpmndi:BPMNShape id="Participant_scheduled_di" bpmnElement="Participant_scheduled" isHorizontal="true">
+        <dc:Bounds x="100" y="1450" width="1500" height="200" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="TimerEvent_datalake_sync_di" bpmnElement="TimerEvent_datalake_sync">
+        <dc:Bounds x="140" y="1530" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_sync_read_iceberg_di" bpmnElement="Activity_sync_read_iceberg">
+        <dc:Bounds x="240" y="1520" width="140" height="60" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_sync_fetch_journal_di" bpmnElement="Activity_sync_fetch_journal">
+        <dc:Bounds x="440" y="1520" width="150" height="60" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_sync_dedup_di" bpmnElement="Activity_sync_dedup">
+        <dc:Bounds x="650" y="1520" width="140" height="60" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_sync_insert_di" bpmnElement="Activity_sync_insert">
+        <dc:Bounds x="850" y="1520" width="160" height="60" />
+      </bpmndi:BPMNShape>
+
+      <!-- Pool: OpenEdX (outside main flow, minimal) -->
+      <bpmndi:BPMNShape id="Participant_openedx_di" bpmnElement="Participant_openedx" isHorizontal="true">
+        <dc:Bounds x="100" y="1700" width="1500" height="150" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_edx_enroll_di" bpmnElement="Activity_edx_enroll">
+        <dc:Bounds x="200" y="1730" width="120" height="60" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_edx_track_di" bpmnElement="Activity_edx_track">
+        <dc:Bounds x="400" y="1730" width="140" height="60" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_edx_progress_di" bpmnElement="Activity_edx_progress">
+        <dc:Bounds x="600" y="1730" width="130" height="60" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_edx_list_courses_di" bpmnElement="Activity_edx_list_courses">
+        <dc:Bounds x="200" y="1730" width="1" height="1" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_edx_subsection_di" bpmnElement="Activity_edx_subsection">
+        <dc:Bounds x="200" y="1730" width="1" height="1" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_edx_course_details_di" bpmnElement="Activity_edx_course_details">
+        <dc:Bounds x="200" y="1730" width="1" height="1" />
+      </bpmndi:BPMNShape>
+
+      <!-- ===== EDGES (Student pool) ===== -->
+      <bpmndi:BPMNEdge id="Flow_login_to_gateway_di" bpmnElement="Flow_login_to_gateway">
+        <di:waypoint x="166" y="558" /><di:waypoint x="220" y="555" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_edx_to_keycloak_di" bpmnElement="Flow_edx_to_keycloak">
+        <di:waypoint x="330" y="555" /><di:waypoint x="380" y="555" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_keycloak_to_balance_di" bpmnElement="Flow_keycloak_to_balance">
+        <di:waypoint x="490" y="555" /><di:waypoint x="540" y="555" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_balance_to_main_di" bpmnElement="Flow_balance_to_main">
+        <di:waypoint x="640" y="555" /><di:waypoint x="690" y="560" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_main_to_courses_di" bpmnElement="Flow_main_to_courses">
+        <di:waypoint x="715" y="535" /><di:waypoint x="715" y="510" /><di:waypoint x="800" y="510" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_main_to_balance_view_di" bpmnElement="Flow_main_to_balance_view">
+        <di:waypoint x="740" y="585" /><di:waypoint x="800" y="590" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_main_to_achievements_view_di" bpmnElement="Flow_main_to_achievements_view">
+        <di:waypoint x="715" y="585" /><di:waypoint x="715" y="670" /><di:waypoint x="800" y="670" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_courses_to_gateway_di" bpmnElement="Flow_courses_to_gateway">
+        <di:waypoint x="900" y="510" /><di:waypoint x="970" y="535" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_balance_view_to_gateway_di" bpmnElement="Flow_balance_view_to_gateway">
+        <di:waypoint x="900" y="590" /><di:waypoint x="970" y="560" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_achievements_view_to_gateway_di" bpmnElement="Flow_achievements_view_to_gateway">
+        <di:waypoint x="900" y="670" /><di:waypoint x="995" y="585" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_gateway_to_enroll_di" bpmnElement="Flow_gateway_to_enroll">
+        <di:waypoint x="1020" y="535" /><di:waypoint x="1080" y="530" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_gateway_to_lesson_di" bpmnElement="Flow_gateway_to_lesson">
+        <di:waypoint x="1020" y="585" /><di:waypoint x="1080" y="630" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_gateway_to_rewards_di" bpmnElement="Flow_gateway_to_rewards">
+        <di:waypoint x="1020" y="560" /><di:waypoint x="1700" y="530" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_enroll_to_achievement_check_di" bpmnElement="Flow_enroll_to_achievement_check">
+        <di:waypoint x="1180" y="530" /><di:waypoint x="1240" y="520" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_lesson_to_completion_di" bpmnElement="Flow_lesson_to_completion">
+        <di:waypoint x="1180" y="630" /><di:waypoint x="1240" y="630" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_completion_to_subsection_di" bpmnElement="Flow_completion_to_subsection">
+        <di:waypoint x="1350" y="630" /><di:waypoint x="1400" y="630" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_subsection_to_progress_di" bpmnElement="Flow_subsection_to_progress">
+        <di:waypoint x="1510" y="630" /><di:waypoint x="1560" y="630" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_progress_to_achievements_di" bpmnElement="Flow_progress_to_achievements">
+        <di:waypoint x="1615" y="600" /><di:waypoint x="1615" y="520" /><di:waypoint x="1370" y="520" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_achievements_check_to_balance_add_di" bpmnElement="Flow_achievements_check_to_balance_add">
+        <di:waypoint x="1370" y="520" /><di:waypoint x="1420" y="520" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_balance_add_to_back_di" bpmnElement="Flow_balance_add_to_back">
+        <di:waypoint x="1530" y="520" /><di:waypoint x="1580" y="530" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_back_to_courses_di" bpmnElement="Flow_back_to_courses">
+        <di:waypoint x="1605" y="505" /><di:waypoint x="1605" y="480" /><di:waypoint x="850" y="480" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_back_to_rewards_di" bpmnElement="Flow_back_to_rewards">
+        <di:waypoint x="1630" y="530" /><di:waypoint x="1700" y="530" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_view_rewards_to_redeem_di" bpmnElement="Flow_view_rewards_to_redeem">
+        <di:waypoint x="1810" y="530" /><di:waypoint x="1860" y="530" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_redeem_to_end_di" bpmnElement="Flow_redeem_to_end">
+        <di:waypoint x="1970" y="530" /><di:waypoint x="2040" y="528" />
+      </bpmndi:BPMNEdge>
+
+      <!-- ===== EDGES (Moderator pool) ===== -->
+      <bpmndi:BPMNEdge id="Flow_mod_start_to_gateway_di" bpmnElement="Flow_mod_start_to_gateway">
+        <di:waypoint x="176" y="188" /><di:waypoint x="230" y="190" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_mod_to_achievements_di" bpmnElement="Flow_mod_to_achievements">
+        <di:waypoint x="280" y="190" /><di:waypoint x="430" y="110" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_mod_to_rewards_di" bpmnElement="Flow_mod_to_rewards">
+        <di:waypoint x="280" y="215" /><di:waypoint x="430" y="240" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_mod_to_s3_di" bpmnElement="Flow_mod_to_s3">
+        <di:waypoint x="255" y="215" /><di:waypoint x="255" y="280" /><di:waypoint x="350" y="280" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_mod_ach_create_di" bpmnElement="Flow_mod_ach_create">
+        <di:waypoint x="480" y="90" /><di:waypoint x="560" y="90" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_mod_ach_update_di" bpmnElement="Flow_mod_ach_update">
+        <di:waypoint x="455" y="135" /><di:waypoint x="455" y="170" /><di:waypoint x="560" y="170" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_mod_ach_delete_di" bpmnElement="Flow_mod_ach_delete">
+        <di:waypoint x="480" y="110" /><di:waypoint x="560" y="250" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_mod_r_create_di" bpmnElement="Flow_mod_r_create">
+        <di:waypoint x="480" y="240" /><di:waypoint x="750" y="90" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_mod_r_update_di" bpmnElement="Flow_mod_r_update">
+        <di:waypoint x="455" y="265" /><di:waypoint x="455" y="280" /><di:waypoint x="750" y="170" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_mod_r_delete_di" bpmnElement="Flow_mod_r_delete">
+        <di:waypoint x="480" y="240" /><di:waypoint x="750" y="250" />
+      </bpmndi:BPMNEdge>
+
+      <!-- ===== EDGES (Scheduled pool) ===== -->
+      <bpmndi:BPMNEdge id="Flow_timer_to_sync_start_di" bpmnElement="Flow_timer_to_sync_start">
+        <di:waypoint x="176" y="1548" /><di:waypoint x="240" y="1550" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_read_iceberg_to_fetch_di" bpmnElement="Flow_read_iceberg_to_fetch">
+        <di:waypoint x="380" y="1550" /><di:waypoint x="440" y="1550" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_fetch_to_dedup_di" bpmnElement="Flow_fetch_to_dedup">
+        <di:waypoint x="590" y="1550" /><di:waypoint x="650" y="1550" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_dedup_to_insert_di" bpmnElement="Flow_dedup_to_insert">
+        <di:waypoint x="790" y="1550" /><di:waypoint x="850" y="1550" />
+      </bpmndi:BPMNEdge>
+
+      <!-- ===== EDGES (System pool) ===== -->
+      <bpmndi:BPMNEdge id="Flow_msg_edx_done_di" bpmnElement="Flow_msg_edx_done">
+        <di:waypoint x="330" y="860" /><di:waypoint x="400" y="860" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_msg_keycloak_done_di" bpmnElement="Flow_msg_keycloak_done">
+        <di:waypoint x="200" y="890" /><di:waypoint x="200" y="1090" /><di:waypoint x="260" y="1090" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_msg_keycloak_create_di" bpmnElement="Flow_msg_keycloak_create">
+        <di:waypoint x="400" y="890" /><di:waypoint x="400" y="830" /><di:waypoint x="330" y="830" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_msg_keycloak_created_di" bpmnElement="Flow_msg_keycloak_created">
+        <di:waypoint x="530" y="860" /><di:waypoint x="530" y="1090" /><di:waypoint x="260" y="1090" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_ach_check_to_condition_di" bpmnElement="Flow_ach_check_to_condition">
+        <di:waypoint x="340" y="980" /><di:waypoint x="400" y="980" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_condition_to_gateway_di" bpmnElement="Flow_condition_to_gateway">
+        <di:waypoint x="560" y="980" /><di:waypoint x="620" y="980" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_gateway_award_di" bpmnElement="Flow_gateway_award">
+        <di:waypoint x="670" y="980" /><di:waypoint x="730" y="970" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_gateway_skip_di" bpmnElement="Flow_gateway_skip">
+        <di:waypoint x="645" y="1005" /><di:waypoint x="900" y="1090" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_award_to_balance_add_di" bpmnElement="Flow_award_to_balance_add">
+        <di:waypoint x="850" y="970" /><di:waypoint x="900" y="1090" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_balance_added_di" bpmnElement="Flow_balance_added">
+        <di:waypoint x="1050" y="1090" /><di:waypoint x="200" y="1210" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_msg_redeem_start_di" bpmnElement="Flow_msg_redeem_start">
+        <di:waypoint x="320" y="1210" /><di:waypoint x="400" y="1210" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_redeem_check_to_xa_di" bpmnElement="Flow_redeem_check_to_xa">
+        <di:waypoint x="450" y="1210" /><di:waypoint x="530" y="1200" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_xa_done_di" bpmnElement="Flow_xa_done">
+        <di:waypoint x="710" y="1200" /><di:waypoint x="200" y="1210" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_xa_to_pulsar_di" bpmnElement="Flow_xa_to_pulsar">
+        <di:waypoint x="620" y="1230" /><di:waypoint x="620" y="1330" /><di:waypoint x="510" y="1330" /><di:waypoint x="370" y="1330" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_pulsar_to_redis_di" bpmnElement="Flow_pulsar_to_redis">
+        <di:waypoint x="370" y="1330" /><di:waypoint x="440" y="1330" />
+      </bpmndi:BPMNEdge>
+
+      <!-- ===== MESSAGE FLOW EDGES ===== -->
+      <bpmndi:BPMNEdge id="MF_enroll_to_edx_di" bpmnElement="MF_enroll_to_edx">
+        <di:waypoint x="1130" y="560" /><di:waypoint x="1130" y="1730" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MF_edx_enroll_done_di" bpmnElement="MF_edx_enroll_done">
+        <di:waypoint x="260" y="1730" /><di:waypoint x="260" y="560" /><di:waypoint x="1080" y="530" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MF_lesson_to_track_di" bpmnElement="MF_lesson_to_track">
+        <di:waypoint x="1180" y="630" /><di:waypoint x="1180" y="1760" /><di:waypoint x="470" y="1760" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MF_login_to_keycloak_di" bpmnElement="MF_login_to_keycloak">
+        <di:waypoint x="275" y="590" /><di:waypoint x="275" y="830" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MF_keycloak_user_create_di" bpmnElement="MF_keycloak_user_create">
+        <di:waypoint x="435" y="590" /><di:waypoint x="435" y="830" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MF_balance_create_di" bpmnElement="MF_balance_create">
+        <di:waypoint x="590" y="590" /><di:waypoint x="590" y="1060" /><di:waypoint x="200" y="1090" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MF_enroll_to_backend_di" bpmnElement="MF_enroll_to_backend">
+        <di:waypoint x="1180" y="520" /><di:waypoint x="1180" y="950" /><di:waypoint x="200" y="980" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MF_ach_done_to_student_di" bpmnElement="MF_ach_done_to_student">
+        <di:waypoint x="975" y="1060" /><di:waypoint x="1475" y="550" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MF_progress_to_ach_di" bpmnElement="MF_progress_to_ach">
+        <di:waypoint x="1615" y="660" /><di:waypoint x="1615" y="980" /><di:waypoint x="340" y="980" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MF_view_rewards_di" bpmnElement="MF_view_rewards">
+        <di:waypoint x="1755" y="560" /><di:waypoint x="1755" y="1180" /><di:waypoint x="200" y="1210" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MF_redeem_start_di" bpmnElement="MF_redeem_start">
+        <di:waypoint x="1915" y="560" /><di:waypoint x="1915" y="1185" /><di:waypoint x="400" y="1210" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MF_redeem_done_di" bpmnElement="MF_redeem_done">
+        <di:waypoint x="620" y="1170" /><di:waypoint x="1915" y="530" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MF_pulsar_di" bpmnElement="MF_pulsar">
+        <di:waypoint x="370" y="1330" /><di:waypoint x="440" y="1330" />
+      </bpmndi:BPMNEdge>
+
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>
