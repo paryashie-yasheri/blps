@@ -10,19 +10,23 @@
     exporter="Camunda Modeler"
     exporterVersion="7.23.0">
 
-  <bpmn:process id="Process_student_workflow" name="Student Workflow" isExecutable="true">
+  <bpmn:process id="Process_student_workflow" name="Student Workflow" isExecutable="true"
+      camunda:historyTimeToLive="365">
 
-    <!-- ========== СТАРТОВЫЕ СОБЫТИЯ ========== -->
-    <bpmn:startEvent id="StartEvent_enroll">
+    <!-- ========== СТАРТОВЫЕ СОБЫТИЯ (message) ========== -->
+    <bpmn:startEvent id="StartEvent_enroll" name="Запись на курс">
       <bpmn:outgoing>Flow_enroll_start</bpmn:outgoing>
+      <bpmn:messageEventDefinition messageRef="Message_enroll" />
     </bpmn:startEvent>
 
-    <bpmn:startEvent id="StartEvent_lesson">
+    <bpmn:startEvent id="StartEvent_lesson" name="Завершение урока">
       <bpmn:outgoing>Flow_lesson_start</bpmn:outgoing>
+      <bpmn:messageEventDefinition messageRef="Message_lesson" />
     </bpmn:startEvent>
 
-    <bpmn:startEvent id="StartEvent_redeem">
+    <bpmn:startEvent id="StartEvent_redeem" name="Погашение награды">
       <bpmn:outgoing>Flow_redeem_start</bpmn:outgoing>
+      <bpmn:messageEventDefinition messageRef="Message_redeem" />
     </bpmn:startEvent>
 
     <!-- ========== ENROLL ========== -->
@@ -125,6 +129,10 @@
     <bpmn:sequenceFlow id="Flow_redeem_end" sourceRef="Task_redeem_result" targetRef="EndEvent_redeem" />
 
   </bpmn:process>
+
+  <bpmn:message id="Message_enroll" name="msg_enroll" />
+  <bpmn:message id="Message_lesson" name="msg_lesson" />
+  <bpmn:message id="Message_redeem" name="msg_redeem" />
 
   <bpmndi:BPMNDiagram id="BPMNDiagram_1">
     <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Process_student_workflow">
