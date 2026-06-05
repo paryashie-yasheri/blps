@@ -3,7 +3,6 @@ package soaringLizards.blps.camunda.delegate
 import org.camunda.bpm.engine.delegate.DelegateExecution
 import org.camunda.bpm.engine.delegate.JavaDelegate
 import org.slf4j.LoggerFactory
-import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.stereotype.Component
 import soaringLizards.blps.config.userDetails.JwtUserDetails
 import soaringLizards.blps.service.EdxService
@@ -16,9 +15,15 @@ class FetchSubsectionProgressDelegate(
     private val logger = LoggerFactory.getLogger(javaClass)
 
     override fun execute(execution: DelegateExecution) {
-        val currentUser = SecurityContextHolder.getContext().authentication?.principal as JwtUserDetails
         val courseKey = execution.getVariable("courseKey") as String
         val blockId = execution.getVariable("blockId") as String
+
+        val currentUser = org.springframework.security.core.context.SecurityContextHolder.getContext().authentication?.principal
+        if (currentUser !is JwtUserDetails) {
+            execution.setVariable("subsectionCompletion", "0.0")
+            execution.setVariable("courseProgress", null)
+            return
+        }
 
         val subsectionCompletion = runCatching {
             edxService.getSubsectionCompletion(currentUser, courseKey, blockId)

@@ -16,7 +16,7 @@ class CheckAchievementsDelegate(
     override fun execute(execution: DelegateExecution) {
         val userId = UUID.fromString(execution.getVariable("userId") as String)
         val eventType = AchievementEventType.valueOf(execution.getVariable("eventType") as String)
-        val courseKey = execution.getVariable("courseKey") as String
+        val courseKey = execution.getVariable("courseKey") as? String ?: execution.getVariable("courseId") as? String ?: ""
         val blockId = execution.getVariable("blockId") as String?
         val completion = execution.getVariable("completion") as Double?
 

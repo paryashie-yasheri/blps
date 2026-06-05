@@ -6,7 +6,6 @@ import org.springframework.stereotype.Component
 import soaringLizards.blps.config.userDetails.JwtUserDetails
 import soaringLizards.blps.dto.edx.EdxCompletionBatchRequest
 import soaringLizards.blps.service.EdxService
-import org.springframework.security.core.context.SecurityContextHolder
 
 @Component
 class TrackLessonCompletionDelegate(
@@ -14,19 +13,26 @@ class TrackLessonCompletionDelegate(
 ) : JavaDelegate {
 
     override fun execute(execution: DelegateExecution) {
-        val currentUser = SecurityContextHolder.getContext().authentication?.principal as JwtUserDetails
         val courseKey = execution.getVariable("courseKey") as String
         val blockId = execution.getVariable("blockId") as String
+        val userId = execution.getVariable("userId") as String
 
         val result = runCatching {
-            edxService.trackCompletion(
-                currentUser,
-                EdxCompletionBatchRequest(
-                    username = currentUser.username,
-                    courseKey = courseKey,
-                    blocks = mapOf(blockId to 1.0),
-                ),
-            )
+            val principal = org.springframework.security.core.context.SecurityContextHolder.getContext().authentication?.principal
+            val currentUser = when (principal) {
+                is JwtUserDetails -> principal
+                else -> null
+            }
+            if (currentUser != null) {
+                edxService.trackCompletion(
+                    currentUser,
+                    EdxCompletionBatchRequest(
+                        username = currentUser.username,
+                        courseKey = courseKey,
+                        blocks = mapOf(blockId to 1.0),
+                    ),
+                )
+            } else null
         }
 
         execution.setVariable("trackCompletionSuccess", result.isSuccess)
