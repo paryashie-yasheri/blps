@@ -113,6 +113,7 @@ plugins {
     kotlin("plugin.spring") version "2.1.20"
     id("org.springframework.boot") version "3.4.5"
     id("io.spring.dependency-management") version "1.1.7"
+    war
 
     id("com.google.cloud.tools.jib") version "3.5.2"
     id("org.openapi.generator") version "7.9.0"
@@ -182,6 +183,7 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-security")
     implementation("org.springframework.boot:spring-boot-starter-actuator")
     implementation("org.springframework.boot:spring-boot-starter-web")
+    providedRuntime("org.springframework.boot:spring-boot-starter-tomcat")
     implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("org.springframework.security:spring-security-oauth2-authorization-server")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
@@ -400,5 +402,10 @@ val codegen by tasks.register<DefaultTask>("codegen") {
 
 tasks.withType<org.springframework.boot.gradle.tasks.bundling.BootJar> {
     duplicatesStrategy = org.gradle.api.file.DuplicatesStrategy.EXCLUDE
+}
+
+tasks.withType<org.springframework.boot.gradle.tasks.bundling.BootWar> {
+    duplicatesStrategy = org.gradle.api.file.DuplicatesStrategy.EXCLUDE
+    archiveFileName.set("blps.war")
 }
 
