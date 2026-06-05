@@ -23,7 +23,7 @@ class RewardRedemptionEventPublisher(
 ) {
     private val logger = LoggerFactory.getLogger(javaClass)
 
-    fun publishAfterCommit(event: RewardRedemptionEvent) {
+    fun publishAfterCommit(event: RewardRedemptionEvent, authToken: String? = null) {
         if (!properties.enabled) {
             logger.debug("reward_redemption_event_skipped reason=pulsar_disabled operationId={}", event.operationId)
             return
@@ -33,19 +33,19 @@ class RewardRedemptionEventPublisher(
             TransactionSynchronizationManager.registerSynchronization(
                 object : TransactionSynchronization {
                     override fun afterCommit() {
-                        publishInBackground(event)
+                        publishInBackground(event, authToken)
                     }
                 },
             )
         } else {
-            publishInBackground(event)
+            publishInBackground(event, authToken)
         }
     }
 
-    private fun publishInBackground(event: RewardRedemptionEvent) {
+    private fun publishInBackground(event: RewardRedemptionEvent, authToken: String? = null) {
         try {
             taskExecutor.execute {
-                publish(event)
+                publish(event, authToken)
             }
         } catch (ex: RejectedExecutionException) {
             logger.warn(
@@ -58,7 +58,7 @@ class RewardRedemptionEventPublisher(
         }
     }
 
-    private fun publish(event: RewardRedemptionEvent) {
+    private fun publish(event: RewardRedemptionEvent, authToken: String? = null) {
         try {
             val producer = producerProvider.getIfAvailable()
             if (producer == null) {
@@ -66,14 +66,17 @@ class RewardRedemptionEventPublisher(
                 return
             }
 
+            val props = mutableMapOf(
+                "eventType" to "REWARD_REDEEMED",
+                "operationId" to event.operationId.toString(),
+            )
+            if (authToken != null) {
+                props["authToken"] = authToken
+            }
+
             producer.newMessage()
                 .key(event.userId.toString())
-                .properties(
-                    mapOf(
-                        "eventType" to "REWARD_REDEEMED",
-                        "operationId" to event.operationId.toString(),
-                    ),
-                )
+                .properties(props)
                 .value(objectMapper.writeValueAsBytes(event))
                 .sendAsync()
                 .whenComplete { messageId, throwable ->
