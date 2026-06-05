@@ -121,7 +121,7 @@ services:
       context: .
       dockerfile: Dockerfile.wildfly
     ports:
-      - "8082:8080"
+      - "8083:8080"
       - "9991:9990"
     depends_on:
       - pg
