@@ -55,13 +55,12 @@ class StudentController(
         @AuthenticationPrincipal currentUser: JwtUserDetails,
         @PathVariable courseId: String,
     ): CourseEnrollResponse {
-        val pi = runtimeService.createProcessInstanceByKey("Process_student_workflow")
-            .businessKey("enroll-${currentUser.id}-${courseId}")
-            .setVariable("processAction", "ENROLL")
+        val pi = runtimeService.createMessageCorrelation("msg_enroll")
+            .processInstanceBusinessKey("enroll-${currentUser.id}-${courseId}")
             .setVariable("userId", currentUser.id.toString())
             .setVariable("courseId", courseId)
             .setVariable("eventType", AchievementEventType.COURSE_ENROLLED.name)
-            .execute()
+            .correlateStartMessage()
 
         val awarded = runtimeService.getVariable(pi.id, "awardedAchievements") as? List<*>
         val balance = runtimeService.getVariable(pi.id, "currentBalance") as? Int ?: 0
@@ -84,15 +83,14 @@ class StudentController(
         @PathVariable courseKey: String,
         @PathVariable blockId: String,
     ): LessonCompleteResponse {
-        val pi = runtimeService.createProcessInstanceByKey("Process_student_workflow")
-            .businessKey("lesson-${currentUser.id}-${courseKey}-${blockId}")
-            .setVariable("processAction", "LESSON_COMPLETE")
+        val pi = runtimeService.createMessageCorrelation("msg_lesson")
+            .processInstanceBusinessKey("lesson-${currentUser.id}-${courseKey}-${blockId}")
             .setVariable("userId", currentUser.id.toString())
             .setVariable("courseKey", courseKey)
             .setVariable("blockId", blockId)
             .setVariable("eventType", AchievementEventType.LESSON_COMPLETE.name)
             .setVariable("completion", 1.0)
-            .execute()
+            .correlateStartMessage()
 
         val awarded = runtimeService.getVariable(pi.id, "awardedAchievements") as? List<*>
         val balance = runtimeService.getVariable(pi.id, "currentBalance") as? Int ?: 0
@@ -131,15 +129,20 @@ class StudentController(
         @AuthenticationPrincipal currentUser: JwtUserDetails,
         @PathVariable rewardId: UUID,
     ): UserRewardDto {
-        val pi = runtimeService.createProcessInstanceByKey("Process_student_workflow")
-            .businessKey("redeem-${currentUser.id}-${rewardId}")
-            .setVariable("processAction", "REDEEM")
-            .setVariable("userId", currentUser.id.toString())
-            .setVariable("rewardId", rewardId.toString())
-            .setVariable("operationId", UUID.randomUUID().toString())
-            .setVariable("occurredAt", java.time.OffsetDateTime.now().toString())
-            .execute()
+        val result = rewardService.redeemReward(currentUser.id, rewardId)
 
-        return runtimeService.getVariable(pi.id, "redeemResult") as UserRewardDto
+        try {
+            runtimeService.createMessageCorrelation("msg_redeem")
+                .processInstanceBusinessKey("redeem-${currentUser.id}-${rewardId}")
+                .setVariable("userId", currentUser.id.toString())
+                .setVariable("rewardId", rewardId.toString())
+                .setVariable("operationId", UUID.randomUUID().toString())
+                .setVariable("redeemResult", result)
+                .correlateStartMessage()
+        } catch (_: Exception) {
+            // process logging is best-effort
+        }
+
+        return result
     }
 }

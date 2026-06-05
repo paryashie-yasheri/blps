@@ -1,0 +1,236 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions
+    xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+    xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+    xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+    xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+    xmlns:camunda="http://camunda.org/schema/1.0/bpmn"
+    id="Definitions_student_workflow_v2"
+    targetNamespace="http://blps.soaringlizards/student-workflow"
+    exporter="Camunda Modeler"
+    exporterVersion="7.23.0">
+
+  <bpmn:process id="Process_student_workflow" name="Student Workflow" isExecutable="true"
+      camunda:historyTimeToLive="365">
+
+    <!-- ========== СТАРТОВЫЕ СОБЫТИЯ (message) ========== -->
+    <bpmn:startEvent id="StartEvent_enroll" name="Запись на курс">
+      <bpmn:outgoing>Flow_enroll_start</bpmn:outgoing>
+      <bpmn:messageEventDefinition messageRef="Message_enroll" />
+    </bpmn:startEvent>
+
+    <bpmn:startEvent id="StartEvent_lesson" name="Завершение урока">
+      <bpmn:outgoing>Flow_lesson_start</bpmn:outgoing>
+      <bpmn:messageEventDefinition messageRef="Message_lesson" />
+    </bpmn:startEvent>
+
+    <bpmn:startEvent id="StartEvent_redeem" name="Погашение награды">
+      <bpmn:outgoing>Flow_redeem_start</bpmn:outgoing>
+      <bpmn:messageEventDefinition messageRef="Message_redeem" />
+    </bpmn:startEvent>
+
+    <!-- ========== ENROLL ========== -->
+    <bpmn:serviceTask id="Task_enroll_in_edx" name="Запись на курс"
+        camunda:delegateExpression="${enrollInEdxDelegate}">
+      <bpmn:incoming>Flow_enroll_start</bpmn:incoming>
+      <bpmn:outgoing>Flow_enroll_to_achievements</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <bpmn:serviceTask id="Task_enroll_check_achievements" name="Проверка достижений"
+        camunda:delegateExpression="${checkAchievementsDelegate}">
+      <bpmn:incoming>Flow_enroll_to_achievements</bpmn:incoming>
+      <bpmn:outgoing>Flow_enroll_to_balance</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <bpmn:serviceTask id="Task_enroll_get_balance" name="Получить баланс"
+        camunda:delegateExpression="${getBalanceDelegate}">
+      <bpmn:incoming>Flow_enroll_to_balance</bpmn:incoming>
+      <bpmn:outgoing>Flow_enroll_end</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <bpmn:endEvent id="EndEvent_enroll">
+      <bpmn:incoming>Flow_enroll_end</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <!-- ========== LESSON ========== -->
+    <bpmn:serviceTask id="Task_track_completion" name="Трекинг completion"
+        camunda:delegateExpression="${trackLessonCompletionDelegate}">
+      <bpmn:incoming>Flow_lesson_start</bpmn:incoming>
+      <bpmn:outgoing>Flow_lesson_to_progress</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <bpmn:serviceTask id="Task_fetch_progress" name="Проверка прогресса"
+        camunda:delegateExpression="${fetchSubsectionProgressDelegate}">
+      <bpmn:incoming>Flow_lesson_to_progress</bpmn:incoming>
+      <bpmn:outgoing>Flow_lesson_to_achievements</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <bpmn:serviceTask id="Task_lesson_check_achievements" name="Проверка достижений"
+        camunda:delegateExpression="${checkAchievementsDelegate}">
+      <bpmn:incoming>Flow_lesson_to_achievements</bpmn:incoming>
+      <bpmn:outgoing>Flow_lesson_to_balance</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <bpmn:serviceTask id="Task_lesson_get_balance" name="Получить баланс"
+        camunda:delegateExpression="${getBalanceDelegate}">
+      <bpmn:incoming>Flow_lesson_to_balance</bpmn:incoming>
+      <bpmn:outgoing>Flow_lesson_end</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <bpmn:endEvent id="EndEvent_lesson">
+      <bpmn:incoming>Flow_lesson_end</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <!-- ========== REDEEM (с User Task и Camunda Form) ========== -->
+    <bpmn:serviceTask id="Task_load_rewards" name="Загрузка наград"
+        camunda:delegateExpression="${loadAvailableRewardsDelegate}">
+      <bpmn:incoming>Flow_redeem_start</bpmn:incoming>
+      <bpmn:outgoing>Flow_redeem_to_execute</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <bpmn:serviceTask id="Task_redeem_execute" name="Покупка награды"
+        camunda:delegateExpression="${redeemRewardDelegate}">
+      <bpmn:incoming>Flow_redeem_to_execute</bpmn:incoming>
+      <bpmn:outgoing>Flow_redeem_to_pulsar</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <bpmn:serviceTask id="Task_publish_pulsar" name="Публикация в Pulsar"
+        camunda:delegateExpression="${publishRedemptionEventDelegate}">
+      <bpmn:incoming>Flow_redeem_to_pulsar</bpmn:incoming>
+      <bpmn:outgoing>Flow_redeem_to_prepare</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <bpmn:serviceTask id="Task_prepare_result" name="Подготовка результата"
+        camunda:delegateExpression="${prepareResultDelegate}">
+      <bpmn:incoming>Flow_redeem_to_prepare</bpmn:incoming>
+      <bpmn:outgoing>Flow_redeem_to_end</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <bpmn:endEvent id="EndEvent_redeem">
+      <bpmn:incoming>Flow_redeem_to_end</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <!-- ========== SEQUENCE FLOWS ========== -->
+    <bpmn:sequenceFlow id="Flow_enroll_start" sourceRef="StartEvent_enroll" targetRef="Task_enroll_in_edx" />
+    <bpmn:sequenceFlow id="Flow_enroll_to_achievements" sourceRef="Task_enroll_in_edx" targetRef="Task_enroll_check_achievements" />
+    <bpmn:sequenceFlow id="Flow_enroll_to_balance" sourceRef="Task_enroll_check_achievements" targetRef="Task_enroll_get_balance" />
+    <bpmn:sequenceFlow id="Flow_enroll_end" sourceRef="Task_enroll_get_balance" targetRef="EndEvent_enroll" />
+
+    <bpmn:sequenceFlow id="Flow_lesson_start" sourceRef="StartEvent_lesson" targetRef="Task_track_completion" />
+    <bpmn:sequenceFlow id="Flow_lesson_to_progress" sourceRef="Task_track_completion" targetRef="Task_fetch_progress" />
+    <bpmn:sequenceFlow id="Flow_lesson_to_achievements" sourceRef="Task_fetch_progress" targetRef="Task_lesson_check_achievements" />
+    <bpmn:sequenceFlow id="Flow_lesson_to_balance" sourceRef="Task_lesson_check_achievements" targetRef="Task_lesson_get_balance" />
+    <bpmn:sequenceFlow id="Flow_lesson_end" sourceRef="Task_lesson_get_balance" targetRef="EndEvent_lesson" />
+
+    <bpmn:sequenceFlow id="Flow_redeem_start" sourceRef="StartEvent_redeem" targetRef="Task_load_rewards" />
+    <bpmn:sequenceFlow id="Flow_redeem_to_execute" sourceRef="Task_load_rewards" targetRef="Task_redeem_execute" />
+    <bpmn:sequenceFlow id="Flow_redeem_to_pulsar" sourceRef="Task_redeem_execute" targetRef="Task_publish_pulsar" />
+    <bpmn:sequenceFlow id="Flow_redeem_to_prepare" sourceRef="Task_publish_pulsar" targetRef="Task_prepare_result" />
+    <bpmn:sequenceFlow id="Flow_redeem_to_end" sourceRef="Task_prepare_result" targetRef="EndEvent_redeem" />
+
+  </bpmn:process>
+
+  <bpmn:message id="Message_enroll" name="msg_enroll" />
+  <bpmn:message id="Message_lesson" name="msg_lesson" />
+  <bpmn:message id="Message_redeem" name="msg_redeem" />
+
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Process_student_workflow">
+      <bpmndi:BPMNShape id="StartEvent_enroll_di" bpmnElement="StartEvent_enroll">
+        <dc:Bounds x="100" y="80" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_enroll_in_edx_di" bpmnElement="Task_enroll_in_edx">
+        <dc:Bounds x="190" y="60" width="130" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_enroll_check_achievements_di" bpmnElement="Task_enroll_check_achievements">
+        <dc:Bounds x="380" y="60" width="130" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_enroll_get_balance_di" bpmnElement="Task_enroll_get_balance">
+        <dc:Bounds x="570" y="60" width="130" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_enroll_di" bpmnElement="EndEvent_enroll">
+        <dc:Bounds x="760" y="82" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="StartEvent_lesson_di" bpmnElement="StartEvent_lesson">
+        <dc:Bounds x="100" y="220" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_track_completion_di" bpmnElement="Task_track_completion">
+        <dc:Bounds x="190" y="200" width="130" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_fetch_progress_di" bpmnElement="Task_fetch_progress">
+        <dc:Bounds x="380" y="200" width="130" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_lesson_check_achievements_di" bpmnElement="Task_lesson_check_achievements">
+        <dc:Bounds x="570" y="200" width="130" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_lesson_get_balance_di" bpmnElement="Task_lesson_get_balance">
+        <dc:Bounds x="760" y="200" width="130" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_lesson_di" bpmnElement="EndEvent_lesson">
+        <dc:Bounds x="950" y="222" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="StartEvent_redeem_di" bpmnElement="StartEvent_redeem">
+        <dc:Bounds x="100" y="370" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_load_rewards_di" bpmnElement="Task_load_rewards">
+        <dc:Bounds x="190" y="350" width="120" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_redeem_execute_di" bpmnElement="Task_redeem_execute">
+        <dc:Bounds x="370" y="350" width="120" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_publish_pulsar_di" bpmnElement="Task_publish_pulsar">
+        <dc:Bounds x="550" y="350" width="120" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_prepare_result_di" bpmnElement="Task_prepare_result">
+        <dc:Bounds x="730" y="350" width="120" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_redeem_di" bpmnElement="EndEvent_redeem">
+        <dc:Bounds x="910" y="372" width="36" height="36" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNEdge id="Flow_enroll_start_di" bpmnElement="Flow_enroll_start">
+        <di:waypoint x="136" y="98" /><di:waypoint x="190" y="100" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_enroll_to_achievements_di" bpmnElement="Flow_enroll_to_achievements">
+        <di:waypoint x="320" y="100" /><di:waypoint x="380" y="100" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_enroll_to_balance_di" bpmnElement="Flow_enroll_to_balance">
+        <di:waypoint x="510" y="100" /><di:waypoint x="570" y="100" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_enroll_end_di" bpmnElement="Flow_enroll_end">
+        <di:waypoint x="700" y="100" /><di:waypoint x="760" y="100" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_lesson_start_di" bpmnElement="Flow_lesson_start">
+        <di:waypoint x="136" y="238" /><di:waypoint x="190" y="240" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_lesson_to_progress_di" bpmnElement="Flow_lesson_to_progress">
+        <di:waypoint x="320" y="240" /><di:waypoint x="380" y="240" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_lesson_to_achievements_di" bpmnElement="Flow_lesson_to_achievements">
+        <di:waypoint x="510" y="240" /><di:waypoint x="570" y="240" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_lesson_to_balance_di" bpmnElement="Flow_lesson_to_balance">
+        <di:waypoint x="700" y="240" /><di:waypoint x="760" y="240" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_lesson_end_di" bpmnElement="Flow_lesson_end">
+        <di:waypoint x="890" y="240" /><di:waypoint x="950" y="240" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_redeem_start_di" bpmnElement="Flow_redeem_start">
+        <di:waypoint x="136" y="388" /><di:waypoint x="190" y="390" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_redeem_to_execute_di" bpmnElement="Flow_redeem_to_execute">
+        <di:waypoint x="310" y="390" /><di:waypoint x="370" y="390" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_redeem_to_pulsar_di" bpmnElement="Flow_redeem_to_pulsar">
+        <di:waypoint x="490" y="390" /><di:waypoint x="550" y="390" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_redeem_to_prepare_di" bpmnElement="Flow_redeem_to_prepare">
+        <di:waypoint x="670" y="390" /><di:waypoint x="730" y="390" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_redeem_to_end_di" bpmnElement="Flow_redeem_to_end">
+        <di:waypoint x="850" y="390" /><di:waypoint x="910" y="390" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+
+</bpmn:definitions>

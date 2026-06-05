@@ -216,7 +216,9 @@ dependencies {
 
     // camunda
     implementation(platform("org.camunda.bpm:camunda-bom:$camundaVersion"))
-    implementation("org.camunda.bpm:camunda-engine-spring-6")
+    implementation("org.camunda.bpm.springboot:camunda-bpm-spring-boot-starter:$camundaVersion")
+    implementation("org.camunda.bpm.springboot:camunda-bpm-spring-boot-starter-webapp:$camundaVersion")
+    implementation("org.camunda.bpm.springboot:camunda-bpm-spring-boot-starter-rest:$camundaVersion")
     implementation("org.camunda.bpm:camunda-engine-plugin-spin")
     implementation("org.camunda.spin:camunda-spin-dataformat-all")
 
@@ -394,5 +396,9 @@ val codegen by tasks.register<DefaultTask>("codegen") {
     dependsOn(
         generateJooq,
     )
+}
+
+tasks.withType<org.springframework.boot.gradle.tasks.bundling.BootJar> {
+    duplicatesStrategy = org.gradle.api.file.DuplicatesStrategy.EXCLUDE
 }
 

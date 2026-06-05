@@ -10,6 +10,7 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity
 import org.springframework.security.config.annotation.web.configurers.ExceptionHandlingConfigurer
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
+import org.springframework.security.web.util.matcher.AntPathRequestMatcher
 import org.springframework.security.web.SecurityFilterChain
 import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint
 import soaringLizards.blps.config.userDetails.JwtToAbstractAuthenticationTokenConverter
@@ -56,7 +57,7 @@ class SecurityConfig(
     @Order(2)
     fun camundaSecurityFilterChain(http: HttpSecurity): SecurityFilterChain {
         return http
-            .securityMatcher("/camunda/**")
+            .securityMatcher(AntPathRequestMatcher("/camunda/**"))
             .authorizeHttpRequests { auth ->
                 auth.anyRequest().permitAll()
             }
@@ -84,11 +85,10 @@ class SecurityConfig(
                         "/oauth2/**",
                         "/v3/api-docs/**",
                         "/actuator/**",
+                        "/engine-rest/**",
                     ).permitAll()
                     .anyRequest().authenticated()
             }
-            .formLogin(withDefaults())
-            .httpBasic(withDefaults())
             .oauth2ResourceServer { oauth2 ->
                 oauth2.jwt { jwt ->
                     jwt.decoder(keycloakJwtDecoder)

@@ -94,7 +94,7 @@ app:
     log-base-dir: ${ATOMIKOS_LOG_BASE_DIR:${java.io.tmpdir}/blps-atomikos}
     tm-unique-name: ${ATOMIKOS_TM_UNIQUE_NAME:${spring.application.name}-tm}
     transaction-timeout-seconds: ${ATOMIKOS_TRANSACTION_TIMEOUT_SECONDS:30}
-    max-timeout-seconds: ${ATOMIKOS_MAX_TIMEOUT_SECONDS:60}
+    max-timeout-seconds: ${ATOMIKOS_MAX_TIMEOUT_SECONDS:300}
     checkpoint-interval: ${ATOMIKOS_CHECKPOINT_INTERVAL:500}
     threaded-2pc: ${ATOMIKOS_THREADED_2PC:true}
     enable-logging: ${ATOMIKOS_ENABLE_LOGGING:true}
@@ -142,7 +142,24 @@ aws:
     secret-key: ${S3_SECRET_KEY:0fb18b9b-c15f-465f-a346-09f816f4fae7}
     bucket: ${S3_BUCKET:bucket}
 
-# camunda engine is configured programmatically in CamundaEngineConfig
+camunda:
+  bpm:
+    database:
+      schema-update: true
+      type: postgres
+    history-level: full
+    auto-deployment-enabled: true
+    default-history-time-to-live: 365
+    deployment-resource-pattern:
+      - classpath:/processes/*.bpmn
+      - classpath:/processes/*.bpmn20.xml
+    filter:
+      create: All tasks
+    admin-user:
+      id: ${CAMUNDA_ADMIN_USER:admin}
+      password: ${CAMUNDA_ADMIN_PASSWORD:admin}
+      first-name: Camunda
+      last-name: Admin
 
 # turn off `jooq's tip of the day`
 logging:
