@@ -96,11 +96,17 @@
       <bpmn:incoming>Flow_token_to_load</bpmn:incoming>
       <bpmn:outgoing>Flow_load_to_select</bpmn:outgoing>
     </bpmn:serviceTask>
-    <bpmn:userTask id="Activity_select_reward" name="Выбрать награду" camunda:assignee="demo">
+    <bpmn:userTask id="Activity_select_reward" name="Выбрать награду" camunda:candidateUsers="demo">
       <bpmn:extensionElements>
         <camunda:formData>
-          <camunda:formField id="rewardId" label="Награда" type="enum">
+          <camunda:formField id="rewardId" label="Награда" type="enum" defaultValue="" camunda:required="true">
+            <camunda:value id="" name="— Выберите награду —" />
             <camunda:value id="d7d08433-eb76-48e2-9240-6fd9a2a15b0c" name="Bug Collector Badge (30 баллов)" />
+            <camunda:value id="47461418-22e3-42ff-9126-e449f970ce5d" name="Meme Lord Crown (50 баллов)" />
+            <camunda:value id="cdd7e34b-1491-4de6-abc4-88784058cf5a" name="67 (67 баллов)" />
+            <camunda:value id="3c93fe45-b107-4d93-8908-e8fe6e346f37" name="Coffee Machine Harmony (75 баллов)" />
+            <camunda:value id="6d965c8e-6701-4998-b75a-3901c4ce3cf3" name="Tung Tung Tung Sahur (100 баллов)" />
+            <camunda:value id="d57e7780-85a0-436c-a2a3-f1a067ead752" name="Existential Crisis Pack (200 баллов)" />
           </camunda:formField>
         </camunda:formData>
       </bpmn:extensionElements>
