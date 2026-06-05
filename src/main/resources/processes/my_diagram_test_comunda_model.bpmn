@@ -99,7 +99,7 @@
     <bpmn:userTask id="Activity_select_reward" name="Выбрать награду" camunda:assignee="demo">
       <bpmn:extensionElements>
         <camunda:formData>
-          <camunda:formField id="rewardId" label="Награда" type="string">
+          <camunda:formField id="rewardId" label="Награда" type="enum">
             <camunda:value id="d7d08433-eb76-48e2-9240-6fd9a2a15b0c" name="Bug Collector Badge (30 баллов)" />
           </camunda:formField>
         </camunda:formData>
